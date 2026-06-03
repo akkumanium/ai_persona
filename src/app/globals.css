@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #080b12;
+  --foreground: #eef6ff;
+  --surface: rgba(17, 24, 36, 0.78);
+  --surface-strong: rgba(22, 31, 46, 0.92);
+  --surface-soft: rgba(28, 39, 57, 0.78);
+  --line: rgba(172, 203, 255, 0.13);
+  --line-strong: rgba(92, 225, 255, 0.42);
+  --text-muted: #91a2b8;
+  --text-soft: #bfd0e6;
+  --accent: #5ce1ff;
+  --accent-strong: #8b5cf6;
+  --shadow-soft: 18px 18px 44px rgba(0, 0, 0, 0.42),
+    -12px -12px 28px rgba(75, 107, 147, 0.08);
+  --shadow-inset: inset 8px 8px 18px rgba(0, 0, 0, 0.28),
+    inset -8px -8px 18px rgba(112, 151, 201, 0.06);
 }
 
 @theme inline {
@@ -12,15 +25,186 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
+  isolation: isolate;
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: rgba(92, 225, 255, 0.32);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(129, 151, 181, 0.32);
+  border: 2px solid #0a0e16;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(8, 11, 18, 0.82);
+}
+
+/* Dark futuristic reskin for the Tailwind utility palette already used by the workspace. */
+.bg-white,
+.bg-white\/70,
+.bg-white\/75,
+.bg-white\/82,
+.bg-white\/84 {
+  background-color: var(--surface) !important;
+  background-image: none !important;
+  backdrop-filter: none;
+}
+
+.bg-stone-50,
+.bg-stone-100 {
+  background-color: var(--surface-soft) !important;
+  background-image: none !important;
+}
+
+.bg-stone-900 {
+  background-color: #1d2840 !important;
+  background-image: none !important;
+}
+
+.bg-stone-300 {
+  background-color: rgba(79, 93, 117, 0.55) !important;
+}
+
+.bg-emerald-800,
+.hover\:bg-emerald-900:hover {
+  background-color: #26314d !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.tab-selected {
+  position: relative !important;
+  overflow: hidden !important;
+  background-color: #143525 !important;
+  background-image: none !important;
+  border: 1px solid rgba(74, 222, 128, 0.52) !important;
+  box-shadow: none !important;
+}
+
+.tab-selected:hover {
+  background-color: #173c2a !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.bg-emerald-50 {
+  background-color: rgba(92, 225, 255, 0.11) !important;
+  background-image: none !important;
+}
+
+.text-stone-950,
+.text-stone-900 {
+  color: #f4f8ff !important;
+}
+
+.text-stone-700 {
+  color: var(--text-soft) !important;
+}
+
+.text-stone-600,
+.text-stone-500,
+.text-stone-400 {
+  color: var(--text-muted) !important;
+}
+
+.text-emerald-800,
+.text-emerald-900 {
+  color: var(--accent) !important;
+}
+
+.border-stone-100,
+.border-stone-200,
+.border-stone-300 {
+  border-color: var(--line) !important;
+}
+
+.border-emerald-800,
+.hover\:border-emerald-800:hover,
+.focus\:border-emerald-800:focus {
+  border-color: var(--line-strong) !important;
+}
+
+.hover\:bg-stone-100:hover,
+.hover\:bg-white:hover {
+  background-color: rgba(40, 56, 82, 0.86) !important;
+}
+
+.hover\:text-stone-950:hover,
+.hover\:text-emerald-900:hover {
+  color: #f8fbff !important;
+}
+
+.shadow-sm,
+.shadow-md {
+  box-shadow: none !important;
+}
+
+.rounded-lg {
+  border-radius: 8px !important;
+}
+
+.rounded-md {
+  border-radius: 7px !important;
+}
+
+input,
+textarea,
+select {
+  color: #eef6ff;
+  background-color: rgba(8, 13, 22, 0.62) !important;
+  box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(191, 208, 230, 0.48);
+}
+
+select option {
+  color: #eef6ff;
+  background: #111827;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+  box-shadow: none;
+}
+
+button,
+a,
+label {
+  -webkit-tap-highlight-color: transparent;
 }
