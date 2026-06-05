@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { env } from "@/lib/env";
 import { imageProvider } from "@/lib/providers";
 import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
 import type { ProviderImageInput } from "@/lib/providers/types";
@@ -14,7 +13,7 @@ export async function POST(request: Request) {
       : input.referenceImageUrl
         ? [input.referenceImageUrl]
         : [];
-    const referenceImages = referenceUrls.length && env.geminiApiKey
+    const referenceImages = referenceUrls.length
       ? (
           await Promise.all(
             referenceUrls.map((url, index) =>
@@ -33,7 +32,7 @@ export async function POST(request: Request) {
       ]
         .filter(Boolean)
         .join("\n"),
-      model: "gemini-3-pro-image-preview",
+      model: input.model,
       aspectRatio: input.aspectRatio,
       imageSize: input.imageSize,
       count: input.count,

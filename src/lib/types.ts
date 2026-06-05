@@ -10,7 +10,7 @@ export type GenerationType =
   | "video_motion"
   | "video_prompt";
 export type JobStatus = "queued" | "running" | "succeeded" | "failed";
-export type ProviderName = "nano-banana-pro" | "wan";
+export type ProviderName = "nano-banana-pro" | "openai" | "wan";
 
 export type Persona = {
   id: string;
@@ -30,6 +30,7 @@ export type Asset = {
   prompt: string;
   personaId?: string;
   referenceAssetIds?: string[];
+  referenceSlot?: "face" | "face-grid" | "body" | "more";
   isDefaultReference?: boolean;
   generationType: GenerationType;
   provider: ProviderName | "demo";

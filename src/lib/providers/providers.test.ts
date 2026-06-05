@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { MODEL_REGISTRY, modelsForCapability } from "@/lib/model-registry";
+import { modelsForCapability } from "@/lib/model-registry";
 import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
 
 describe("model registry", () => {
-  it("keeps Kling out of the active provider registry", () => {
-    expect(MODEL_REGISTRY.every((model) => model.provider !== "kling")).toBe(true);
+  it("includes ChatGPT for image generation", () => {
+    expect(modelsForCapability("image-reference").map((model) => model.id)).toContain("gpt-image-1");
+  });
+
+  it("includes Wan and adapter video models for video generation", () => {
+    expect(modelsForCapability("video-normal").map((model) => model.id)).toEqual(
+      expect.arrayContaining(["wan-2.2", "wan-animate", "kling", "seedance"]),
+    );
   });
 
   it("exposes Wan Animate for motion-control video", () => {

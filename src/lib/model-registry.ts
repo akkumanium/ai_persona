@@ -7,7 +7,7 @@ export type ModelCapability =
 export type ModelRegistryEntry = {
   id: string;
   label: string;
-  provider: "nano-banana-pro" | "wan";
+  provider: "nano-banana-pro" | "openai" | "wan";
   capabilities: ModelCapability[];
   enabled: boolean;
   notes: string;
@@ -21,6 +21,14 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     capabilities: ["avatar", "image-reference"],
     enabled: true,
     notes: "Google Gemini image model used for prompt and reference-image generation.",
+  },
+  {
+    id: "gpt-image-1",
+    label: "ChatGPT",
+    provider: "openai",
+    capabilities: ["avatar", "image-reference"],
+    enabled: true,
+    notes: "OpenAI image model used for prompt and reference-image generation.",
   },
   {
     id: "wan-2.2",
@@ -37,6 +45,22 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     capabilities: ["video-normal", "video-motion"],
     enabled: true,
     notes: "Configurable motion-control adapter for reference-driven animation.",
+  },
+  {
+    id: "kling",
+    label: "Kling",
+    provider: "wan",
+    capabilities: ["video-normal", "video-motion"],
+    enabled: true,
+    notes: "Kling-compatible video model routed through the video adapter.",
+  },
+  {
+    id: "seedance",
+    label: "Seedance",
+    provider: "wan",
+    capabilities: ["video-normal", "video-motion"],
+    enabled: true,
+    notes: "Seedance-compatible video model routed through the video adapter.",
   },
 ];
 

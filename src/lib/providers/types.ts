@@ -38,7 +38,7 @@ export type ImageGenerationResult = {
 
 export type VideoGenerationRequest = {
   prompt: string;
-  model: "wan-2.2" | "wan-animate";
+  model: string;
   mode: "normal" | "motion";
   referenceImageUrl?: string;
   durationSeconds: number;

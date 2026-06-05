@@ -33,6 +33,7 @@ export const avatarGenerationSchema = z.object({
 export const imageGenerationSchema = z.object({
   personaId: z.string().min(1),
   personaName: z.string().min(1),
+  model: z.string().min(1).default("gemini-3-pro-image-preview"),
   referenceImageUrl: z.string().min(1).optional(),
   referenceImageUrls: z.array(z.string().min(1)).min(0).default([]),
   prompt: z.string().min(10).max(2000),
@@ -45,10 +46,10 @@ export const imageGenerationSchema = z.object({
 export const videoGenerationSchema = z.object({
   personaId: z.string().min(1),
   personaName: z.string().min(1),
+  model: z.string().min(1).default("wan-animate"),
   referenceImageUrl: z.string().min(1).optional(),
   prompt: z.string().min(10).max(2000),
   mode: z.enum(["normal", "motion"]),
-  model: z.enum(["wan-2.2", "wan-animate"]).default("wan-animate"),
   durationSeconds: z.number().int().min(3).max(12).default(5),
   aspectRatio: aspectRatioSchema.default("9:16"),
   motionReference: z.string().max(500).optional().default(""),

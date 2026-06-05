@@ -6,8 +6,7 @@ This repo is a Next.js + TypeScript + Supabase SaaS MVP for creating AI-influenc
 - First screen is the authenticated creator workspace, not a marketing page.
 - Minimal product-level safety: require rights confirmation and adult-persona confirmation for avatar creation; rely on provider moderation beyond that.
 - Image provider: Nano Banana Pro through Google Gemini, default model `gemini-3-pro-image-preview`.
-- Video provider: Wan-compatible adapter only. Kling has intentionally been removed from this implementation.
-- Wan models in the registry: `wan-2.2` for normal image-to-video and `wan-animate` for motion-control video.
+- Video provider: Wan, Kling, Seedance
 
 ## Architecture
 - `src/components/studio-workspace.tsx` owns the client workspace UI and demo-mode state.
