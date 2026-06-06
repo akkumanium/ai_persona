@@ -1,6 +1,11 @@
 import { env } from "@/lib/env";
 import { mockImageGeneration } from "@/lib/providers/mock";
-import type { ImageGenerationRequest, ImageGenerationResult, ImageProvider } from "@/lib/providers/types";
+import type {
+  GeneratedAssetPayload,
+  ImageGenerationRequest,
+  ImageGenerationResult,
+  ImageProvider,
+} from "@/lib/providers/types";
 
 export class OpenAIImageProvider implements ImageProvider {
   name = "openai" as const;
@@ -29,9 +34,11 @@ export class OpenAIImageProvider implements ImageProvider {
       throw new Error(json?.error?.message ?? "ChatGPT image generation failed.");
     }
 
-    const assets = Array.isArray(json?.data)
-      ? json.data
-          .map((item: { b64_json?: string; url?: string; mime_type?: string }, index: number) => {
+    const responseData = Array.isArray(json?.data)
+      ? (json.data as { b64_json?: string; url?: string; mime_type?: string }[])
+      : [];
+    const assets = responseData
+          .map((item, index): GeneratedAssetPayload | null => {
             if (item.b64_json) {
               return {
                 url: `data:image/png;base64,${item.b64_json}`,
@@ -50,8 +57,7 @@ export class OpenAIImageProvider implements ImageProvider {
 
             return null;
           })
-          .filter((asset): asset is NonNullable<typeof asset> => Boolean(asset))
-      : [];
+          .filter((asset): asset is GeneratedAssetPayload => Boolean(asset));
 
     if (!assets.length) {
       throw new Error("ChatGPT returned no image assets.");

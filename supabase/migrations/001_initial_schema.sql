@@ -56,6 +56,7 @@ create table public.generation_jobs (
   persona_id uuid references public.personas(id) on delete set null,
   status public.job_status not null default 'queued',
   provider public.provider_name not null,
+  provider_job_id text,
   model text not null,
   generation_type public.generation_type not null,
   input_params jsonb not null default '{}'::jsonb,

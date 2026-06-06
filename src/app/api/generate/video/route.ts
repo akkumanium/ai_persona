@@ -35,6 +35,7 @@ export async function POST(request: Request) {
         id: jobId,
         status: result.status,
         provider: result.provider,
+        providerJobId: result.providerJobId,
         model: result.model,
         generationType,
         prompt: input.prompt,

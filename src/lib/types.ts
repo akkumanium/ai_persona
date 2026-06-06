@@ -34,6 +34,7 @@ export type Asset = {
   isDefaultReference?: boolean;
   generationType: GenerationType;
   provider: ProviderName | "demo";
+  providerJobId?: string;
   model: string;
   mimeType: string;
   createdAt: string;

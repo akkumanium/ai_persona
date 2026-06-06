@@ -9,7 +9,13 @@ describe("model registry", () => {
 
   it("includes Wan and adapter video models for video generation", () => {
     expect(modelsForCapability("video-normal").map((model) => model.id)).toEqual(
-      expect.arrayContaining(["wan-2.2", "wan-animate", "kling", "seedance"]),
+      expect.arrayContaining([
+        "wan-2.2",
+        "wan-animate",
+        "kling-v2-6",
+        "dreamina-seedance-2-0-260128",
+        "dreamina-seedance-2-0-fast-260128",
+      ]),
     );
   });
 
