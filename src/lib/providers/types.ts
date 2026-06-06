@@ -41,8 +41,16 @@ export type VideoGenerationRequest = {
   model: string;
   mode: "normal" | "motion";
   referenceImageUrl?: string;
+  startFrameImageUrl?: string;
+  endFrameImageUrl?: string;
   durationSeconds: number;
   aspectRatio: string;
+  negativePrompt?: string;
+  providerMode?: "std" | "pro";
+  cfgScale?: number;
+  generateAudio?: boolean;
+  resolution?: "480p" | "720p" | "1080p";
+  returnLastFrame?: boolean;
   motionReference?: string;
   motionReferenceVideo?: ProviderMediaInput;
 };

@@ -7,7 +7,7 @@ export type ModelCapability =
 export type ModelRegistryEntry = {
   id: string;
   label: string;
-  provider: "nano-banana-pro" | "openai" | "wan";
+  provider: "nano-banana-pro" | "openai" | "wan" | "kling" | "seedance";
   capabilities: ModelCapability[];
   enabled: boolean;
   notes: string;
@@ -47,20 +47,28 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     notes: "Configurable motion-control adapter for reference-driven animation.",
   },
   {
-    id: "kling",
-    label: "Kling",
-    provider: "wan",
-    capabilities: ["video-normal", "video-motion"],
+    id: "kling-v2-6",
+    label: "Kling 2.6",
+    provider: "kling",
+    capabilities: ["video-normal"],
     enabled: true,
-    notes: "Kling-compatible video model routed through the video adapter.",
+    notes: "Kling image-to-video with start frame, optional pro end frame, 5s/10s duration, sound, negative prompt, and CFG controls.",
   },
   {
-    id: "seedance",
-    label: "Seedance",
-    provider: "wan",
-    capabilities: ["video-normal", "video-motion"],
+    id: "dreamina-seedance-2-0-260128",
+    label: "Seedance 2.0",
+    provider: "seedance",
+    capabilities: ["video-normal"],
     enabled: true,
-    notes: "Seedance-compatible video model routed through the video adapter.",
+    notes: "BytePlus ModelArk Seedance 2.0 with text, start/end frame image-to-video, 4-15s duration, resolution, audio, and last-frame return.",
+  },
+  {
+    id: "dreamina-seedance-2-0-fast-260128",
+    label: "Seedance 2.0 Fast",
+    provider: "seedance",
+    capabilities: ["video-normal"],
+    enabled: true,
+    notes: "Lower-cost Seedance 2.0 Fast option for image-to-video workflows up to 720p.",
   },
 ];
 

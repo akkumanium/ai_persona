@@ -36,6 +36,5 @@ Without provider keys the app stays usable in demo mode and returns generated pl
 
 ## Implementation Notes
 - Keep provider-specific details behind `ImageProvider` and `VideoProvider`.
-- Do not reintroduce Kling unless the product owner explicitly asks for it.
 - Store raw provider responses on jobs when persistence is connected.
 - When adding billing, reuse `credit_ledger`; do not wire checkout into generation routes directly.

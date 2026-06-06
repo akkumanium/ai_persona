@@ -20,7 +20,6 @@ The repo includes shared instructions for Codex, Copilot, and future agents:
 - Default image model: `gemini-3-pro-image-preview`.
 - Video generation: Wan-compatible adapter.
 - Video models: `wan-2.2` for normal video and `wan-animate` for motion-control video.
-- Kling is not part of this implementation.
 
 Provider references:
 - Google Gemini image generation: https://ai.google.dev/gemini-api/docs/image-generation

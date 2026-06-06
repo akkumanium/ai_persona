@@ -54,11 +54,15 @@ export async function mockVideoGeneration(
       mimeType: "video/mp4",
       providerAssetId: `demo-video-asset-${Date.now()}`,
     },
-    costEstimateCents: request.mode === "motion" ? 95 : 70,
+    costEstimateCents: request.mode === "motion" ? 95 : Math.max(50, request.durationSeconds * 14),
     raw: {
       demo: true,
       mode: request.mode,
       prompt: request.prompt,
+      startFrameImageUrl: request.startFrameImageUrl,
+      endFrameImageUrl: request.endFrameImageUrl,
+      durationSeconds: request.durationSeconds,
+      aspectRatio: request.aspectRatio,
       motionReferenceVideo: Boolean(request.motionReferenceVideo),
     },
   };

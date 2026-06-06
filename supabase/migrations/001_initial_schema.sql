@@ -5,12 +5,15 @@ create type public.generation_type as enum (
   'avatar_prompt',
   'avatar_image_blend',
   'avatar_normalization',
+  'reference_upload',
   'image_from_reference',
+  'image_from_prompt',
   'video_normal',
-  'video_motion'
+  'video_motion',
+  'video_prompt'
 );
 create type public.job_status as enum ('queued', 'running', 'succeeded', 'failed');
-create type public.provider_name as enum ('nano-banana-pro', 'wan', 'demo');
+create type public.provider_name as enum ('nano-banana-pro', 'openai', 'wan', 'kling', 'seedance', 'demo');
 
 create table public.personas (
   id uuid primary key default gen_random_uuid(),

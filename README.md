@@ -17,7 +17,6 @@ The app runs in demo mode without API keys. Copy `.env.example` to `.env.local` 
 
 - Images: Nano Banana Pro via Gemini, default model `gemini-3-pro-image-preview`
 - Videos: Wan-compatible adapter, models `wan-2.2` and `wan-animate`
-- Kling is intentionally not included.
 
 ## Useful Commands
 

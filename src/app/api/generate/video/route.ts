@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const generationType =
       input.mode === "motion"
         ? "video_motion"
-        : input.referenceImageUrl
+        : input.startFrameImageUrl || input.referenceImageUrl
           ? "video_normal"
           : "video_prompt";
     const result = await videoProvider.submit(input);

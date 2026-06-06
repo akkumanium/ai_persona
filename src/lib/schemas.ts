@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const aspectRatioSchema = z.enum(["1:1", "3:4", "4:5", "9:16", "16:9"]);
+export const videoAspectRatioSchema = z.enum(["auto", "1:1", "3:4", "4:3", "4:5", "9:16", "16:9", "21:9"]);
 export const imageSizeSchema = z.enum(["1K", "2K", "4K"]);
 
 export const providerImageInputSchema = z.object({
@@ -48,10 +49,18 @@ export const videoGenerationSchema = z.object({
   personaName: z.string().min(1),
   model: z.string().min(1).default("wan-animate"),
   referenceImageUrl: z.string().min(1).optional(),
+  startFrameImageUrl: z.string().min(1).optional(),
+  endFrameImageUrl: z.string().min(1).optional(),
   prompt: z.string().min(10).max(2000),
   mode: z.enum(["normal", "motion"]),
-  durationSeconds: z.number().int().min(3).max(12).default(5),
-  aspectRatio: aspectRatioSchema.default("9:16"),
+  durationSeconds: z.number().int().min(3).max(15).default(5),
+  aspectRatio: videoAspectRatioSchema.default("9:16"),
+  negativePrompt: z.string().max(1000).optional().default(""),
+  providerMode: z.enum(["std", "pro"]).optional().default("std"),
+  cfgScale: z.number().min(0).max(1).optional().default(0.5),
+  generateAudio: z.boolean().optional().default(false),
+  resolution: z.enum(["480p", "720p", "1080p"]).optional().default("720p"),
+  returnLastFrame: z.boolean().optional().default(false),
   motionReference: z.string().max(500).optional().default(""),
   motionReferenceVideo: providerMediaInputSchema.optional(),
 });

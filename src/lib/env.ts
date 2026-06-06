@@ -7,6 +7,12 @@ export const env = {
   nanoBananaModel: process.env.NANO_BANANA_MODEL ?? "gemini-3-pro-image-preview",
   wanApiBaseUrl: process.env.WAN_API_BASE_URL,
   wanApiKey: process.env.WAN_API_KEY,
+  klingApiBaseUrl: process.env.KLING_API_BASE_URL ?? "https://api-singapore.klingai.com",
+  klingApiKey: process.env.KLING_API_KEY,
+  klingModel: process.env.KLING_MODEL ?? "kling-v2-6",
+  seedanceApiBaseUrl: process.env.SEEDANCE_API_BASE_URL ?? "https://ark.ap-southeast.bytepluses.com",
+  seedanceApiKey: process.env.SEEDANCE_API_KEY,
+  seedanceModel: process.env.SEEDANCE_MODEL ?? "dreamina-seedance-2-0-260128",
 };
 
 export function hasSupabaseEnv() {

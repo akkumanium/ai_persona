@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { mockVideoGeneration } from "@/lib/providers/mock";
+import { normalizeVideoStatus, videoAssetFromUrl } from "@/lib/providers/video-utils";
 import type {
   VideoGenerationRequest,
   VideoGenerationResult,
@@ -23,10 +24,17 @@ export class WanVideoProvider implements VideoProvider {
       body: JSON.stringify({
         model: request.model,
         prompt: request.prompt,
-        image_url: request.referenceImageUrl || undefined,
+        image_url: request.startFrameImageUrl || request.referenceImageUrl || undefined,
+        end_image_url: request.endFrameImageUrl || undefined,
         mode: request.mode,
         duration: request.durationSeconds,
         aspect_ratio: request.aspectRatio,
+        negative_prompt: request.negativePrompt || undefined,
+        cfg_scale: request.cfgScale,
+        quality_mode: request.providerMode,
+        generate_audio: request.generateAudio,
+        resolution: request.resolution,
+        return_last_frame: request.returnLastFrame,
         motion_reference: request.motionReference || undefined,
         motion_reference_video: request.motionReferenceVideo
           ? {
@@ -46,15 +54,9 @@ export class WanVideoProvider implements VideoProvider {
     return {
       provider: this.name,
       model: request.model,
-      status: normalizeStatus(json.status),
+      status: normalizeVideoStatus(json.status),
       providerJobId: String(json.id ?? json.job_id ?? json.task_id),
-      asset: json.video_url
-        ? {
-            url: json.video_url,
-            mimeType: "video/mp4",
-            providerAssetId: String(json.asset_id ?? json.id ?? json.job_id),
-          }
-        : undefined,
+      asset: videoAssetFromUrl(json.video_url ?? json.url, json.asset_id ?? json.id ?? json.job_id),
       costEstimateCents: request.mode === "motion" ? 95 : 70,
       raw: json,
     };
@@ -89,31 +91,11 @@ export class WanVideoProvider implements VideoProvider {
     return {
       provider: this.name,
       model: String(json.model ?? "wan-animate"),
-      status: normalizeStatus(json.status),
+      status: normalizeVideoStatus(json.status),
       providerJobId,
-      asset: json.video_url
-        ? {
-            url: json.video_url,
-            mimeType: "video/mp4",
-            providerAssetId: String(json.asset_id ?? providerJobId),
-          }
-        : undefined,
+      asset: videoAssetFromUrl(json.video_url ?? json.url, json.asset_id ?? providerJobId),
       costEstimateCents: 0,
       raw: json,
     };
   }
-}
-
-function normalizeStatus(status: unknown) {
-  const value = String(status ?? "queued").toLowerCase();
-  if (["success", "succeeded", "completed", "complete"].includes(value)) {
-    return "succeeded" as const;
-  }
-  if (["failed", "error", "cancelled", "canceled"].includes(value)) {
-    return "failed" as const;
-  }
-  if (["running", "processing", "in_progress"].includes(value)) {
-    return "running" as const;
-  }
-  return "queued" as const;
 }

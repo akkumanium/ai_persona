@@ -5,11 +5,13 @@
 import {
   Activity,
   ArrowLeft,
+  Check,
   Clapperboard,
   Coins,
   ImageIcon,
   Loader2,
   Play,
+  Search,
   Settings,
   Sparkles,
   Star,
@@ -42,6 +44,7 @@ type GenerationMode = "images" | "videos" | "motion";
 type AssetFilter = "all" | "avatar" | "upload" | "image" | "video";
 type ReferenceSlotId = "face" | "face-grid" | "body" | "more";
 type FaceGenerationMode = "scratch" | "hybrid";
+type VideoFrameSlot = "start" | "end";
 
 const DEFAULT_PROMPTS = {
   face:
@@ -62,6 +65,11 @@ const referenceSlots: { id: ReferenceSlotId; label: string; prompt: string; aspe
   { id: "body", label: "Body", prompt: DEFAULT_PROMPTS.body, aspectRatio: "4:5" },
   { id: "more", label: "more", prompt: DEFAULT_PROMPTS.more, aspectRatio: "4:5" },
 ];
+
+const klingAspectRatios = ["16:9", "9:16", "1:1"];
+const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
+const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
+const videoResolutionOptions = ["480p", "720p", "1080p"];
 
 const navItems = [
   { id: "personas", label: "Personas", icon: UserRound },
@@ -1312,11 +1320,22 @@ function GenerationView({
   const [imagePrompt, setImagePrompt] = useState("Editorial product photo for a social launch campaign.");
   const [videoPrompt, setVideoPrompt] = useState("Short vertical clip with a confident camera turn and subtle smile.");
   const [useImageReferences, setUseImageReferences] = useState(true);
-  const [useVideoReferences, setUseVideoReferences] = useState(true);
   const [imageModel, setImageModel] = useState("gemini-3-pro-image-preview");
   const [videoModel, setVideoModel] = useState("wan-2.2");
   const [motionVideoModel, setMotionVideoModel] = useState("wan-animate");
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
+  const [videoStartFrameByPersona, setVideoStartFrameByPersona] = useState<Record<string, string>>({});
+  const [videoEndFrameByPersona, setVideoEndFrameByPersona] = useState<Record<string, string | undefined>>({});
+  const [videoFrameSlot, setVideoFrameSlot] = useState<VideoFrameSlot>("start");
+  const [videoImageSearch, setVideoImageSearch] = useState("");
+  const [videoDurationSeconds, setVideoDurationSeconds] = useState(5);
+  const [videoAspectRatio, setVideoAspectRatio] = useState("9:16");
+  const [videoNegativePrompt, setVideoNegativePrompt] = useState("blur, distortions, warped hands, low quality");
+  const [videoProviderMode, setVideoProviderMode] = useState<"std" | "pro">("std");
+  const [videoCfgScale, setVideoCfgScale] = useState(0.5);
+  const [videoGenerateAudio, setVideoGenerateAudio] = useState(false);
+  const [videoResolution, setVideoResolution] = useState<"480p" | "720p" | "1080p">("720p");
+  const [videoReturnLastFrame, setVideoReturnLastFrame] = useState(false);
   const [motionReference, setMotionReference] = useState("slow head turn, right hand product reveal");
   const [motionReferenceImage, setMotionReferenceImage] = useState<SourceImageInput | undefined>();
   const [motionReferenceVideo, setMotionReferenceVideo] = useState<SourceVideoInput | undefined>();
@@ -1350,6 +1369,24 @@ function GenerationView({
     () => selectedReferenceAssets.filter((asset) => selectedReferenceIds.includes(asset.id)),
     [selectedReferenceAssets, selectedReferenceIds],
   );
+  const generatedImageAssets = useMemo(
+    () => assets.filter((asset) => asset.personaId === selectedPersona?.id && asset.kind === "image"),
+    [assets, selectedPersona?.id],
+  );
+  const selectedVideoStartFrame =
+    generatedImageAssets.find((asset) => asset.id === (selectedPersona ? videoStartFrameByPersona[selectedPersona.id] : "")) ??
+    generatedImageAssets[0];
+  const selectedVideoEndFrame = generatedImageAssets.find(
+    (asset) => asset.id === (selectedPersona ? videoEndFrameByPersona[selectedPersona.id] : ""),
+  );
+  const videoAspectRatioOptions = aspectRatiosForVideoModel(videoModel);
+  const durationBounds = durationBoundsForVideoModel(videoModel);
+  const safeVideoAspectRatio = videoAspectRatioOptions.includes(videoAspectRatio)
+    ? videoAspectRatio
+    : videoAspectRatioOptions[0];
+  const safeVideoDuration = clampNumber(videoDurationSeconds, durationBounds.min, durationBounds.max);
+  const safeVideoResolution =
+    videoModel.includes("fast") && videoResolution === "1080p" ? "720p" : videoResolution;
   const latestAssets = useMemo(
     () =>
       assets.filter((asset) => {
@@ -1370,6 +1407,35 @@ function GenerationView({
         : [...currentIds, assetId];
       return { ...current, [selectedPersona.id]: nextIds };
     });
+  }
+
+  function selectVideoFrame(assetId: string) {
+    if (!selectedPersona) return;
+    if (videoFrameSlot === "start") {
+      setVideoStartFrameByPersona((current) => ({ ...current, [selectedPersona.id]: assetId }));
+      return;
+    }
+
+    setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: assetId }));
+  }
+
+  function clearVideoEndFrame() {
+    if (!selectedPersona) return;
+    setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: undefined }));
+  }
+
+  function changeVideoModel(modelId: string) {
+    setVideoModel(modelId);
+    const nextAspectRatios = aspectRatiosForVideoModel(modelId);
+    if (!nextAspectRatios.includes(videoAspectRatio)) {
+      setVideoAspectRatio(nextAspectRatios.includes("9:16") ? "9:16" : nextAspectRatios[0]);
+    }
+
+    const nextDurationBounds = durationBoundsForVideoModel(modelId);
+    setVideoDurationSeconds((current) => clampNumber(current, nextDurationBounds.min, nextDurationBounds.max));
+    if (modelId.includes("fast") && videoResolution === "1080p") {
+      setVideoResolution("720p");
+    }
   }
 
   async function generateImage(event: FormEvent) {
@@ -1416,14 +1482,15 @@ function GenerationView({
   async function generateVideo(event: FormEvent, mode: "normal" | "motion") {
     event.preventDefault();
     if (!selectedPersona) return;
-    const referenceAssets = mode === "normal" && useVideoReferences ? selectedReferenceSelection : [];
-    if (mode === "normal" && useVideoReferences && !referenceAssets.length) return;
+    const startFrameAsset = mode === "normal" ? selectedVideoStartFrame : undefined;
+    const endFrameAsset = mode === "normal" ? selectedVideoEndFrame : undefined;
+    if (mode === "normal" && !startFrameAsset) return;
     const referenceImageUrl =
       mode === "motion"
         ? motionReferenceImage
           ? sourceImageToDataUrl(motionReferenceImage)
           : selectedReference?.url
-        : referenceAssets[0]?.url;
+        : startFrameAsset?.url;
     if (mode === "motion" && !referenceImageUrl) return;
     setIsGeneratingVideo(true);
     try {
@@ -1433,11 +1500,18 @@ function GenerationView({
         prompt: videoPrompt,
         mode,
         model: mode === "motion" ? motionVideoModel : videoModel,
-        durationSeconds: 5,
-        aspectRatio: "9:16",
+        durationSeconds: mode === "normal" ? safeVideoDuration : 5,
+        aspectRatio: mode === "normal" ? safeVideoAspectRatio : "9:16",
+        negativePrompt: mode === "normal" ? videoNegativePrompt : "",
+        providerMode: mode === "normal" ? videoProviderMode : "std",
+        cfgScale: mode === "normal" ? videoCfgScale : 0.5,
+        generateAudio: mode === "normal" ? videoGenerateAudio : false,
+        resolution: mode === "normal" ? safeVideoResolution : "720p",
+        returnLastFrame: mode === "normal" ? videoReturnLastFrame : false,
         motionReference: mode === "motion" ? motionReference : "",
         motionReferenceVideo: mode === "motion" ? motionReferenceVideo : undefined,
-        ...(referenceImageUrl ? { referenceImageUrl } : {}),
+        ...(referenceImageUrl ? { referenceImageUrl, startFrameImageUrl: referenceImageUrl } : {}),
+        ...(mode === "normal" && endFrameAsset ? { endFrameImageUrl: endFrameAsset.url } : {}),
       };
       const response = await fetch("/api/generate/video", {
         method: "POST",
@@ -1450,7 +1524,7 @@ function GenerationView({
       }
       const referenceAssetIds =
         mode === "normal"
-          ? referenceAssets.map((asset) => asset.id)
+          ? [startFrameAsset?.id, endFrameAsset?.id].filter((id): id is string => Boolean(id))
           : motionReferenceImage
             ? []
             : selectedReference
@@ -1569,34 +1643,70 @@ function GenerationView({
           <form onSubmit={(event) => void generateVideo(event, "normal")}>
             <PanelTitle icon={Clapperboard} title="Video Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-            <ModelSelect label="Video model" value={videoModel} options={videoModelOptions} onChange={setVideoModel} />
-            <ModeToggle
-              label="Reference mode"
-              value={useVideoReferences ? "references" : "prompt"}
-              options={[
-                { value: "references", label: "Use references" },
-                { value: "prompt", label: "Prompt only" },
-              ]}
-              onChange={(value) => setUseVideoReferences(value === "references")}
+            <ModelSelect label="Video model" value={videoModel} options={videoModelOptions} onChange={changeVideoModel} />
+            <VideoFramePicker
+              images={generatedImageAssets}
+              activeSlot={videoFrameSlot}
+              search={videoImageSearch}
+              selectedStartId={selectedVideoStartFrame?.id}
+              selectedEndId={selectedVideoEndFrame?.id}
+              onActiveSlotChange={setVideoFrameSlot}
+              onSearchChange={setVideoImageSearch}
+              onSelect={selectVideoFrame}
+              onClearEnd={clearVideoEndFrame}
             />
-            <ReferenceSummary
-              useReferences={useVideoReferences}
-              selectedCount={selectedReferenceSelection.length}
-              totalCount={selectedReferenceAssets.length}
+            <NumberField
+              label="Duration"
+              value={safeVideoDuration}
+              min={durationBounds.min}
+              max={durationBounds.max}
+              step={durationBounds.step}
+              suffix="s"
+              onChange={setVideoDurationSeconds}
             />
-            {useVideoReferences ? (
-              <ReferencePicker
-                references={selectedReferenceAssets}
-                selectedIds={selectedReferenceIds}
-                onToggle={toggleReferenceSelection}
-              />
+            <SelectField
+              label="Aspect ratio"
+              value={safeVideoAspectRatio}
+              options={videoAspectRatioOptions}
+              onChange={setVideoAspectRatio}
+            />
+            {isKlingVideoModel(videoModel) ? (
+              <>
+                <ModeToggle
+                  label="Quality"
+                  value={selectedVideoEndFrame ? "pro" : videoProviderMode}
+                  options={[
+                    { value: "std", label: "Standard" },
+                    { value: "pro", label: "Pro" },
+                  ]}
+                  onChange={(value) => setVideoProviderMode(value as "std" | "pro")}
+                />
+                <RangeField label="CFG" value={videoCfgScale} min={0} max={1} step={0.05} onChange={setVideoCfgScale} />
+              </>
             ) : null}
-            <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={6} />
+            {isSeedanceVideoModel(videoModel) ? (
+              <>
+                <SelectField
+                  label="Resolution"
+                  value={safeVideoResolution}
+                  options={videoModel.includes("fast") ? ["480p", "720p"] : videoResolutionOptions}
+                  onChange={(value) => setVideoResolution(value as "480p" | "720p" | "1080p")}
+                />
+                <CheckboxField
+                  label="Return last frame"
+                  checked={videoReturnLastFrame}
+                  onChange={setVideoReturnLastFrame}
+                />
+              </>
+            ) : null}
+            <CheckboxField label="Generate audio" checked={videoGenerateAudio} onChange={setVideoGenerateAudio} />
+            <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={5} />
+            <TextArea label="Negative prompt" value={videoNegativePrompt} onChange={setVideoNegativePrompt} rows={3} />
             <SubmitButton
               loading={isGeneratingVideo}
               icon={Play}
               label="Generate video"
-              disabled={!selectedPersona || (useVideoReferences && !selectedReferenceSelection.length)}
+              disabled={!selectedPersona || !selectedVideoStartFrame}
             />
           </form>
         ) : null}
