@@ -79,6 +79,7 @@ export function StudioWorkspace() {
   const [assets, setAssets] = useState<Asset[]>(demoAssets);
   const [jobs, setJobs] = useState<GenerationJob[]>(demoJobs);
   const [selectedPersonaId, setSelectedPersonaId] = useState(demoPersonas[0]?.id ?? "");
+  const [generateInitialSlotId, setGenerateInitialSlotId] = useState<ReferenceSlotId | undefined>();
   const [notice, setNotice] = useState("Demo workspace is active until Supabase and provider keys are set.");
 
   const selectedPersona = personas.find((persona) => persona.id === selectedPersonaId) ?? personas[0];
@@ -258,15 +259,14 @@ export function StudioWorkspace() {
                 addReferenceAssets(personaId, nextAssets);
                 setNotice(`${nextAssets.length} reference asset${nextAssets.length === 1 ? "" : "s"} added.`);
               }}
-              onAssetsCreated={(nextAssets, job) => {
-                addAssets(nextAssets);
-                addJob(job);
-                setNotice(`${nextAssets.length} reference asset${nextAssets.length === 1 ? "" : "s"} generated.`);
-              }}
               onToggleReferenceDefault={toggleReferenceDefault}
               onDeleteReference={deleteReferenceAsset}
               onRenameReference={renameReferenceAsset}
-              onNavigateToGenerate={() => setView("generate")}
+              onNavigateToGenerate={(slotId, personaId) => {
+                if (personaId) setSelectedPersonaId(personaId);
+                setGenerateInitialSlotId(slotId);
+                setView("generate");
+              }}
             />
           )}
           {view === "generate" && (
@@ -274,13 +274,17 @@ export function StudioWorkspace() {
               personas={personas}
               assets={assets}
               selectedPersona={selectedPersona}
+              initialSlotId={generateInitialSlotId}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets);
                 addJob(job);
                 setNotice(`${nextAssets.length} reference asset${nextAssets.length === 1 ? "" : "s"} generated.`);
               }}
               onSelectPersona={setSelectedPersonaId}
-              onBack={() => setView("personas")}
+              onBack={() => {
+                setGenerateInitialSlotId(undefined);
+                setView("personas");
+              }}
             />
           )}
           {(view === "images" || view === "videos" || view === "motion") && (
@@ -316,7 +320,6 @@ function PersonasView({
   onCreatePersona,
   onDeletePersona,
   onAddReferences,
-  onAssetsCreated,
   onToggleReferenceDefault,
   onDeleteReference,
   onRenameReference,
@@ -330,11 +333,10 @@ function PersonasView({
   onCreatePersona: (persona: Persona) => void;
   onDeletePersona: (personaId: string) => void;
   onAddReferences: (personaId: string, assets: Asset[]) => void;
-  onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
   onRenameReference: (assetId: string, title: string) => void;
-  onNavigateToGenerate: () => void;
+  onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [managedPersonaId, setManagedPersonaId] = useState<string | undefined>();
   const [isCreatingPersona, setIsCreatingPersona] = useState(false);
@@ -381,7 +383,6 @@ function PersonasView({
         }}
         onUpdatePersona={onUpdatePersona}
         onAddReferences={onAddReferences}
-        onAssetsCreated={onAssetsCreated}
         onToggleReferenceDefault={onToggleReferenceDefault}
         onDeleteReference={onDeleteReference}
         onRenameReference={onRenameReference}
@@ -479,7 +480,6 @@ function PersonaManagementView({
   onDeletePersona,
   onUpdatePersona,
   onAddReferences,
-  onAssetsCreated,
   onToggleReferenceDefault,
   onDeleteReference,
   onRenameReference,
@@ -491,20 +491,11 @@ function PersonaManagementView({
   onDeletePersona: (personaId: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
   onAddReferences: (personaId: string, assets: Asset[]) => void;
-  onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
   onRenameReference: (assetId: string, title: string) => void;
-  onNavigateToGenerate: () => void;
+  onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
-  const [generationSlotId, setGenerationSlotId] = useState<ReferenceSlotId | undefined>();
-  const [faceGenerationMode, setFaceGenerationMode] = useState<FaceGenerationMode>("scratch");
-  const [generationPrompt, setGenerationPrompt] = useState(DEFAULT_PROMPTS.face);
-  const [hybridSources, setHybridSources] = useState<SourceImageInput[]>([]);
-  const [confirmsRights, setConfirmsRights] = useState(false);
-  const [confirmsAdultPersona, setConfirmsAdultPersona] = useState(false);
-  const [isGeneratingReference, setIsGeneratingReference] = useState(false);
-  const [generationError, setGenerationError] = useState("");
   const [isEditingPersona, setIsEditingPersona] = useState(false);
   const [personaNameDraft, setPersonaNameDraft] = useState(persona.name);
   const [personaDescriptionDraft, setPersonaDescriptionDraft] = useState(persona.description);
@@ -514,7 +505,6 @@ function PersonaManagementView({
   );
   const imageAssets = assets.filter((asset) => asset.personaId === persona.id && asset.kind === "image");
   const videoAssets = assets.filter((asset) => asset.personaId === persona.id && asset.kind === "video");
-  const activeSlot = referenceSlots.find((slot) => slot.id === generationSlotId);
   const previewAsset = assets.find((asset) => asset.id === previewAssetId);
 
   function assetsForSlot(slotId: ReferenceSlotId) {
@@ -536,16 +526,6 @@ function PersonaManagementView({
     if (!nextName || !nextDescription) return;
     onUpdatePersona(persona.id, { name: nextName, description: nextDescription });
     setIsEditingPersona(false);
-  }
-
-  function openGeneration(slot: (typeof referenceSlots)[number]) {
-    setGenerationSlotId(slot.id);
-    setFaceGenerationMode("scratch");
-    setGenerationPrompt(slot.prompt);
-    setHybridSources([]);
-    setConfirmsRights(false);
-    setConfirmsAdultPersona(false);
-    setGenerationError("");
   }
 
   async function captureSlotUpload(slot: (typeof referenceSlots)[number], files: FileList | null) {
@@ -571,99 +551,9 @@ function PersonaManagementView({
     onAddReferences(persona.id, nextAssets);
   }
 
-  async function captureHybridSources(files: FileList | null) {
-    const newImages = await encodeFiles(files, "image/png");
-    setHybridSources((current) => [...current, ...newImages]);
-  }
-
-  function removeHybridSource(index: number) {
-    setHybridSources((current) => current.filter((_, i) => i !== index));
-  }
-
   function confirmPersonaDelete() {
     if (window.confirm("Are you sure you want to do this?")) {
       onDeletePersona(persona.id);
-    }
-  }
-
-  async function generateReference(event: FormEvent) {
-    event.preventDefault();
-    if (!activeSlot) return;
-    if (!confirmsRights || !confirmsAdultPersona) return;
-    if (activeSlot.id === "face" && faceGenerationMode === "hybrid" && hybridSources.length < 2) return;
-
-    setIsGeneratingReference(true);
-    setGenerationError("");
-    try {
-      const hasDefault = referenceAssets.some((asset) => asset.isDefaultReference);
-      if (activeSlot.id === "face") {
-        const prompt = faceGenerationMode === "hybrid" ? DEFAULT_PROMPTS.hybrid : generationPrompt;
-        const response = await fetch("/api/generate/avatar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            mode: faceGenerationMode === "hybrid" ? "blend" : "prompt",
-            personaName: persona.name,
-            description: persona.description,
-            styleNotes: persona.styleNotes,
-            prompt,
-            aspectRatio: activeSlot.aspectRatio,
-            imageSize: "4K",
-            count: 1,
-            sourceImages: faceGenerationMode === "hybrid" ? hybridSources.slice(0, 2) : [],
-            confirmsRights,
-            confirmsAdultPersona,
-          }),
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Reference generation failed.");
-        const nextAssets = payload.assets.map((asset: Asset, index: number) => ({
-          ...asset,
-          kind: "avatar" as const,
-          title: `${activeSlot.label} reference ${assetsForSlot(activeSlot.id).length + index + 1}`,
-          prompt,
-          personaId: persona.id,
-          referenceSlot: activeSlot.id,
-          isDefaultReference: !hasDefault && index === 0,
-        }));
-        onAssetsCreated(nextAssets, { ...payload.job, personaId: persona.id, prompt });
-      } else {
-        const defaultReferences = referenceAssets.filter((asset) => asset.isDefaultReference);
-        const referenceAssetIds = defaultReferences.map((asset) => asset.id);
-        const referenceImageUrls = defaultReferences.map((asset) => asset.url);
-        const response = await fetch("/api/generate/image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            personaId: persona.id,
-            personaName: persona.name,
-            model: "gemini-3-pro-image-preview",
-            prompt: generationPrompt,
-            styleNotes: persona.styleNotes,
-            aspectRatio: activeSlot.aspectRatio,
-            imageSize: "4K",
-            count: 1,
-            referenceImageUrls,
-          }),
-        });
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Reference generation failed.");
-        const nextAssets = payload.assets.map((asset: Asset, index: number) => ({
-          ...asset,
-          kind: "avatar" as const,
-          title: `${activeSlot.label} reference ${assetsForSlot(activeSlot.id).length + index + 1}`,
-          personaId: persona.id,
-          referenceSlot: activeSlot.id,
-          referenceAssetIds,
-          isDefaultReference: !hasDefault && index === 0,
-        }));
-        onAssetsCreated(nextAssets, { ...payload.job, personaId: persona.id });
-      }
-      setGenerationSlotId(undefined);
-    } catch (error) {
-      setGenerationError(error instanceof Error ? error.message : "Reference generation failed.");
-    } finally {
-      setIsGeneratingReference(false);
     }
   }
 
@@ -717,7 +607,7 @@ function PersonaManagementView({
             <>
               <button
                 type="button"
-                onClick={onNavigateToGenerate}
+                onClick={() => onNavigateToGenerate(undefined, persona.id)}
                 className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-800 px-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
               >
                 <WandSparkles size={16} />
@@ -749,7 +639,8 @@ function PersonaManagementView({
             key={slot.id}
             slot={slot}
             assets={assetsForSlot(slot.id)}
-            onGenerate={() => openGeneration(slot)}
+            previewAsset={previewAsset?.referenceSlot === slot.id ? previewAsset : undefined}
+            onGenerate={() => onNavigateToGenerate(slot.id, persona.id)}
             onUpload={(files) => void captureSlotUpload(slot, files)}
             onToggleReferenceDefault={onToggleReferenceDefault}
             onDeleteReference={(assetId) => onDeleteReference(persona.id, assetId)}
@@ -761,32 +652,6 @@ function PersonaManagementView({
 
       <AssetSection title="Images" assets={imageAssets} />
       <AssetSection title="Videos" assets={videoAssets} />
-
-      {previewAsset ? <ReferencePreviewDialog asset={previewAsset} onClose={() => setPreviewAssetId(undefined)} /> : null}
-
-      {activeSlot ? (
-        <ReferenceGenerationDialog
-          slot={activeSlot}
-          faceGenerationMode={faceGenerationMode}
-          prompt={activeSlot.id === "face" && faceGenerationMode === "hybrid" ? DEFAULT_PROMPTS.hybrid : generationPrompt}
-          hybridSources={hybridSources}
-          confirmsRights={confirmsRights}
-          confirmsAdultPersona={confirmsAdultPersona}
-          isGenerating={isGeneratingReference}
-          error={generationError}
-          onModeChange={(mode) => {
-            setFaceGenerationMode(mode);
-            setGenerationPrompt(mode === "hybrid" ? DEFAULT_PROMPTS.hybrid : DEFAULT_PROMPTS.face);
-          }}
-          onPromptChange={setGenerationPrompt}
-          onHybridSourcesChange={(files) => void captureHybridSources(files)}
-          onRemoveHybridSource={removeHybridSource}
-          onConfirmsRightsChange={setConfirmsRights}
-          onConfirmsAdultPersonaChange={setConfirmsAdultPersona}
-          onSubmit={generateReference}
-          onClose={() => setGenerationSlotId(undefined)}
-        />
-      ) : null}
     </section>
   );
 }
@@ -794,6 +659,7 @@ function PersonaManagementView({
 function ReferenceSlotCard({
   slot,
   assets,
+  previewAsset,
   onGenerate,
   onUpload,
   onToggleReferenceDefault,
@@ -803,6 +669,7 @@ function ReferenceSlotCard({
 }: {
   slot: (typeof referenceSlots)[number];
   assets: Asset[];
+  previewAsset?: Asset;
   onGenerate: () => void;
   onUpload: (files: FileList | null) => void;
   onToggleReferenceDefault: (assetId: string) => void;
@@ -811,15 +678,16 @@ function ReferenceSlotCard({
   onPreviewReference: (asset: Asset) => void;
 }) {
   const latestAsset = assets[0];
+  const displayAsset = previewAsset ?? latestAsset;
   return (
     <article className="rounded-lg border border-stone-200 bg-stone-50 p-3">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-stone-950">{slot.label}</h3>
-        {latestAsset?.isDefaultReference ? <Star className="text-emerald-800" size={16} /> : null}
+        {displayAsset?.isDefaultReference ? <Star className="text-emerald-800" size={16} /> : null}
       </div>
       <div className="mt-3 flex aspect-[4/5] items-center justify-center overflow-hidden rounded-md bg-white">
-        {latestAsset ? (
-          <img src={latestAsset.url} alt={latestAsset.title} className="h-full w-full object-cover" />
+        {displayAsset ? (
+          <img src={displayAsset.url} alt={displayAsset.title} className="h-full w-full object-cover" />
         ) : (
           <span className="text-sm font-medium text-stone-400">Empty</span>
         )}
@@ -849,6 +717,7 @@ function ReferenceSlotCard({
               onDeleteReference={onDeleteReference}
               onRenameReference={onRenameReference}
               onPreviewReference={onPreviewReference}
+              isPreviewed={previewAsset?.id === asset.id}
             />
           ))}
         </div>
@@ -897,12 +766,14 @@ function ReferenceAssetRow({
   onDeleteReference,
   onRenameReference,
   onPreviewReference,
+  isPreviewed = false,
 }: {
   asset: Asset;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (assetId: string) => void;
   onRenameReference: (assetId: string, title: string) => void;
   onPreviewReference: (asset: Asset) => void;
+  isPreviewed?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(asset.title);
@@ -949,11 +820,14 @@ function ReferenceAssetRow({
           <button
             type="button"
             onClick={() => onPreviewReference(asset)}
-            className="block w-full text-left text-xs font-semibold text-stone-900 transition hover:text-emerald-800 hover:underline"
+            className={cn(
+              "block w-full text-left text-xs font-semibold transition hover:text-emerald-800 hover:underline",
+              isPreviewed ? "text-emerald-800" : "text-stone-900",
+            )}
           >
             {asset.title}
           </button>
-          <p className="mt-1 text-[11px] text-stone-500">Click the title to preview the full reference photo.</p>
+          <p className="mt-1 text-[11px] text-stone-500"></p>
           <div className="mt-2 flex flex-wrap gap-2">
           <button
             type="button"
@@ -991,31 +865,6 @@ function ReferenceAssetRow({
   );
 }
 
-function ReferencePreviewDialog({ asset, onClose }: { asset: Asset; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-stone-950/45 px-4 py-6">
-      <div className="w-full max-w-4xl rounded-lg border border-stone-200 bg-white p-4 shadow-xl">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-stone-900">{asset.title}</p>
-            <p className="text-xs text-stone-500">Reference preview</p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-9 items-center justify-center rounded-md border border-stone-200 text-stone-600 transition hover:border-emerald-800 hover:text-stone-950"
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="mt-4 max-h-[75vh] overflow-hidden rounded-lg bg-stone-100">
-          <img src={asset.url} alt={asset.title} className="max-h-[75vh] w-full object-contain" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CreatePersonaDialog({
   name,
   description,
@@ -1047,147 +896,6 @@ function CreatePersonaDialog({
         <TextField label="Name" value={name} onChange={onNameChange} />
         <TextArea label="Description" value={description} onChange={onDescriptionChange} rows={4} />
         <SubmitButton loading={false} icon={ArrowLeft} label="Continue" disabled={!name.trim() || !description.trim()} />
-      </form>
-    </div>
-  );
-}
-
-function ReferenceGenerationDialog({
-  slot,
-  faceGenerationMode,
-  prompt,
-  hybridSources,
-  confirmsRights,
-  confirmsAdultPersona,
-  isGenerating,
-  error,
-  onModeChange,
-  onPromptChange,
-  onHybridSourcesChange,
-  onRemoveHybridSource,
-  onConfirmsRightsChange,
-  onConfirmsAdultPersonaChange,
-  onSubmit,
-  onClose,
-}: {
-  slot: (typeof referenceSlots)[number];
-  faceGenerationMode: FaceGenerationMode;
-  prompt: string;
-  hybridSources: SourceImageInput[];
-  confirmsRights: boolean;
-  confirmsAdultPersona: boolean;
-  isGenerating: boolean;
-  error: string;
-  onModeChange: (mode: FaceGenerationMode) => void;
-  onPromptChange: (value: string) => void;
-  onHybridSourcesChange: (files: FileList | null) => void;
-  onRemoveHybridSource: (index: number) => void;
-  onConfirmsRightsChange: (value: boolean) => void;
-  onConfirmsAdultPersonaChange: (value: boolean) => void;
-  onSubmit: (event: FormEvent) => void;
-  onClose: () => void;
-}) {
-  const isHybrid = slot.id === "face" && faceGenerationMode === "hybrid";
-  return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-stone-950/35 px-4 py-6">
-      <form
-        onSubmit={onSubmit}
-        className="max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-lg border border-stone-200 bg-white p-5 shadow-xl"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <PanelTitle icon={WandSparkles} title={`${slot.label} generation`} />
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-9 items-center justify-center rounded-md border border-stone-200 text-stone-600 transition hover:border-emerald-800 hover:text-stone-950"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {slot.id === "face" ? (
-          <ModeToggle
-            label="Mode"
-            value={faceGenerationMode}
-            options={[
-              { value: "scratch", label: "Generate from scratch" },
-              { value: "hybrid", label: "Hybrid mode" },
-            ]}
-            onChange={(value) => onModeChange(value as FaceGenerationMode)}
-          />
-        ) : null}
-
-        {isHybrid ? (
-          <>
-            <UploadBox
-              accept="image/*"
-              multiple={false}
-              icon={Upload}
-              label={
-                hybridSources.length < 2
-                  ? `Upload face ${hybridSources.length + 1} of 2`
-                  : "Both faces uploaded"
-              }
-              detail={hybridSources.length > 0 ? `${hybridSources.length} face${hybridSources.length === 1 ? "" : "s"} uploaded` : undefined}
-              onChange={onHybridSourcesChange}
-            />
-            {hybridSources.length > 0 ? (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {hybridSources.map((image, index) => (
-                  <div key={index} className="relative rounded-lg border border-stone-200 bg-white overflow-hidden">
-                    <img 
-                      src={sourceImageToDataUrl(image)} 
-                      alt={`Face ${index + 1}`} 
-                      className="aspect-square w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition flex items-center justify-center">
-                      <button
-                        type="button"
-                        onClick={() => onRemoveHybridSource(index)}
-                        className="opacity-0 hover:opacity-100 transition flex size-10 items-center justify-center rounded-full bg-red-600 text-white"
-                      >
-                        <X size={18} />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-2 left-2 rounded-full bg-emerald-800 text-white text-xs font-semibold size-7 flex items-center justify-center">
-                      {index + 1}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </>
-        ) : null}
-
-        <TextArea label="Prompt" value={prompt} onChange={onPromptChange} rows={7} />
-
-        <label className="mt-4 flex items-start gap-3 rounded-lg bg-stone-50 p-3 text-sm text-stone-700">
-          <input
-            type="checkbox"
-            checked={confirmsRights}
-            onChange={(event) => onConfirmsRightsChange(event.target.checked)}
-            className="mt-1 size-4 accent-emerald-800"
-          />
-          <span>I confirm I have rights to use the provided identity references.</span>
-        </label>
-        <label className="mt-2 flex items-start gap-3 rounded-lg bg-stone-50 p-3 text-sm text-stone-700">
-          <input
-            type="checkbox"
-            checked={confirmsAdultPersona}
-            onChange={(event) => onConfirmsAdultPersonaChange(event.target.checked)}
-            className="mt-1 size-4 accent-emerald-800"
-          />
-          <span>I confirm this is an adult persona.</span>
-        </label>
-
-        {error ? <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-
-        <SubmitButton
-          loading={isGenerating}
-          icon={WandSparkles}
-          label="Generate"
-          disabled={!confirmsRights || !confirmsAdultPersona || (isHybrid && hybridSources.length < 2)}
-        />
       </form>
     </div>
   );
@@ -1962,6 +1670,7 @@ function GeneratePersonaView({
   personas,
   assets,
   selectedPersona,
+  initialSlotId,
   onAssetsCreated,
   onSelectPersona,
   onBack,
@@ -1969,13 +1678,16 @@ function GeneratePersonaView({
   personas: Persona[];
   assets: Asset[];
   selectedPersona?: Persona;
+  initialSlotId?: ReferenceSlotId;
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onBack: () => void;
 }) {
-  const [selectedSlot, setSelectedSlot] = useState<ReferenceSlotId | undefined>("face");
+  const initialSelectedSlot = initialSlotId ?? "face";
+  const initialPrompt = referenceSlots.find((slot) => slot.id === initialSelectedSlot)?.prompt ?? DEFAULT_PROMPTS.face;
+  const [selectedSlot, setSelectedSlot] = useState<ReferenceSlotId | undefined>(initialSelectedSlot);
   const [generationMode, setGenerationMode] = useState<FaceGenerationMode>("scratch");
-  const [generationPrompt, setGenerationPrompt] = useState(DEFAULT_PROMPTS.face);
+  const [generationPrompt, setGenerationPrompt] = useState(initialPrompt);
   const [hybridSources, setHybridSources] = useState<SourceImageInput[]>([]);
   const [selectedModel, setSelectedModel] = useState("gemini-3-pro-image-preview");
   const [confirmsRights, setConfirmsRights] = useState(false);
@@ -2008,7 +1720,11 @@ function GeneratePersonaView({
   );
 
   const selectedReferenceIds = useMemo(
-    () => (selectedPersona ? referenceSelectionByPersona[selectedPersona.id] ?? fallbackReferenceIds : []),
+    () => {
+      if (!selectedPersona) return [];
+      const selectedIds = referenceSelectionByPersona[selectedPersona.id];
+      return selectedIds && selectedIds.length > 0 ? selectedIds : fallbackReferenceIds;
+    },
     [fallbackReferenceIds, referenceSelectionByPersona, selectedPersona],
   );
 
@@ -2020,11 +1736,12 @@ function GeneratePersonaView({
   function toggleReferenceSelection(assetId: string) {
     if (!selectedPersona) return;
     setReferenceSelectionByPersona((current) => {
-      const currentIds = current[selectedPersona.id] ?? fallbackReferenceIds;
+      const storedIds = current[selectedPersona.id];
+      const currentIds = storedIds && storedIds.length > 0 ? storedIds : fallbackReferenceIds;
       const nextIds = currentIds.includes(assetId)
         ? currentIds.filter((id) => id !== assetId)
         : [...currentIds, assetId];
-      return { ...current, [selectedPersona.id]: nextIds };
+      return { ...current, [selectedPersona.id]: nextIds.length > 0 ? nextIds : currentIds };
     });
   }
 
@@ -2042,6 +1759,7 @@ function GeneratePersonaView({
     if (!selectedPersona || !selectedSlot) return;
     if (!confirmsRights || !confirmsAdultPersona) return;
     if (selectedSlot === "face" && generationMode === "hybrid" && hybridSources.length < 2) return;
+    if (selectedSlot !== "face" && selectedReferenceSelection.length === 0) return;
 
     setIsGenerating(true);
     setGenerationError("");
@@ -2088,7 +1806,7 @@ function GeneratePersonaView({
         }));
         onAssetsCreated(nextAssets, { ...payload.job, personaId: selectedPersona.id, prompt });
       } else {
-        const defaultReferences = selectedReferenceSelection.length > 0 ? selectedReferenceSelection : selectedReferenceAssets;
+        const defaultReferences = selectedReferenceSelection;
         const referenceAssetIds = defaultReferences.map((asset) => asset.id);
         const referenceImageUrls = defaultReferences.map((asset) => asset.url);
         const response = await fetch("/api/generate/image", {
@@ -2244,24 +1962,9 @@ function GeneratePersonaView({
 
               {selectedSlot !== "face" ? (
                 <>
-                  <ModeToggle
-                    label="Reference mode"
-                    value={selectedReferenceSelection.length > 0 ? "references" : "prompt"}
-                    options={[
-                      { value: "references", label: "Use references" },
-                      { value: "prompt", label: "Prompt only" },
-                    ]}
-                    onChange={(value) => {
-                      if (value === "prompt") {
-                        setReferenceSelectionByPersona((current) => ({
-                          ...current,
-                          [selectedPersona?.id ?? ""]: [],
-                        }));
-                      }
-                    }}
-                  />
                   <ReferenceSummary
-                    useReferences={selectedReferenceSelection.length > 0}
+                    useReferences={true}
+                    allowPromptOnly={false}
                     selectedCount={selectedReferenceSelection.length}
                     totalCount={selectedReferenceAssets.length}
                   />
@@ -2321,7 +2024,8 @@ function GeneratePersonaView({
               !selectedPersona ||
               !confirmsRights ||
               !confirmsAdultPersona ||
-              (isHybrid && hybridSources.length < 2)
+              (isHybrid && hybridSources.length < 2) ||
+              (selectedSlot !== "face" && selectedReferenceSelection.length === 0)
             }
           />
         </form>
@@ -2565,21 +2269,27 @@ function ReferencePicker({
 
 function ReferenceSummary({
   useReferences,
+  allowPromptOnly = true,
   selectedCount,
   totalCount,
 }: {
   useReferences: boolean;
+  allowPromptOnly?: boolean;
   selectedCount: number;
   totalCount: number;
 }) {
   return (
     <div className="mt-4 rounded-lg bg-stone-50 px-4 py-3 text-sm text-stone-600">
       {!useReferences
-        ? "Prompt-only generation enabled. No references will be used."
+        ? allowPromptOnly
+          ? "Prompt-only generation enabled. No references will be used."
+          : "No references will be used."
         : totalCount === 0
           ? "No references available yet. Add references to this persona first."
           : selectedCount === 0
-            ? "Select at least one reference or switch to prompt-only."
+            ? allowPromptOnly
+              ? "Select at least one reference or switch to prompt-only."
+              : "Select at least one reference image."
             : `${selectedCount} of ${totalCount} reference image${totalCount === 1 ? "" : "s"} selected.`}
     </div>
   );
