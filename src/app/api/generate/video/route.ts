@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { videoProvider } from "@/lib/providers";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUserWhenSupabaseIsConfigured();
+    if (auth.response) return auth.response;
+
     const input = videoGenerationSchema.parse(await request.json());
     const generationType =
       input.mode === "motion"

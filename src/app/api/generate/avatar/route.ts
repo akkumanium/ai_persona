@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { imageProvider } from "@/lib/providers";
 import { avatarGenerationSchema } from "@/lib/schemas";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUserWhenSupabaseIsConfigured();
+    if (auth.response) return auth.response;
+
     const input = avatarGenerationSchema.parse(await request.json());
 
     if (!input.confirmsRights || !input.confirmsAdultPersona) {

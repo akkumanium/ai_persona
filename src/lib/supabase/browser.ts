@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { env } from "@/lib/env";
 
 export function createBrowserSupabaseClient() {
@@ -6,5 +6,5 @@ export function createBrowserSupabaseClient() {
     throw new Error("Supabase browser environment variables are not configured.");
   }
 
-  return createClient(env.supabaseUrl, env.supabaseAnonKey);
+  return createBrowserClient(env.supabaseUrl, env.supabaseAnonKey);
 }

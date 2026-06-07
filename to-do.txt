@@ -1,0 +1,9 @@
+1. Don't show the prompt in "jobs"
+2. Add being able to delete images, just like how we're able to delete references
+3. Dollar usage bug
+4. Image generated twice
+5. Supabase not finished
+6. Come up with a name
+7. Google oauth settings fix 
+Client secret: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
+Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { videoProvider } from "@/lib/providers";
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUserWhenSupabaseIsConfigured();
+    if (auth.response) return auth.response;
+
     const { provider, providerJobId } = await request.json();
     if (!providerJobId) {
       return NextResponse.json({ error: "providerJobId is required." }, { status: 400 });

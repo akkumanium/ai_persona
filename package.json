@@ -11,12 +11,13 @@
   },
   "dependencies": {
     "@google/genai": "^2.2.0",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "^16.2.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
@@ -30,5 +31,22 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.6"
-  }
+  },
+  "description": "Persona Studio is a Next.js + Supabase SaaS MVP for creating AI-influencer personas, reference avatars, images, and Wan-powered videos.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akkumanium/ai_persona.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/akkumanium/ai_persona/issues"
+  },
+  "homepage": "https://github.com/akkumanium/ai_persona#readme"
 }

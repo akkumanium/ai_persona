@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { imageProvider } from "@/lib/providers";
 import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
 import type { ProviderImageInput } from "@/lib/providers/types";
@@ -7,6 +8,9 @@ import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
+    const auth = await requireUserWhenSupabaseIsConfigured();
+    if (auth.response) return auth.response;
+
     const input = imageGenerationSchema.parse(await request.json());
     const referenceUrls = input.referenceImageUrls.length
       ? input.referenceImageUrls
