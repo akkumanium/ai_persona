@@ -17,6 +17,7 @@ export type ImageGenerationRequest = {
   model: string;
   aspectRatio: string;
   imageSize: string;
+  imageQuality?: "auto" | "low" | "medium" | "high";
   count: number;
   referenceImages?: ProviderImageInput[];
   generationType: GenerationType;

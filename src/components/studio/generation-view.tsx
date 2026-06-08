@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { Clapperboard, ImageIcon, Loader2, Play, Search, Upload, X } from "lucide-react";
+import { Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { GenerationMode, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
@@ -28,6 +28,9 @@ const klingAspectRatios = ["16:9", "9:16", "1:1"];
 const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
 const videoResolutionOptions = ["480p", "720p", "1080p"];
+const imageAspectRatioOptions = ["1:1", "3:4", "4:5", "9:16", "16:9"];
+const imageSizeOptions = ["1K", "2K", "4K"];
+const imageQualityOptions = ["auto", "low", "medium", "high"];
 
 export function GenerationView({
   mode,
@@ -37,6 +40,7 @@ export function GenerationView({
   selectedReference,
   onAssetsCreated,
   onSelectPersona,
+  onDeleteAsset,
 }: {
   mode: GenerationMode;
   personas: Persona[];
@@ -45,11 +49,15 @@ export function GenerationView({
   selectedReference?: Asset;
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
+  onDeleteAsset: (assetId: string) => void;
 }) {
   const [imagePrompt, setImagePrompt] = useState("Editorial product photo for a social launch campaign.");
   const [videoPrompt, setVideoPrompt] = useState("Short vertical clip with a confident camera turn and subtle smile.");
   const [useImageReferences, setUseImageReferences] = useState(true);
   const [imageModel, setImageModel] = useState("gemini-3-pro-image-preview");
+  const [imageAspectRatio, setImageAspectRatio] = useState("4:5");
+  const [imageSize, setImageSize] = useState("2K");
+  const [imageQuality, setImageQuality] = useState("auto");
   const [videoModel, setVideoModel] = useState("wan-2.2");
   const [motionVideoModel, setMotionVideoModel] = useState("wan-animate");
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
@@ -181,9 +189,10 @@ export function GenerationView({
         prompt: imagePrompt,
         model: imageModel,
         styleNotes: selectedPersona.styleNotes,
-        aspectRatio: "4:5",
-        imageSize: "2K",
-        count: 2,
+        aspectRatio: imageAspectRatio,
+        imageSize,
+        imageQuality,
+        count: 1,
         ...(referenceImageUrls.length
           ? { referenceImageUrl: referenceImageUrls[0], referenceImageUrls }
           : {}),
@@ -315,8 +324,20 @@ export function GenerationView({
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
-                    <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
+                        <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteAsset(asset.id)}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md border border-stone-200 text-stone-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+                        aria-label={`Delete ${asset.title}`}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -337,6 +358,14 @@ export function GenerationView({
             <PanelTitle icon={ImageIcon} title="Image Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
             <ModelSelect label="Image model" value={imageModel} options={imageModelOptions} onChange={setImageModel} />
+            <SelectField
+              label="Aspect ratio"
+              value={imageAspectRatio}
+              options={imageAspectRatioOptions}
+              onChange={setImageAspectRatio}
+            />
+            <SelectField label="Image size" value={imageSize} options={imageSizeOptions} onChange={setImageSize} />
+            <SelectField label="Quality" value={imageQuality} options={imageQualityOptions} onChange={setImageQuality} />
             <ModeToggle
               label="Reference mode"
               value={useImageReferences ? "references" : "prompt"}

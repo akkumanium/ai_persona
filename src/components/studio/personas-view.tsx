@@ -53,7 +53,7 @@ export function PersonasView({
     const description = newDescription.trim();
     if (!name || !description) return;
 
-    const personaId = `persona-${crypto.randomUUID()}`;
+    const personaId = crypto.randomUUID();
     onCreatePersona({
       id: personaId,
       name,
@@ -232,7 +232,7 @@ function PersonaManagementView({
     const createdAt = new Date().toISOString();
     const hasDefault = referenceAssets.some((asset) => asset.isDefaultReference);
     const nextAssets: Asset[] = images.map((image, index) => ({
-      id: `asset-${crypto.randomUUID()}`,
+      id: crypto.randomUUID(),
       kind: "upload",
       title: `${slot.label} reference ${assetsForSlot(slot.id).length + index + 1}`,
       url: sourceImageToDataUrl(image),

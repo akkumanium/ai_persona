@@ -1,6 +1,16 @@
-import { redirect } from "next/navigation";
+import { getPublicPaddleConfig } from "@/lib/billing";
+import { StudioPaywall } from "@/components/studio-paywall";
 import { StudioWorkspace } from "@/components/studio-workspace";
 import { hasSupabaseEnv } from "@/lib/env";
+import { getBillingAccess } from "@/lib/server/billing-access";
+import {
+  emptyStudioData,
+  mapAsset,
+  mapJob,
+  mapLedger,
+  mapPersona,
+  type StudioInitialData,
+} from "@/lib/studio-records";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
@@ -11,16 +21,50 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function StudioPage() {
-  if (hasSupabaseEnv()) {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  let initialData: StudioInitialData = emptyStudioData;
+  const supabaseReady = hasSupabaseEnv();
+  const paddleConfig = getPublicPaddleConfig();
 
-    if (!user) {
-      redirect("/");
-    }
+  if (!supabaseReady) {
+    return <StudioPaywall supabaseReady={false} paddleConfig={paddleConfig} />;
   }
 
-  return <StudioWorkspace />;
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <StudioPaywall supabaseReady={supabaseReady} paddleConfig={paddleConfig} />;
+  }
+
+  const access = await getBillingAccess(supabase, user.id);
+
+  if (!access.hasStudioAccess) {
+    return (
+      <StudioPaywall
+        userId={user.id}
+        userEmail={user.email}
+        supabaseReady={supabaseReady}
+        paddleConfig={paddleConfig}
+      />
+    );
+  }
+
+  const [personas, assets, jobs, ledger] = await Promise.all([
+    supabase.from("personas").select("*").order("created_at", { ascending: false }),
+    supabase.from("assets").select("*").order("created_at", { ascending: false }),
+    supabase.from("generation_jobs").select("*").order("created_at", { ascending: false }),
+    supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }),
+  ]);
+
+  initialData = {
+    personas: (personas.data ?? []).map(mapPersona),
+    assets: (assets.data ?? []).map(mapAsset),
+    jobs: (jobs.data ?? []).map(mapJob),
+    ledger: (ledger.data ?? []).map(mapLedger),
+    balanceCents: access.balanceCents,
+  };
+
+  return <StudioWorkspace initialData={initialData} supabaseReady={supabaseReady} />;
 }

@@ -20,9 +20,11 @@ type AuthMode = "signin" | "signup";
 export function AuthButton({
   initialUserEmail,
   supabaseReady,
+  variant = "light",
 }: {
   initialUserEmail?: string;
   supabaseReady: boolean;
+  variant?: "light" | "dark";
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -134,13 +136,22 @@ export function AuthButton({
     router.refresh();
   }
 
+  const accountClass =
+    variant === "dark"
+      ? "inline-flex h-11 items-center gap-2 rounded-md border border-[#ffffff1f] bg-[#ffffff12] px-4 text-sm font-semibold text-white transition hover:border-[#ff4fa3] hover:bg-[#ffffff1c]"
+      : "inline-flex h-11 items-center gap-2 rounded-md border border-[#e6c9d8] bg-white px-4 text-sm font-semibold text-[#19141a] transition hover:border-[#c22f75]";
+  const primaryClass =
+    variant === "dark"
+      ? "inline-flex h-11 items-center gap-2 rounded-md bg-[#ff4fa3] px-4 text-sm font-semibold text-[#120913] shadow-[0_14px_34px_rgba(255,79,163,0.24)] transition hover:bg-[#ff77b8] disabled:cursor-not-allowed disabled:opacity-70"
+      : "inline-flex h-11 items-center gap-2 rounded-md bg-[#19141a] px-4 text-sm font-semibold text-white transition hover:bg-[#35242f] disabled:cursor-not-allowed disabled:opacity-70";
+
   return (
     <div className="relative">
       {userEmail ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
           <a
             href="/studio"
-            className="inline-flex h-11 items-center gap-2 rounded-md border border-[#ffffff2b] bg-[#ffffff10] px-4 text-sm font-semibold text-white transition hover:border-[#25c4a4]"
+            className={accountClass}
           >
             <ShieldCheck size={17} />
             Account
@@ -149,7 +160,7 @@ export function AuthButton({
             type="button"
             onClick={signOut}
             disabled={isSubmitting}
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-[#f7c95f] px-4 text-sm font-semibold text-[#151009] transition hover:bg-[#ffd979] disabled:cursor-not-allowed disabled:opacity-70"
+            className={primaryClass}
           >
             {isSubmitting ? <Loader2 size={17} className="animate-spin" /> : <LogOut size={17} />}
             Sign out
@@ -159,7 +170,7 @@ export function AuthButton({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="inline-flex h-11 items-center gap-2 rounded-md bg-[#f7c95f] px-4 text-sm font-semibold text-[#151009] transition hover:bg-[#ffd979]"
+          className={primaryClass}
         >
           <LogIn size={17} />
           Sign in

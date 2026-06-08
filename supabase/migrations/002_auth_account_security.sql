@@ -68,7 +68,9 @@ create trigger on_auth_user_created
 
 alter table public.assets
   add column if not exists is_default_reference boolean not null default false,
-  add column if not exists reference_slot text check (reference_slot in ('face', 'face-grid', 'body', 'more'));
+  add column if not exists reference_slot text check (reference_slot in ('face', 'face-grid', 'body', 'more')),
+  add column if not exists reference_asset_ids uuid[] not null default '{}',
+  add column if not exists provider_job_id text;
 
 do $$
 begin

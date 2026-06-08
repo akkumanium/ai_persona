@@ -7,7 +7,9 @@ import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import type { ReferenceSlotId, View } from "@/components/studio/types";
-import { demoAssets, demoJobs, demoLedger, demoPersonas } from "@/lib/demo-data";
+import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
+import type { StudioInitialData } from "@/lib/studio-records";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatCredits } from "@/lib/utils";
 
@@ -21,14 +23,26 @@ const navItems = [
   { id: "settings", label: "Settings", icon: Settings },
 ] as const;
 
-export function StudioWorkspace() {
+export function StudioWorkspace({
+  initialData,
+  supabaseReady,
+}: {
+  initialData?: StudioInitialData;
+  supabaseReady?: boolean;
+}) {
   const [view, setView] = useState<View>("personas");
-  const [personas, setPersonas] = useState<Persona[]>(demoPersonas);
-  const [assets, setAssets] = useState<Asset[]>(demoAssets);
-  const [jobs, setJobs] = useState<GenerationJob[]>(demoJobs);
-  const [selectedPersonaId, setSelectedPersonaId] = useState(demoPersonas[0]?.id ?? "");
+  const [personas, setPersonas] = useState<Persona[]>(initialData?.personas ?? demoPersonas);
+  const [assets, setAssets] = useState<Asset[]>(initialData?.assets ?? demoAssets);
+  const [jobs, setJobs] = useState<GenerationJob[]>(initialData?.jobs ?? demoJobs);
+  const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 5000));
+  const [userId, setUserId] = useState<string | undefined>();
+  const [selectedPersonaId, setSelectedPersonaId] = useState(
+    initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
+  );
   const [generateInitialSlotId, setGenerateInitialSlotId] = useState<ReferenceSlotId | undefined>();
-  const [notice, setNotice] = useState("Demo workspace is active until Supabase and provider keys are set.");
+  const [notice, setNotice] = useState(
+    supabaseReady ? "Your workspace is saved." : "Demo workspace is active until Supabase is set.",
+  );
 
   const selectedPersona = personas.find((persona) => persona.id === selectedPersonaId) ?? personas[0];
   const personaReferenceAssets = assets.filter(
@@ -39,25 +53,68 @@ export function StudioWorkspace() {
     personaReferenceAssets.find((asset) => asset.isDefaultReference) ??
     assets.find((asset) => asset.id === selectedPersona?.referenceAssetId) ??
     personaReferenceAssets[0];
-  const spentCents = [
-    ...demoLedger,
-    ...jobs.map((job) => ({
-      amountCents: job.costEstimateCents,
-    })),
-  ].reduce((sum, entry) => sum + entry.amountCents, 0);
+  const displayedBalanceCents = Math.max(0, balanceCents);
+
+  function supabaseClient() {
+    return supabaseReady ? createBrowserSupabaseClient() : undefined;
+  }
+
+  async function supabaseContext() {
+    const client = supabaseClient();
+    if (!client) return undefined;
+    if (userId) return { client, userId };
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+    if (!user) return undefined;
+    setUserId(user.id);
+    return { client, userId: user.id };
+  }
 
   function addJob(job: GenerationJob) {
     setJobs((current) => [job, ...current]);
   }
 
-  function addAssets(nextAssets: Asset[]) {
+  function addAssets(nextAssets: Asset[], job?: GenerationJob) {
     setAssets((current) => [...nextAssets, ...current]);
+    if (job?.costEstimateCents) {
+      setBalanceCents((current) => Math.max(0, current - job.costEstimateCents));
+    }
+  }
+
+  function addGeneratedReferenceAssets(nextAssets: Asset[], job: GenerationJob) {
+    addAssets(nextAssets, job);
+    const personaId = nextAssets[0]?.personaId;
+    const nextReferenceId =
+      nextAssets.find((asset) => asset.isDefaultReference)?.id ?? nextAssets[0]?.id;
+    if (!personaId || !nextReferenceId) return;
+
+    setPersonas((current) =>
+      current.map((persona) =>
+        persona.id === personaId && !persona.referenceAssetId
+          ? { ...persona, referenceAssetId: nextReferenceId }
+          : persona,
+      ),
+    );
+    void supabaseClient()
+      ?.from("personas")
+      .update({ reference_asset_id: nextReferenceId })
+      .eq("id", personaId)
+      .is("reference_asset_id", null);
   }
 
   function updatePersona(personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) {
     setPersonas((current) =>
       current.map((persona) => (persona.id === personaId ? { ...persona, ...updates } : persona)),
     );
+    void supabaseClient()
+      ?.from("personas")
+      .update({
+        name: updates.name,
+        description: updates.description,
+        style_notes: updates.styleNotes,
+      })
+      .eq("id", personaId);
   }
 
   function renameReferenceAsset(assetId: string, title: string) {
@@ -66,11 +123,26 @@ export function StudioWorkspace() {
     setAssets((current) =>
       current.map((asset) => (asset.id === assetId ? { ...asset, title: nextTitle } : asset)),
     );
+    void supabaseClient()?.from("assets").update({ title: nextTitle }).eq("id", assetId);
   }
 
   function addPersona(persona: Persona) {
     setPersonas((current) => [persona, ...current]);
     setSelectedPersonaId(persona.id);
+    void (async () => {
+      const context = await supabaseContext();
+      if (!context) return;
+      await context.client.from("personas").insert({
+        id: persona.id,
+        user_id: context.userId,
+        name: persona.name,
+        description: persona.description,
+        style_notes: persona.styleNotes,
+        status: persona.status,
+        reference_asset_id: persona.referenceAssetId ?? null,
+        created_at: persona.createdAt,
+      });
+    })();
   }
 
   function deletePersona(personaId: string) {
@@ -79,6 +151,7 @@ export function StudioWorkspace() {
       if (currentId !== personaId) return currentId;
       return personas.find((persona) => persona.id !== personaId)?.id ?? "";
     });
+    void supabaseClient()?.from("personas").delete().eq("id", personaId);
   }
 
   function addReferenceAssets(personaId: string, nextAssets: Asset[]) {
@@ -92,34 +165,85 @@ export function StudioWorkspace() {
         return nextReferenceId ? { ...persona, referenceAssetId: nextReferenceId } : persona;
       }),
     );
+    const client = supabaseClient();
+    if (client) {
+      void (async () => {
+        const context = await supabaseContext();
+        if (!context) return;
+        await context.client.from("assets").insert(nextAssets.map((asset) => assetToInsert(asset, context.userId)));
+        const nextReferenceId =
+          nextAssets.find((asset) => asset.isDefaultReference)?.id ?? nextAssets[0]?.id;
+        if (nextReferenceId) {
+          await context.client
+            .from("personas")
+            .update({ reference_asset_id: nextReferenceId })
+            .eq("id", personaId)
+            .is("reference_asset_id", null);
+        }
+      })();
+    }
   }
 
   function toggleReferenceDefault(assetId: string) {
+    const target = assets.find((asset) => asset.id === assetId);
+    const nextValue = !target?.isDefaultReference;
     setAssets((current) =>
       current.map((asset) =>
         asset.id === assetId
-          ? { ...asset, isDefaultReference: !asset.isDefaultReference }
+          ? { ...asset, isDefaultReference: nextValue }
           : asset,
       ),
     );
+    void supabaseClient()
+      ?.from("assets")
+      .update({ is_default_reference: nextValue })
+      .eq("id", assetId);
   }
 
-  function deleteReferenceAsset(personaId: string, assetId: string) {
+  function deleteAsset(assetId: string) {
+    const asset = assets.find((item) => item.id === assetId);
+    if (!asset) return;
+
     setAssets((currentAssets) => {
       const nextAssets = currentAssets.filter((asset) => asset.id !== assetId);
+      if (!asset.personaId || (asset.kind !== "avatar" && asset.kind !== "upload")) {
+        return nextAssets;
+      }
       const remainingReferences = nextAssets.filter(
-        (asset) =>
-          asset.personaId === personaId && (asset.kind === "avatar" || asset.kind === "upload"),
+        (item) =>
+          item.personaId === asset.personaId && (item.kind === "avatar" || item.kind === "upload"),
       );
       const nextReferenceId =
         remainingReferences.find((asset) => asset.isDefaultReference)?.id ?? remainingReferences[0]?.id;
       setPersonas((currentPersonas) =>
         currentPersonas.map((persona) =>
-          persona.id === personaId ? { ...persona, referenceAssetId: nextReferenceId } : persona,
+          persona.id === asset.personaId ? { ...persona, referenceAssetId: nextReferenceId } : persona,
         ),
       );
       return nextAssets;
     });
+    const client = supabaseClient();
+    if (client) {
+      void client.from("assets").delete().eq("id", assetId);
+      if (asset.personaId && (asset.kind === "avatar" || asset.kind === "upload")) {
+        const remainingReferences = assets.filter(
+          (item) =>
+            item.id !== assetId &&
+            item.personaId === asset.personaId &&
+            (item.kind === "avatar" || item.kind === "upload"),
+        );
+        const nextReferenceId =
+          remainingReferences.find((item) => item.isDefaultReference)?.id ?? remainingReferences[0]?.id;
+        void client
+          .from("personas")
+          .update({ reference_asset_id: nextReferenceId ?? null })
+          .eq("id", asset.personaId);
+      }
+    }
+  }
+
+  function deleteReferenceAsset(_personaId: string, assetId: string) {
+    deleteAsset(assetId);
   }
 
   return (
@@ -159,9 +283,9 @@ export function StudioWorkspace() {
         </nav>
 
         <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-stone-200 bg-stone-50 p-4">
-          <p className="text-sm font-semibold text-stone-900">Usage</p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatCredits(spentCents)}</p>
-          <p className="mt-1 text-xs leading-5 text-stone-500">Estimated generation usage recorded for billing.</p>
+          <p className="text-sm font-semibold text-stone-900">Balance</p>
+          <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatCredits(displayedBalanceCents)}</p>
+          <p className="mt-1 text-xs leading-5 text-stone-500">Available credit for new generations.</p>
         </div>
       </aside>
 
@@ -227,7 +351,7 @@ export function StudioWorkspace() {
               selectedPersona={selectedPersona}
               initialSlotId={generateInitialSlotId}
               onAssetsCreated={(nextAssets, job) => {
-                addAssets(nextAssets);
+                addGeneratedReferenceAssets(nextAssets, job);
                 addJob(job);
                 setNotice(`${nextAssets.length} reference asset${nextAssets.length === 1 ? "" : "s"} generated.`);
               }}
@@ -246,18 +370,41 @@ export function StudioWorkspace() {
               selectedPersona={selectedPersona}
               selectedReference={selectedReference}
               onAssetsCreated={(nextAssets, job) => {
-                addAssets(nextAssets);
+                addAssets(nextAssets, job);
                 addJob(job);
                 setNotice(`${nextAssets.length} asset${nextAssets.length === 1 ? "" : "s"} generated.`);
               }}
               onSelectPersona={setSelectedPersonaId}
+              onDeleteAsset={deleteAsset}
             />
           )}
-          {view === "assets" && <AssetsView assets={assets} personas={personas} />}
+          {view === "assets" && <AssetsView assets={assets} personas={personas} onDeleteAsset={deleteAsset} />}
           {view === "jobs" && <JobsView jobs={jobs} />}
-          {view === "settings" && <SettingsView spentCents={spentCents} />}
+          {view === "settings" && <SettingsView balanceCents={displayedBalanceCents} />}
         </div>
       </main>
     </div>
   );
+}
+
+function assetToInsert(asset: Asset, userId: string) {
+  return {
+    id: asset.id,
+    user_id: userId,
+    persona_id: asset.personaId ?? null,
+    kind: asset.kind,
+    public_url: asset.url,
+    title: asset.title,
+    prompt: asset.prompt,
+    reference_asset_ids: asset.referenceAssetIds ?? [],
+    reference_slot: asset.referenceSlot ?? null,
+    is_default_reference: Boolean(asset.isDefaultReference),
+    generation_type: asset.generationType,
+    provider: asset.provider,
+    provider_job_id: asset.providerJobId ?? null,
+    model: asset.model,
+    mime_type: asset.mimeType,
+    provider_asset_id: asset.providerAssetId ?? null,
+    created_at: asset.createdAt,
+  };
 }

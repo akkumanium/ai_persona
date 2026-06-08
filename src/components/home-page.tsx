@@ -1,50 +1,88 @@
 import {
   ArrowRight,
   BadgeCheck,
-  Boxes,
+  BriefcaseBusiness,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronRight,
   Clapperboard,
-  Database,
+  Eye,
+  FileText,
+  Fingerprint,
   ImageIcon,
-  KeyRound,
-  Play,
+  Layers3,
+  MessageSquareText,
+  MousePointer2,
+  PanelTop,
   ShieldCheck,
   Sparkles,
-  UserRound,
+  UsersRound,
   WandSparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { AuthButton } from "@/components/auth/auth-button";
 
-const workflow = [
+const features = [
   {
-    title: "Design the persona",
-    copy: "Name the creator, capture the style direction, and collect identity references.",
-    icon: UserRound,
+    title: "Stable character direction",
+    copy: "Store the persona's look, voice, references, and usage notes together so every new asset starts from the same creative brief.",
+    icon: Fingerprint,
   },
   {
-    title: "Generate references",
-    copy: "Create face, grid, body, and extra avatar shots from prompts or blended sources.",
-    icon: WandSparkles,
+    title: "Reference-aware generation",
+    copy: "Choose the exact images that should guide a render. The workspace keeps those references visible instead of hiding them in a prompt history.",
+    icon: Eye,
   },
   {
-    title: "Produce media",
-    copy: "Turn the selected reference set into images, normal videos, or motion-control clips.",
+    title: "Spend visibility before output",
+    copy: "See the balance impact of image and video jobs as you work, making it easier to plan tests without losing track of cost.",
+    icon: CalendarCheck,
+  },
+  {
+    title: "Reviewable production history",
+    copy: "Generated assets, prompts, providers, and job states stay attached to the persona so teams can compare what worked.",
+    icon: FileText,
+  },
+];
+
+const steps = [
+  {
+    title: "Define the identity",
+    copy: "Capture the persona's purpose, visual boundaries, styling notes, and reusable reference needs.",
+  },
+  {
+    title: "Generate with context",
+    copy: "Select references, choose image or video output, and keep every job tied to the right identity.",
+  },
+  {
+    title: "Reuse the best results",
+    copy: "Promote strong outputs into your reference set and build the next batch from evidence, not guesswork.",
+  },
+];
+
+const useCases = [
+  {
+    title: "Creator teams",
+    copy: "Keep recurring faces, outfits, campaign themes, and approved references organized across short-form content cycles.",
     icon: Clapperboard,
   },
+  {
+    title: "Brand studios",
+    copy: "Prototype talent concepts, product scenes, and launch visuals while maintaining clear review notes for stakeholders.",
+    icon: BriefcaseBusiness,
+  },
+  {
+    title: "Small businesses",
+    copy: "Create consistent social assets for offers, seasonal campaigns, and audience tests without rebuilding style direction each week.",
+    icon: UsersRound,
+  },
 ];
 
-const providers = [
-  "Gemini / Nano Banana Pro",
-  "OpenAI image generation",
-  "Wan 2.2 and Wan Animate",
-  "Kling image-to-video",
-  "Seedance 2.0",
-];
-
-const stats = [
-  { label: "Reference slots", value: "4" },
-  { label: "Provider families", value: "5" },
-  { label: "Storage buckets", value: "4" },
+const credibility = [
+  "Reference-first workflow",
+  "Secure account access",
+  "Clear credit balance",
+  "Image and video jobs",
 ];
 
 export function HomePage({
@@ -55,102 +93,108 @@ export function HomePage({
   supabaseReady: boolean;
 }) {
   return (
-    <main className="min-h-screen bg-[#090c12] text-[#f7fbff]">
-      <section className="relative min-h-[92vh] overflow-hidden border-b border-[#ffffff1a]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(37,196,164,0.24),transparent_28%),radial-gradient(circle_at_78%_8%,rgba(247,170,66,0.18),transparent_24%),radial-gradient(circle_at_72%_72%,rgba(225,67,97,0.16),transparent_28%),linear-gradient(135deg,#090c12_0%,#111827_48%,#1b1718_100%)]" />
-        <div className="absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:46px_46px]" />
-
-        <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+    <main className="min-h-screen overflow-hidden bg-[#070711] text-white">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_18%_12%,rgba(255,79,163,0.18),transparent_30%),radial-gradient(circle_at_78%_8%,rgba(116,92,246,0.18),transparent_28%),linear-gradient(135deg,#070711_0%,#0b0d1b_42%,#160b1f_100%)]" />
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-[#080812]/[0.78] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex size-11 items-center justify-center rounded-lg bg-[#25c4a4] text-[#07110f]">
-              <Sparkles size={22} />
+            <span className="flex size-10 items-center justify-center rounded-md border border-[#ff4fa3]/40 bg-[#ff4fa3]/14 text-[#ff8fc7] shadow-[0_0_34px_rgba(255,79,163,0.18)]">
+              <Sparkles size={19} />
             </span>
-            <span>
-              <span className="block text-base font-semibold">Persona Studio</span>
-              <span className="block text-xs font-medium uppercase tracking-[0.18em] text-[#aeb9c8]">
-                Creator SaaS
-              </span>
-            </span>
+            <span className="text-base font-semibold tracking-normal">Persona Studio</span>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium text-[#c8d4e5] md:flex">
+          <nav className="hidden items-center gap-7 text-sm font-medium text-[#aab0c2] md:flex">
+            <a href="#features" className="transition hover:text-white">
+              Benefits
+            </a>
             <a href="#workflow" className="transition hover:text-white">
               Workflow
             </a>
-            <a href="#stack" className="transition hover:text-white">
-              Stack
+            <a href="#preview" className="transition hover:text-white">
+              Product
             </a>
-            <Link href="/studio" className="transition hover:text-white">
-              Studio
+            <Link href="/pricing" className="transition hover:text-white">
+              Pricing
             </Link>
           </nav>
 
-          <AuthButton initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} />
-        </header>
+          <AuthButton initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} variant="dark" />
+        </div>
+      </header>
 
-        <div className="relative z-10 mx-auto grid min-h-[calc(92vh-5.5rem)] max-w-7xl items-center gap-10 px-5 pb-10 pt-4 sm:px-8 lg:grid-cols-[minmax(0,0.86fr)_minmax(360px,1fr)]">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#ffffff24] bg-[#ffffff12] px-3 py-2 text-sm font-medium text-[#dce8f7]">
-              <BadgeCheck size={16} className="text-[#25c4a4]" />
-              Demo-safe AI creator production workspace
-            </div>
-            <h1 className="mt-6 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-normal text-white sm:text-6xl lg:text-7xl">
-              Persona Studio
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[#c7d4e4]">
-              A focused SaaS MVP for building AI-influencer identities, generating reusable reference avatars, and producing consistent images and videos from one workspace.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/studio"
-                className="inline-flex h-12 items-center gap-2 rounded-md bg-[#f7c95f] px-5 text-sm font-semibold text-[#151009] transition hover:bg-[#ffd979]"
-              >
-                Open studio
-                <ArrowRight size={18} />
-              </Link>
-              <a
-                href="#workflow"
-                className="inline-flex h-12 items-center gap-2 rounded-md border border-[#ffffff2b] bg-[#ffffff10] px-5 text-sm font-semibold text-white transition hover:border-[#25c4a4]"
-              >
-                See workflow
-                <Play size={17} />
-              </a>
-            </div>
-
-            <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
-              {stats.map((stat) => (
-                <div key={stat.label} className="border-l border-[#ffffff24] pl-4">
-                  <p className="text-3xl font-semibold text-white">{stat.value}</p>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-[#9eacbd]">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
+      <section className="mx-auto grid min-h-screen max-w-7xl gap-12 px-5 pb-20 pt-32 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#ff4fa3]/28 bg-white/[0.07] px-3 py-2 text-sm font-semibold text-[#ffd0e7] shadow-[0_14px_45px_rgba(0,0,0,0.22)] backdrop-blur">
+            <BadgeCheck size={16} className="text-[#ff65af]" />
+            Persona production for careful creative teams
           </div>
 
-          <HeroScene />
+          <h1 className="mt-7 text-5xl font-semibold leading-[1.01] tracking-normal text-white sm:text-7xl">
+            Build AI personas that stay consistent under real production pressure.
+          </h1>
+
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#b6bacb]">
+            Persona Studio gives teams one elegant place to define a reusable creator identity, manage reference assets, and produce image or video variations with the context intact.
+          </p>
+
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              href="/studio"
+              className="inline-flex h-12 items-center gap-2 rounded-md bg-[#ff4fa3] px-5 text-sm font-semibold text-[#120913] shadow-[0_18px_44px_rgba(255,79,163,0.26)] transition hover:bg-[#ff77b8]"
+            >
+              Open studio
+              <ArrowRight size={18} />
+            </Link>
+            <Link
+              href="/pricing"
+              className="inline-flex h-12 items-center gap-2 rounded-md border border-white/[0.14] bg-white/[0.08] px-5 text-sm font-semibold text-white transition hover:border-[#ff4fa3]/70 hover:bg-white/[0.12]"
+            >
+              View pricing
+              <ChevronRight size={18} />
+            </Link>
+          </div>
+
+          <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-2">
+            {credibility.map((item) => (
+              <div key={item} className="flex items-center gap-2 text-sm font-medium text-[#d9dce8]">
+                <CheckCircle2 size={17} className="text-[#ff65af]" />
+                {item}
+              </div>
+            ))}
+          </div>
         </div>
+
+        <HeroVisual />
       </section>
 
-      <section id="workflow" className="bg-[#f6f2ea] px-5 py-16 text-[#151922] sm:px-8">
+      <section id="features" className="border-y border-white/10 bg-[#0b0b16]/[0.74] px-5 py-20 sm:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#b84f62]">Workflow</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-normal sm:text-4xl">
-              From identity system to usable campaign media.
-            </h2>
+          <div className="grid gap-7 lg:grid-cols-[0.72fr_1fr] lg:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Practical Benefits</p>
+              <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-normal text-white sm:text-5xl">
+                Less drift, clearer decisions, faster asset review.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-base leading-7 text-[#aeb4c6]">
+              The product is built around the parts of AI production that usually become messy: references, revisions, cost, and shared memory.
+            </p>
           </div>
-          <div className="mt-9 grid gap-4 md:grid-cols-3">
-            {workflow.map((item) => {
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {features.map((item) => {
               const Icon = item.icon;
               return (
-                <article key={item.title} className="rounded-lg border border-[#ddd3c4] bg-[#fffaf0] p-5">
-                  <div className="flex size-11 items-center justify-center rounded-md bg-[#25c4a4] text-[#07110f]">
-                    <Icon size={22} />
+                <article
+                  key={item.title}
+                  className="rounded-lg border border-white/10 bg-white/[0.055] p-5 shadow-[0_20px_70px_rgba(0,0,0,0.24)] backdrop-blur"
+                >
+                  <div className="flex size-11 items-center justify-center rounded-md border border-[#ff4fa3]/24 bg-[#ff4fa3]/12 text-[#ff8fc7]">
+                    <Icon size={21} />
                   </div>
-                  <h3 className="mt-5 text-xl font-semibold">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#52606f]">{item.copy}</p>
+                  <h3 className="mt-5 text-xl font-semibold text-white">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-[#aeb4c6]">{item.copy}</p>
                 </article>
               );
             })}
@@ -158,143 +202,306 @@ export function HomePage({
         </div>
       </section>
 
-      <section id="stack" className="bg-[#10151d] px-5 py-16 sm:px-8">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1fr]">
+      <section id="workflow" className="px-5 py-20 sm:px-8">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.75fr_1fr] lg:items-center">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#25c4a4]">Built for production paths</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-4xl">
-              Real adapters, typed requests, and database groundwork.
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">How It Works</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
+              A simple loop for keeping creative direction honest.
             </h2>
-            <p className="mt-5 text-base leading-7 text-[#bdc8d6]">
-              The frontend is backed by Zod-validated API routes, a model registry, provider adapters, and a Supabase migration for user-owned personas, assets, jobs, provider configs, and credit accounting.
+            <p className="mt-5 max-w-xl text-base leading-7 text-[#aeb4c6]">
+              Persona Studio keeps planning, generation, and review close together so each pass improves the system instead of becoming another loose file.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Feature icon={Boxes} title="Provider registry" copy="Model capabilities are declared in one place, then surfaced by the workspace controls." />
-            <Feature icon={Database} title="Supabase schema" copy="Tables, storage buckets, and RLS policies are already laid out for persistence." />
-            <Feature icon={KeyRound} title="Demo fallback" copy="Missing provider keys return demo output so the UI stays usable while integrating services." />
-            <Feature icon={ShieldCheck} title="Rights checks" copy="Reference generation requires rights and adult-persona confirmations before calls are sent." />
+          <div className="grid gap-4">
+            {steps.map((step, index) => (
+              <article key={step.title} className="grid gap-4 rounded-lg border border-white/10 bg-[#11111f]/[0.76] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.22)] sm:grid-cols-[56px_1fr]">
+                <div className="flex size-14 items-center justify-center rounded-md border border-[#a78bfa]/30 bg-[#a78bfa]/12 text-lg font-semibold text-[#d7c8ff]">
+                  0{index + 1}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-white">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#aeb4c6]">{step.copy}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="bg-[#f6f2ea] px-5 py-14 text-[#151922] sm:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 md:flex-row md:items-center">
+      <section id="preview" className="border-y border-white/10 bg-[#0a0a14] px-5 py-20 sm:px-8">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#b84f62]">Providers</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {providers.map((provider) => (
-                <span key={provider} className="rounded-md border border-[#ddd3c4] bg-[#fffaf0] px-3 py-2 text-sm font-semibold text-[#334155]">
-                  {provider}
-                </span>
-              ))}
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Product Preview</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
+              A workspace built for reference-led AI production.
+            </h2>
+            <p className="mt-5 max-w-xl text-base leading-7 text-[#aeb4c6]">
+              Compare persona notes, selected references, output state, and job cost without jumping between prompt documents, file folders, and billing pages.
+            </p>
+            <div className="mt-7 grid gap-3 text-sm text-[#d7dbea]">
+              <PreviewPoint icon={Layers3} text="Reference slots make intent visible before generation starts." />
+              <PreviewPoint icon={MessageSquareText} text="Prompts remain attached to the resulting asset for later review." />
+              <PreviewPoint icon={ShieldCheck} text="Account access and credits are handled before the studio opens." />
             </div>
           </div>
-          <Link
-            href="/studio"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#151922] px-5 text-sm font-semibold text-white transition hover:bg-[#263244]"
-          >
-            Launch workspace
-            <ArrowRight size={18} />
-          </Link>
+
+          <WorkspacePreview />
+        </div>
+      </section>
+
+      <section className="px-5 py-20 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Use Cases</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
+              Useful when consistency is part of the brief.
+            </h2>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {useCases.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article key={item.title} className="rounded-lg border border-white/10 bg-white/[0.055] p-6 backdrop-blur">
+                  <Icon size={24} className="text-[#8db7ff]" />
+                  <h3 className="mt-5 text-xl font-semibold text-white">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-[#aeb4c6]">{item.copy}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-white/10 bg-[#0d0d19] px-5 py-20 sm:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Credibility</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
+              Calm enough for daily work. Precise enough for client review.
+            </h2>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.055] p-6 shadow-[0_22px_80px_rgba(0,0,0,0.28)] backdrop-blur">
+            <p className="text-xl leading-8 text-[#eef0f8]">
+              &quot;The value is not another prompt box. It is the shared record: who the persona is, which references are approved, what each job cost, and which outputs are worth repeating.&quot;
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
+              <div>
+                <p className="font-semibold text-white">Creative operations lead</p>
+                <p className="mt-1 text-sm text-[#aeb4c6]">Reviewing AI creator workflows for brand teams</p>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border border-[#ff4fa3]/24 bg-[#ff4fa3]/10 px-3 py-2 text-sm font-semibold text-[#ffd0e7]">
+                <ShieldCheck size={16} />
+                Built for accountable production
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
   );
 }
 
-function HeroScene() {
+function HeroVisual() {
   return (
-    <div className="relative mx-auto aspect-[5/4] w-full max-w-2xl">
-      <div className="absolute inset-0 rounded-lg border border-[#ffffff26] bg-[#121923d9] shadow-2xl shadow-black/35" />
-      <div className="absolute left-5 right-5 top-5 flex items-center justify-between border-b border-[#ffffff17] pb-4">
-        <div>
-          <p className="text-sm font-semibold text-white">Live generation desk</p>
-          <p className="mt-1 text-xs text-[#94a6bb]">Persona: Nova Vale</p>
-        </div>
-        <span className="rounded-md bg-[#25c4a4] px-3 py-1 text-xs font-semibold text-[#07110f]">Demo ready</span>
-      </div>
-
-      <div className="absolute bottom-5 left-5 top-24 w-[34%] rounded-md bg-[#0b1018] p-3">
-        <div className="aspect-[4/5] rounded-md bg-[radial-gradient(circle_at_52%_32%,#f2c7a7_0_12%,#6d3f55_13%_23%,#e9a56f_24%_39%,#24384e_40%_100%)]" />
-        <div className="mt-3 space-y-2">
-          <div className="h-2 rounded-full bg-[#f7c95f]" />
-          <div className="h-2 w-2/3 rounded-full bg-[#ffffff2b]" />
-        </div>
-      </div>
-
-      <div className="absolute right-5 top-24 grid w-[56%] grid-cols-2 gap-3">
-        <PreviewTile icon={UserRound} title="Face" accent="#25c4a4" />
-        <PreviewTile icon={ImageIcon} title="Image" accent="#f7c95f" />
-        <PreviewTile icon={Clapperboard} title="Video" accent="#e14361" />
-        <PreviewTile icon={WandSparkles} title="Motion" accent="#8fd067" />
-      </div>
-
-      <div className="absolute bottom-5 right-5 w-[56%] rounded-md border border-[#ffffff14] bg-[#f6f2ea] p-4 text-[#151922]">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold">Generation queue</p>
-            <p className="mt-1 text-xs text-[#637083]">3 assets prepared</p>
+    <div className="relative">
+      <div className="absolute -inset-6 rounded-lg bg-[#ff4fa3]/10 blur-3xl" />
+      <div className="relative rounded-lg border border-white/[0.12] bg-[#10101d]/[0.82] p-3 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur">
+        <div className="rounded-md border border-white/10 bg-[#070812]">
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-[#ff4fa3]" />
+              <span className="size-2 rounded-full bg-[#a78bfa]" />
+              <span className="size-2 rounded-full bg-[#8db7ff]" />
+            </div>
+            <div className="text-xs font-medium text-[#8f96aa]">Persona workspace</div>
           </div>
-          <Sparkles size={20} className="text-[#b84f62]" />
+
+          <div className="grid gap-3 p-4 lg:grid-cols-[0.74fr_1fr]">
+            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex size-12 items-center justify-center rounded-md bg-[linear-gradient(135deg,#ff4fa3,#8b5cf6)] text-white">
+                  <WandSparkles size={21} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Mira Vale</p>
+                  <p className="text-xs text-[#9fa6b8]">Editorial creator persona</p>
+                </div>
+              </div>
+              <div className="mt-5 space-y-3">
+                <VisualLine width="w-11/12" />
+                <VisualLine width="w-8/12" />
+                <VisualLine width="w-10/12" />
+              </div>
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <VisualSwatch color="bg-[#ff4fa3]" label="Accent" />
+                <VisualSwatch color="bg-[#d7c8ff]" label="Wardrobe" />
+                <VisualSwatch color="bg-[#8db7ff]" label="Lighting" />
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <ReferenceCard label="Face ref" active />
+                <ReferenceCard label="Look ref" />
+                <ReferenceCard label="Scene ref" />
+              </div>
+              <div className="rounded-lg border border-white/10 bg-[#121423] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">Campaign image batch</p>
+                    <p className="mt-1 text-xs text-[#9fa6b8]">4 outputs using 2 approved references</p>
+                  </div>
+                  <span className="rounded-md border border-[#ff4fa3]/30 bg-[#ff4fa3]/12 px-2 py-1 text-xs font-semibold text-[#ffd0e7]">
+                    Ready
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-4 gap-2">
+                  {["bg-[#221628]", "bg-[#1a2034]", "bg-[#27182d]", "bg-[#151827]"].map((color, index) => (
+                    <div key={color} className={`aspect-[4/5] rounded-md border border-white/10 ${color} p-2`}>
+                      <div className="h-1/2 rounded bg-white/[0.08]" />
+                      <div className="mt-2 h-1.5 rounded bg-white/[0.18]" />
+                      <div className={index === 1 ? "mt-1 h-1.5 w-2/3 rounded bg-[#ff4fa3]/[0.55]" : "mt-1 h-1.5 w-2/3 rounded bg-white/[0.12]"} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 border-t border-white/10 p-4 sm:grid-cols-3">
+            <Metric label="Balance" value="$42.50" />
+            <Metric label="References" value="18" />
+            <Metric label="Jobs queued" value="03" />
+          </div>
         </div>
-        <div className="mt-4 grid gap-2">
-          <QueueBar label="Avatar" width="92%" color="#25c4a4" />
-          <QueueBar label="Images" width="76%" color="#f7c95f" />
-          <QueueBar label="Video" width="48%" color="#e14361" />
+      </div>
+    </div>
+  );
+}
+
+function WorkspacePreview() {
+  return (
+    <div className="rounded-lg border border-white/[0.12] bg-[#10101d]/[0.86] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.36)] backdrop-blur">
+      <div className="grid gap-4 lg:grid-cols-[180px_1fr]">
+        <aside className="rounded-lg border border-white/10 bg-[#080914] p-3">
+          <div className="mb-4 flex items-center gap-2 px-1 text-sm font-semibold text-white">
+            <PanelTop size={17} className="text-[#ff77b8]" />
+            Studio
+          </div>
+          {["Personas", "Images", "Videos", "Assets"].map((item, index) => (
+            <div
+              key={item}
+              className={`mb-2 flex h-10 items-center gap-2 rounded-md px-3 text-sm ${
+                index === 1
+                  ? "border border-[#ff4fa3]/32 bg-[#ff4fa3]/[0.13] text-white"
+                  : "text-[#9fa6b8]"
+              }`}
+            >
+              {index === 1 ? <ImageIcon size={16} /> : <MousePointer2 size={16} />}
+              {item}
+            </div>
+          ))}
+        </aside>
+
+        <div className="grid gap-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_0.78fr]">
+            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+              <p className="text-sm font-semibold text-white">Generation brief</p>
+              <div className="mt-4 grid gap-3">
+                <BriefRow label="Persona" value="Mira Vale, editorial founder" />
+                <BriefRow label="Output" value="Vertical product stills" />
+                <BriefRow label="Guardrail" value="Keep facial structure and soft studio lighting" />
+              </div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-[#0b1020] p-4">
+              <p className="text-sm font-semibold text-white">Selected references</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <ReferenceCard label="Primary" active />
+                <ReferenceCard label="Wardrobe" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-white">Output review</p>
+                <p className="mt-1 text-xs text-[#9fa6b8]">Compare the newest set before saving references.</p>
+              </div>
+              <span className="rounded-md border border-[#8db7ff]/25 bg-[#8db7ff]/10 px-3 py-1.5 text-xs font-semibold text-[#cfe0ff]">
+                2 min remaining
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <PreviewFrame tone="bg-[#241829]" />
+              <PreviewFrame tone="bg-[#151d31]" selected />
+              <PreviewFrame tone="bg-[#1e1727]" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function PreviewTile({
-  icon: Icon,
-  title,
-  accent,
-}: {
-  icon: typeof UserRound;
-  title: string;
-  accent: string;
-}) {
+function PreviewPoint({ icon: Icon, text }: { icon: typeof Layers3; text: string }) {
   return (
-    <div className="rounded-md border border-[#ffffff14] bg-[#ffffff0f] p-3">
-      <Icon size={18} style={{ color: accent }} />
-      <p className="mt-3 text-sm font-semibold text-white">{title}</p>
-      <div className="mt-3 h-16 rounded-md" style={{ background: `linear-gradient(135deg, ${accent}, #ffffff18)` }} />
+    <div className="flex gap-3">
+      <Icon size={18} className="mt-0.5 shrink-0 text-[#ff77b8]" />
+      <span>{text}</span>
     </div>
   );
 }
 
-function QueueBar({ label, width, color }: { label: string; width: string; color: string }) {
+function VisualLine({ width }: { width: string }) {
+  return <div className={`h-2 rounded-full bg-white/10 ${width}`} />;
+}
+
+function VisualSwatch({ color, label }: { color: string; label: string }) {
   return (
-    <div>
-      <div className="flex justify-between text-xs font-semibold text-[#4b5563]">
-        <span>{label}</span>
-        <span>{width}</span>
-      </div>
-      <div className="mt-1 h-2 rounded-full bg-[#d8d0c2]">
-        <div className="h-full rounded-full" style={{ width, backgroundColor: color }} />
-      </div>
+    <div className="rounded-md border border-white/10 bg-white/[0.04] p-2">
+      <div className={`h-8 rounded ${color}`} />
+      <p className="mt-2 text-[11px] font-medium text-[#9fa6b8]">{label}</p>
     </div>
   );
 }
 
-function Feature({
-  icon: Icon,
-  title,
-  copy,
-}: {
-  icon: typeof Boxes;
-  title: string;
-  copy: string;
-}) {
+function ReferenceCard({ label, active = false }: { label: string; active?: boolean }) {
   return (
-    <article className="rounded-lg border border-[#ffffff18] bg-[#ffffff0b] p-5">
-      <Icon size={22} className="text-[#f7c95f]" />
-      <h3 className="mt-4 text-lg font-semibold text-white">{title}</h3>
-      <p className="mt-3 text-sm leading-6 text-[#b9c4d3]">{copy}</p>
-    </article>
+    <div className={`rounded-md border p-2 ${active ? "border-[#ff4fa3]/[0.45] bg-[#ff4fa3]/[0.12]" : "border-white/10 bg-white/[0.045]"}`}>
+      <div className="aspect-square rounded bg-[linear-gradient(145deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))]" />
+      <p className="mt-2 text-[11px] font-medium text-[#b9bfd0]">{label}</p>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-white/10 bg-white/[0.045] p-3">
+      <p className="text-xs text-[#9fa6b8]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function BriefRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-white/10 bg-[#070812]/70 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8f96aa]">{label}</p>
+      <p className="mt-1 text-sm text-[#e5e7f0]">{value}</p>
+    </div>
+  );
+}
+
+function PreviewFrame({ tone, selected = false }: { tone: string; selected?: boolean }) {
+  return (
+    <div className={`aspect-[4/5] rounded-md border ${selected ? "border-[#ff4fa3]/[0.55]" : "border-white/10"} ${tone} p-2`}>
+      <div className="h-3/5 rounded bg-white/[0.08]" />
+      <div className="mt-3 h-2 rounded bg-white/[0.15]" />
+      <div className={`mt-2 h-2 w-2/3 rounded ${selected ? "bg-[#ff4fa3]/[0.58]" : "bg-white/10"}`} />
+    </div>
   );
 }

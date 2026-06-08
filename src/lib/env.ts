@@ -13,6 +13,11 @@ export const env = {
   seedanceApiBaseUrl: process.env.SEEDANCE_API_BASE_URL ?? "https://ark.ap-southeast.bytepluses.com",
   seedanceApiKey: process.env.SEEDANCE_API_KEY,
   seedanceModel: process.env.SEEDANCE_MODEL ?? "dreamina-seedance-2-0-260128",
+  paddleClientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
+  paddleEnvironment: process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "sandbox",
+  paddleFiveDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_5,
+  paddleTenDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_10,
+  paddleWebhookSecretKey: process.env.PADDLE_WEBHOOK_SECRET_KEY,
 };
 
 export function hasSupabaseEnv() {

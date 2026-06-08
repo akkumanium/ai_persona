@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { imageProvider } from "@/lib/providers";
+import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
 import { avatarGenerationSchema } from "@/lib/schemas";
+import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
@@ -32,6 +35,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const basePrompt =
+      input.mode === "blend"
+        ? DEFAULT_PROMPTS.hybrid
+        : input.prompt.trim() || promptForReferenceSlot(input.referenceSlot);
+    if (input.mode === "prompt" && basePrompt.trim().length < 10) {
+      return NextResponse.json({ error: "Prompt must be at least 10 characters." }, { status: 400 });
+    }
+    const finalPrompt = [basePrompt, input.additionalPrompt.trim()].filter(Boolean).join("\n");
+
     const generationType =
       input.mode === "blend"
         ? "avatar_image_blend"
@@ -43,9 +55,9 @@ export async function POST(request: Request) {
 
     const result = await imageProvider.generate({
       prompt: [
-        input.prompt,
+        finalPrompt,
         `Persona name: ${input.personaName}.`,
-        `Persona description: ${input.description}.`,
+        input.description ? `Persona description: ${input.description}.` : "",
         input.styleNotes ? `Style notes: ${input.styleNotes}.` : "",
         input.mode === "blend"
           ? `Blend these uploaded source concepts into one unique face: ${referenceImageNames}.`
@@ -56,53 +68,78 @@ export async function POST(request: Request) {
       ]
         .filter(Boolean)
         .join("\n"),
-      model: "gemini-3-pro-image-preview",
+      model: input.model,
       aspectRatio: input.aspectRatio,
       imageSize: input.imageSize,
+      imageQuality: input.imageQuality,
       count: input.count,
       referenceImages,
       generationType,
     });
 
     const createdAt = nowIso();
-    const personaId = `persona-${crypto.randomUUID()}`;
-    const assets = result.assets.map((asset, index) => ({
-      id: `asset-${crypto.randomUUID()}`,
+    const personaId = input.personaId ?? crypto.randomUUID();
+    const visiblePrompt = input.mode === "prompt" && input.prompt.trim() ? input.prompt.trim() : input.additionalPrompt.trim();
+    const assets: Asset[] = result.assets.map((asset, index) => ({
+      id: crypto.randomUUID(),
       kind: "avatar",
-      title: `${input.personaName} reference ${index + 1}`,
-      prompt: input.prompt,
+      title: input.titlePrefix ?? `${input.personaName} reference ${index + 1}`,
+      prompt: visiblePrompt,
       personaId,
+      referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
+      referenceSlot: input.referenceSlot,
+      isDefaultReference: input.isDefaultReference && index === 0,
       generationType,
       provider: result.provider,
       model: result.model,
       createdAt,
       ...asset,
     }));
+    const persona: Persona = {
+      id: personaId,
+      name: input.personaName,
+      description: input.description,
+      styleNotes: input.styleNotes,
+      status: "active",
+      referenceAssetId: assets[0]?.id,
+      createdAt,
+    };
+    const job: GenerationJob = {
+      id: crypto.randomUUID(),
+      status: "succeeded",
+      provider: result.provider,
+      model: result.model,
+      generationType,
+      prompt: visiblePrompt,
+      personaId,
+      costEstimateCents: result.costEstimateCents,
+      rawProviderResponse: result.raw,
+      createdAt,
+      updatedAt: createdAt,
+    };
+
+    await persistGenerationRecords({
+      userId: auth.user?.id,
+      assets,
+      job,
+      inputParams: {
+        prompt: visiblePrompt,
+        additionalPrompt: input.additionalPrompt.trim(),
+        mode: input.mode,
+        model: input.model,
+        referenceSlot: input.referenceSlot,
+        aspectRatio: input.aspectRatio,
+        imageSize: input.imageSize,
+        imageQuality: input.imageQuality,
+        count: input.count,
+        hiddenPromptUsed: !input.prompt.trim() || input.mode !== "prompt",
+      },
+    });
 
     return NextResponse.json({
-      persona: {
-        id: personaId,
-        name: input.personaName,
-        description: input.description,
-        styleNotes: input.styleNotes,
-        status: "active",
-        referenceAssetId: assets[0]?.id,
-        createdAt,
-      },
+      persona,
       assets,
-      job: {
-        id: `job-${crypto.randomUUID()}`,
-        status: "succeeded",
-        provider: result.provider,
-        model: result.model,
-        generationType,
-        prompt: input.prompt,
-        personaId,
-        costEstimateCents: result.costEstimateCents,
-        rawProviderResponse: result.raw,
-        createdAt,
-        updatedAt: createdAt,
-      },
+      job,
     });
   } catch (error) {
     return NextResponse.json(

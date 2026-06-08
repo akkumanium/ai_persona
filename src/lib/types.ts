@@ -35,6 +35,7 @@ export type Asset = {
   generationType: GenerationType;
   provider: ProviderName | "demo";
   providerJobId?: string;
+  providerAssetId?: string;
   model: string;
   mimeType: string;
   createdAt: string;
@@ -44,6 +45,7 @@ export type GenerationJob = {
   id: string;
   status: JobStatus;
   provider: ProviderName | "demo";
+  providerJobId?: string;
   model: string;
   generationType: GenerationType;
   prompt: string;
