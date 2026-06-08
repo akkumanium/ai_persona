@@ -12,6 +12,6 @@
 12. Email fix
 13. "String too small" bug when generating references
 14. Fix the settings for Nano Banana Pro
-
+fsdfsdf
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com
