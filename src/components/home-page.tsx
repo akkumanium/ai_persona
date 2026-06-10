@@ -123,22 +123,22 @@ export function HomePage({
         </div>
       </header>
 
-      <section className="mx-auto grid min-h-screen max-w-7xl gap-12 px-5 pb-20 pt-32 sm:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-        <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#ff4fa3]/28 bg-white/[0.07] px-3 py-2 text-sm font-semibold text-[#ffd0e7] shadow-[0_14px_45px_rgba(0,0,0,0.22)] backdrop-blur">
+      <section className="mx-auto flex min-h-screen max-w-7xl items-start justify-center px-5 pb-20 pt-32 text-center sm:px-8">
+        <div className="mx-auto max-w-4xl">
+          <div className="inline-flex items-center justify-center gap-2 rounded-full border border-[#ff4fa3]/28 bg-white/[0.07] px-3 py-2 text-sm font-semibold text-[#ffd0e7] shadow-[0_14px_45px_rgba(0,0,0,0.22)] backdrop-blur">
             <BadgeCheck size={16} className="text-[#ff65af]" />
             Persona production for careful creative teams
           </div>
 
-          <h1 className="mt-7 text-5xl font-semibold leading-[1.01] tracking-normal text-white sm:text-7xl">
+          <h1 className="mx-auto mt-7 text-5xl font-semibold leading-[1.01] tracking-normal text-white sm:text-7xl">
             Build AI personas that stay consistent under real production pressure.
           </h1>
 
-          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#b6bacb]">
+          <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-[#b6bacb]">
             Persona Studio gives teams one elegant place to define a reusable creator identity, manage reference assets, and produce image or video variations with the context intact.
           </p>
 
-          <div className="mt-9 flex flex-wrap gap-3">
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
             <Link
               href="/studio"
               className="inline-flex h-12 items-center gap-2 rounded-md bg-[#ff4fa3] px-5 text-sm font-semibold text-[#120913] shadow-[0_18px_44px_rgba(255,79,163,0.26)] transition hover:bg-[#ff77b8]"
@@ -155,17 +155,15 @@ export function HomePage({
             </Link>
           </div>
 
-          <div className="mt-10 grid max-w-2xl gap-3 sm:grid-cols-2">
+          <div className="mx-auto mt-10 grid max-w-2xl gap-3 sm:grid-cols-2">
             {credibility.map((item) => (
-              <div key={item} className="flex items-center gap-2 text-sm font-medium text-[#d9dce8]">
+              <div key={item} className="flex items-center justify-center gap-2 text-sm font-medium text-[#d9dce8]">
                 <CheckCircle2 size={17} className="text-[#ff65af]" />
                 {item}
               </div>
             ))}
           </div>
         </div>
-
-        <HeroVisual />
       </section>
 
       <section id="features" className="border-y border-white/10 bg-[#0b0b16]/[0.74] px-5 py-20 sm:px-8">
@@ -301,84 +299,6 @@ export function HomePage({
         </div>
       </section>
     </main>
-  );
-}
-
-function HeroVisual() {
-  return (
-    <div className="relative">
-      <div className="absolute -inset-6 rounded-lg bg-[#ff4fa3]/10 blur-3xl" />
-      <div className="relative rounded-lg border border-white/[0.12] bg-[#10101d]/[0.82] p-3 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur">
-        <div className="rounded-md border border-white/10 bg-[#070812]">
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="size-2 rounded-full bg-[#ff4fa3]" />
-              <span className="size-2 rounded-full bg-[#a78bfa]" />
-              <span className="size-2 rounded-full bg-[#8db7ff]" />
-            </div>
-            <div className="text-xs font-medium text-[#8f96aa]">Persona workspace</div>
-          </div>
-
-          <div className="grid gap-3 p-4 lg:grid-cols-[0.74fr_1fr]">
-            <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-12 items-center justify-center rounded-md bg-[linear-gradient(135deg,#ff4fa3,#8b5cf6)] text-white">
-                  <WandSparkles size={21} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">Mira Vale</p>
-                  <p className="text-xs text-[#9fa6b8]">Editorial creator persona</p>
-                </div>
-              </div>
-              <div className="mt-5 space-y-3">
-                <VisualLine width="w-11/12" />
-                <VisualLine width="w-8/12" />
-                <VisualLine width="w-10/12" />
-              </div>
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                <VisualSwatch color="bg-[#ff4fa3]" label="Accent" />
-                <VisualSwatch color="bg-[#d7c8ff]" label="Wardrobe" />
-                <VisualSwatch color="bg-[#8db7ff]" label="Lighting" />
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="grid grid-cols-3 gap-3">
-                <ReferenceCard label="Face ref" active />
-                <ReferenceCard label="Look ref" />
-                <ReferenceCard label="Scene ref" />
-              </div>
-              <div className="rounded-lg border border-white/10 bg-[#121423] p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-white">Campaign image batch</p>
-                    <p className="mt-1 text-xs text-[#9fa6b8]">4 outputs using 2 approved references</p>
-                  </div>
-                  <span className="rounded-md border border-[#ff4fa3]/30 bg-[#ff4fa3]/12 px-2 py-1 text-xs font-semibold text-[#ffd0e7]">
-                    Ready
-                  </span>
-                </div>
-                <div className="mt-4 grid grid-cols-4 gap-2">
-                  {["bg-[#221628]", "bg-[#1a2034]", "bg-[#27182d]", "bg-[#151827]"].map((color, index) => (
-                    <div key={color} className={`aspect-[4/5] rounded-md border border-white/10 ${color} p-2`}>
-                      <div className="h-1/2 rounded bg-white/[0.08]" />
-                      <div className="mt-2 h-1.5 rounded bg-white/[0.18]" />
-                      <div className={index === 1 ? "mt-1 h-1.5 w-2/3 rounded bg-[#ff4fa3]/[0.55]" : "mt-1 h-1.5 w-2/3 rounded bg-white/[0.12]"} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 border-t border-white/10 p-4 sm:grid-cols-3">
-            <Metric label="Balance" value="$42.50" />
-            <Metric label="References" value="18" />
-            <Metric label="Jobs queued" value="03" />
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 

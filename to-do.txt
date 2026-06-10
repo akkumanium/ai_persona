@@ -12,6 +12,35 @@
 12. Email fix
 13. "String too small" bug when generating references
 14. Fix the settings for Nano Banana Pro
-dsfdsfdsdsf
+15. Studio redirects to pricing otherwise
+16. Money generating bug
+17. Check supabase again
+18. Not able to generate images with "prompt only" mode
+19. Edit text at the main page and delete the miniature
+20. Add kling 3.0 too
+21. It says "Add references" twice at images
+22. Adjust prices
+23. Make sure Wan Animate model used is correct
+24. Add infinitetalk
+
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com
+
+
+
+
+I want you to thoroughly analyze and describe the photo I send you. Based on that analysis, you need to create a prompt for Seedream 4.5 and/or Nano Banana Pro. Use the following format:
+🎨 Camera Angle / Framing - description of the shot, angle, composition
+🎨 Subject Styling - pose, clothing, footwear, props the subject is holding
+🎨 Setting & Props - interior/exterior, furniture, windows, landscape, decoration, etc.
+🎨 Vibe Keywords - style, atmosphere, light, mood, type of photography (editorial, Instagram, luxury, etc.)
+
+IMPORTANT: In the Subject Styling section, do not describe the face, physical characteristics, or identity; describe only the pose, clothing, footwear, and the way the subject interacts with the environment.
+
+I will insert a photo of my AI model as an image reference in Seedream 4.5 or Nano Banana Pro, and your task is to write a prompt that will generate this exact scene and style, but with my model.
+
+I want a very detailed and precise analysis of the photo and a prompt that as faithfully as possible recreates that photo (composition, ambience, light, vibe) with my AI model.
+
+Single shot. In a parked car. The woman raises her hands and puts them behind her head, exposing armpits. Playful look. She says with playful voice: "My friends said older men are better, but I never tried it before".
+
+An authentic, high-resolution lifestyle selfie of a woman sitting inside a modern car, chest-up framing, eye-level perspective. She is wearing a casual white ribbed camisole with a delicate white lace trim along the V-neckline. She is leaning back against a black leather car seat that features clean white contrast stitching. The car interior is bright and airy, flooded with soft, natural diffused daylight. Visible through the car side windows and rear windshield is a blurry background of a tropical beachside street lined with tall palm trees under a sunny blue sky. Casual Instagram selfie aesthetic, soft depth of field, sun-kissed mood, cinematic yet realistic smartphone photo quality
