@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { mockVideoGeneration } from "@/lib/providers/mock";
+import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import type {
   VideoGenerationRequest,
   VideoGenerationResult,
@@ -12,7 +12,7 @@ export class SeedanceVideoProvider implements VideoProvider {
 
   async submit(request: VideoGenerationRequest): Promise<VideoGenerationResult> {
     if (!env.seedanceApiKey) {
-      return mockVideoGeneration(request);
+      throw new Error("SEEDANCE_API_KEY is not configured. Seedance API generation is not connected.");
     }
 
     const startFrame = request.startFrameImageUrl || request.referenceImageUrl;
@@ -67,13 +67,7 @@ export class SeedanceVideoProvider implements VideoProvider {
 
   async poll(providerJobId: string): Promise<VideoGenerationResult> {
     if (!env.seedanceApiKey) {
-      return mockVideoGeneration({
-        prompt: "Demo Seedance poll result",
-        model: env.seedanceModel,
-        mode: "normal",
-        durationSeconds: 5,
-        aspectRatio: "9:16",
-      });
+      throw new Error("SEEDANCE_API_KEY is not configured. Seedance API polling is not connected.");
     }
 
     const response = await fetch(
@@ -118,7 +112,7 @@ export class SeedanceVideoProvider implements VideoProvider {
       status,
       providerJobId,
       asset: videoAssetFromUrl(content?.video_url ?? json.video_url, providerJobId),
-      costEstimateCents: estimateSeedanceCost(request),
+      costEstimateCents: estimateVideoGenerationPricing(request).tokens,
       raw: json,
     };
   }
@@ -135,25 +129,6 @@ function normalizeSeedanceDuration(durationSeconds: number) {
 function normalizeSeedanceRatio(aspectRatio: string) {
   if (aspectRatio === "auto") return "adaptive";
   return ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"].includes(aspectRatio) ? aspectRatio : "9:16";
-}
-
-function estimateSeedanceCost(request: VideoGenerationRequest) {
-  const model = normalizeSeedanceModel(request.model);
-  const duration = normalizeSeedanceDuration(request.durationSeconds);
-  const resolution = request.resolution ?? "720p";
-  const isFast = model.includes("fast");
-  const perSecond =
-    resolution === "1080p"
-      ? 50
-      : resolution === "720p"
-        ? isFast
-          ? 16
-          : 20
-        : isFast
-          ? 8
-          : 10;
-
-  return perSecond * duration;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {

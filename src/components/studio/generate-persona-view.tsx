@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 
 const imageAspectRatios = ["1:1", "3:4", "4:5", "9:16", "16:9"];
 const imageSizes = ["1K", "2K", "4K"];
-const imageQualities = ["auto", "low", "medium", "high"];
+const imageQualities = ["low", "medium", "high"];
 
 export function GeneratePersonaView({
   personas,
@@ -52,7 +52,7 @@ export function GeneratePersonaView({
   const [selectedModel, setSelectedModel] = useState("gemini-3-pro-image-preview");
   const [aspectRatio, setAspectRatio] = useState<string>(initialSlot.aspectRatio);
   const [imageSize, setImageSize] = useState("4K");
-  const [imageQuality, setImageQuality] = useState("auto");
+  const [imageQuality, setImageQuality] = useState("medium");
   const [confirmsRights, setConfirmsRights] = useState(false);
   const [confirmsAdultPersona, setConfirmsAdultPersona] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);

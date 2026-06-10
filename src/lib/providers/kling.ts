@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { mockVideoGeneration } from "@/lib/providers/mock";
+import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import type {
   VideoGenerationRequest,
   VideoGenerationResult,
@@ -17,7 +17,7 @@ export class KlingVideoProvider implements VideoProvider {
 
   async submit(request: VideoGenerationRequest): Promise<VideoGenerationResult> {
     if (!env.klingApiKey) {
-      return mockVideoGeneration(request);
+      throw new Error("KLING_API_KEY is not configured. Kling API generation is not connected.");
     }
 
     const startFrame = request.startFrameImageUrl || request.referenceImageUrl;
@@ -25,7 +25,7 @@ export class KlingVideoProvider implements VideoProvider {
       throw new Error("Kling image-to-video requires a start frame image.");
     }
 
-    const duration = normalizeKlingDuration(request.durationSeconds);
+    const duration = normalizeKlingDuration(request.model, request.durationSeconds);
     const mode = request.endFrameImageUrl ? "pro" : (request.providerMode ?? "std");
 
     const response = await fetch(providerUrl(env.klingApiBaseUrl, "/v1/videos/image2video"), {
@@ -43,6 +43,7 @@ export class KlingVideoProvider implements VideoProvider {
         mode,
         duration,
         aspect_ratio: normalizeKlingAspectRatio(request.aspectRatio),
+        resolution: request.resolution,
         cfg_scale: request.cfgScale ?? 0.5,
         sound: request.generateAudio ? "on" : "off",
       }),
@@ -58,13 +59,7 @@ export class KlingVideoProvider implements VideoProvider {
 
   async poll(providerJobId: string): Promise<VideoGenerationResult> {
     if (!env.klingApiKey) {
-      return mockVideoGeneration({
-        prompt: "Demo Kling poll result",
-        model: env.klingModel,
-        mode: "normal",
-        durationSeconds: 5,
-        aspectRatio: "9:16",
-      });
+      throw new Error("KLING_API_KEY is not configured. Kling API polling is not connected.");
     }
 
     const response = await fetch(providerUrl(env.klingApiBaseUrl, `/v1/videos/image2video/${providerJobId}`), {
@@ -123,7 +118,7 @@ export class KlingVideoProvider implements VideoProvider {
       status,
       providerJobId,
       asset: videoAssetFromUrl(videoUrl, firstVideo?.id ?? providerJobId),
-      costEstimateCents: estimateKlingCost(request),
+      costEstimateCents: estimateVideoGenerationPricing(request).tokens,
       raw: json,
     };
   }
@@ -133,17 +128,16 @@ function normalizeKlingModel(model: string) {
   return model === "kling" ? env.klingModel : model;
 }
 
-function normalizeKlingDuration(durationSeconds: number) {
+function normalizeKlingDuration(model: string, durationSeconds: number) {
+  if (model === "kling-v3-0" || model === "kling-v3-0-4k" || model === "kling-v3") {
+    return String(Math.max(1, Math.min(15, Math.round(durationSeconds))));
+  }
+
   return durationSeconds >= 10 ? "10" : "5";
 }
 
 function normalizeKlingAspectRatio(aspectRatio: string) {
   return ["16:9", "9:16", "1:1"].includes(aspectRatio) ? aspectRatio : "9:16";
-}
-
-function estimateKlingCost(request: VideoGenerationRequest) {
-  const base = request.providerMode === "pro" || request.endFrameImageUrl ? 120 : 80;
-  return request.durationSeconds >= 10 ? base * 2 : base;
 }
 
 function isKlingError(json: Record<string, unknown>) {

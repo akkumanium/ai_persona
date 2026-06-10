@@ -5,8 +5,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCredits(cents: number) {
-  return `$${(cents / 100).toFixed(2)}`;
+export function formatTokens(tokens: number) {
+  return `${Math.max(0, Math.round(tokens)).toLocaleString()} tokens`;
 }
 
 export function nowIso() {

@@ -184,7 +184,7 @@ export function AuthButton({
               <div>
                 <p className="text-lg font-semibold">Persona Studio access</p>
                 <p className="mt-1 text-sm leading-6 text-[#b9c4d3]">
-                  Sign in to keep account data, assets, and credit usage tied to your Supabase user.
+                  Sign in to keep account data, assets, and token usage tied to your Supabase user.
                 </p>
               </div>
               <button

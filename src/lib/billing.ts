@@ -6,6 +6,7 @@ export type BillingPlan = {
   id: BillingPlanId;
   name: string;
   priceLabel: string;
+  tokenLabel: string;
   creditCents: number;
   priceId?: string;
   description: string;
@@ -16,7 +17,8 @@ export const billingPlans: BillingPlan[] = [
     id: "starter",
     name: "Studio Light",
     priceLabel: "$5",
-    creditCents: 500,
+    tokenLabel: "5,000 tokens",
+    creditCents: 5000,
     priceId: env.paddleFiveDollarPriceId,
     description: "A focused monthly balance for early persona and reference work.",
   },
@@ -24,7 +26,8 @@ export const billingPlans: BillingPlan[] = [
     id: "plus",
     name: "Studio Plus",
     priceLabel: "$10",
-    creditCents: 1000,
+    tokenLabel: "10,000 tokens",
+    creditCents: 10000,
     priceId: env.paddleTenDollarPriceId,
     description: "More room for image, video, and campaign iteration.",
   },
@@ -53,6 +56,7 @@ export function getPublicPaddleConfig() {
       id: plan.id,
       name: plan.name,
       priceLabel: plan.priceLabel,
+      tokenLabel: plan.tokenLabel,
       creditCents: plan.creditCents,
       priceId: plan.priceId ?? "",
       description: plan.description,

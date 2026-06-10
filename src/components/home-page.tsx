@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Sparkles,
   UsersRound,
-  WandSparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { AuthButton } from "@/components/auth/auth-button";
@@ -81,7 +80,7 @@ const useCases = [
 const credibility = [
   "Reference-first workflow",
   "Secure account access",
-  "Clear credit balance",
+  "Clear token balance",
   "Image and video jobs",
 ];
 
@@ -176,7 +175,7 @@ export function HomePage({
               </h2>
             </div>
             <p className="max-w-2xl text-base leading-7 text-[#aeb4c6]">
-              The product is built around the parts of AI production that usually become messy: references, revisions, cost, and shared memory.
+              The product is built around the parts of AI production that usually become messy: references, revisions, token spend, and shared memory.
             </p>
           </div>
 
@@ -236,7 +235,7 @@ export function HomePage({
               A workspace built for reference-led AI production.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-[#aeb4c6]">
-              Compare persona notes, selected references, output state, and job cost without jumping between prompt documents, file folders, and billing pages.
+              Compare persona notes, selected references, output state, and token cost without jumping between prompt documents, file folders, and billing pages.
             </p>
             <div className="mt-7 grid gap-3 text-sm text-[#d7dbea]">
               <PreviewPoint icon={Layers3} text="Reference slots make intent visible before generation starts." />
@@ -283,7 +282,7 @@ export function HomePage({
           </div>
           <div className="rounded-lg border border-white/10 bg-white/[0.055] p-6 shadow-[0_22px_80px_rgba(0,0,0,0.28)] backdrop-blur">
             <p className="text-xl leading-8 text-[#eef0f8]">
-              &quot;The value is not another prompt box. It is the shared record: who the persona is, which references are approved, what each job cost, and which outputs are worth repeating.&quot;
+              &quot;The value is not another prompt box. It is the shared record: who the persona is, which references are approved, what each job cost in tokens, and which outputs are worth repeating.&quot;
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
               <div>
@@ -376,33 +375,11 @@ function PreviewPoint({ icon: Icon, text }: { icon: typeof Layers3; text: string
   );
 }
 
-function VisualLine({ width }: { width: string }) {
-  return <div className={`h-2 rounded-full bg-white/10 ${width}`} />;
-}
-
-function VisualSwatch({ color, label }: { color: string; label: string }) {
-  return (
-    <div className="rounded-md border border-white/10 bg-white/[0.04] p-2">
-      <div className={`h-8 rounded ${color}`} />
-      <p className="mt-2 text-[11px] font-medium text-[#9fa6b8]">{label}</p>
-    </div>
-  );
-}
-
 function ReferenceCard({ label, active = false }: { label: string; active?: boolean }) {
   return (
     <div className={`rounded-md border p-2 ${active ? "border-[#ff4fa3]/[0.45] bg-[#ff4fa3]/[0.12]" : "border-white/10 bg-white/[0.045]"}`}>
       <div className="aspect-square rounded bg-[linear-gradient(145deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))]" />
       <p className="mt-2 text-[11px] font-medium text-[#b9bfd0]">{label}</p>
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-white/10 bg-white/[0.045] p-3">
-      <p className="text-xs text-[#9fa6b8]">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-white">{value}</p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { mockImageGeneration } from "@/lib/providers/mock";
+import { estimateImageGenerationPricing } from "@/lib/pricing";
 import type {
   GeneratedAssetPayload,
   ImageGenerationRequest,
@@ -12,7 +12,7 @@ export class OpenAIImageProvider implements ImageProvider {
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     if (!env.openaiApiKey) {
-      return mockImageGeneration(request);
+      throw new Error("OPENAI_API_KEY is not configured. ChatGPT Image API generation is not connected.");
     }
 
     if (request.referenceImages?.length) {
@@ -29,7 +29,7 @@ export class OpenAIImageProvider implements ImageProvider {
         model: request.model,
         prompt: request.prompt,
         size: mapImageSize(request.aspectRatio),
-        quality: request.imageQuality ?? "auto",
+        quality: normalizeImageQuality(request.imageQuality),
         n: request.count,
       }),
     });
@@ -72,7 +72,7 @@ export class OpenAIImageProvider implements ImageProvider {
       provider: this.name,
       model: request.model,
       assets: assets.slice(0, request.count),
-      costEstimateCents: request.generationType.includes("avatar") ? 14 : 20,
+      costEstimateCents: estimateImageGenerationPricing(request).tokens,
       raw: json,
     };
   }
@@ -82,7 +82,7 @@ export class OpenAIImageProvider implements ImageProvider {
     form.set("model", request.model);
     form.set("prompt", request.prompt);
     form.set("size", mapImageSize(request.aspectRatio));
-    form.set("quality", request.imageQuality ?? "auto");
+    form.set("quality", normalizeImageQuality(request.imageQuality));
     form.set("n", String(request.count));
 
     for (const [index, image] of (request.referenceImages ?? []).slice(0, 16).entries()) {
@@ -115,7 +115,7 @@ export class OpenAIImageProvider implements ImageProvider {
       provider: this.name,
       model: request.model,
       assets,
-      costEstimateCents: request.generationType.includes("avatar") ? 14 : 20,
+      costEstimateCents: estimateImageGenerationPricing(request).tokens,
       raw: json,
     };
   }
@@ -158,6 +158,10 @@ function extensionFromMimeType(mimeType: string) {
   if (mimeType.includes("webp")) return "webp";
   if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
   return "png";
+}
+
+function normalizeImageQuality(quality: ImageGenerationRequest["imageQuality"]) {
+  return quality === "auto" || !quality ? "medium" : quality;
 }
 
 function mapImageSize(aspectRatio: string) {

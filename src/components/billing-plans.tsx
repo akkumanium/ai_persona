@@ -5,7 +5,7 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import type { BillingPlan } from "@/lib/billing";
-import { formatCredits } from "@/lib/utils";
+import { formatTokens } from "@/lib/utils";
 
 type PublicPaddleConfig = {
   clientToken: string;
@@ -93,7 +93,7 @@ export function BillingPlans({
       const data = (await response.json()) as { hasStudioAccess?: boolean; balanceCents?: number };
       if (data.hasStudioAccess) {
         setCheckoutState("success");
-        setMessage(`Studio access is active. Balance: ${formatCredits(data.balanceCents ?? 0)}.`);
+        setMessage(`Studio access is active. Balance: ${formatTokens(data.balanceCents ?? 0)}.`);
         router.refresh();
         return true;
       }
@@ -266,7 +266,7 @@ export function BillingPlans({
               <div className={`mt-5 grid gap-2 text-sm ${styles.benefit}`}>
                 <div className="flex items-center gap-2">
                   <Check size={16} className={styles.check} />
-                  Adds {formatCredits(plan.creditCents)} to balance after successful payment
+                  Adds {formatTokens(plan.creditCents)} to balance after successful payment
                 </div>
                 <div className="flex items-center gap-2">
                   <Check size={16} className={styles.check} />

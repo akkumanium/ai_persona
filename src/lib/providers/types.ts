@@ -50,7 +50,7 @@ export type VideoGenerationRequest = {
   providerMode?: "std" | "pro";
   cfgScale?: number;
   generateAudio?: boolean;
-  resolution?: "480p" | "720p" | "1080p";
+  resolution?: "480p" | "720p" | "1080p" | "4K";
   returnLastFrame?: boolean;
   motionReference?: string;
   motionReferenceVideo?: ProviderMediaInput;

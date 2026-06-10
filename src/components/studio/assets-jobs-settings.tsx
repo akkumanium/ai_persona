@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { AssetFilter } from "@/components/studio/types";
 import { ModeToggle, PanelTitle } from "@/components/studio/ui";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
-import { formatCredits } from "@/lib/utils";
+import { formatTokens } from "@/lib/utils";
 
 export function AssetsView({
   assets,
@@ -112,7 +112,7 @@ export function JobsView({ jobs }: { jobs: GenerationJob[] }) {
             <p className="mt-1 text-stone-500">{new Date(job.createdAt).toLocaleString()}</p>
           </div>
           <span className="font-medium capitalize text-emerald-800">{job.status}</span>
-          <span className="text-stone-600">{formatCredits(job.costEstimateCents)}</span>
+          <span className="text-stone-600">{formatTokens(job.costEstimateCents)}</span>
         </div>
       ))}
     </section>
@@ -123,8 +123,8 @@ export function SettingsView({ balanceCents }: { balanceCents: number }) {
   return (
     <section className="max-w-xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
       <PanelTitle icon={Coins} title="Balance" />
-      <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatCredits(balanceCents)}</p>
-      <p className="mt-2 text-sm leading-6 text-stone-600">Available credit for new generations.</p>
+      <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>
+      <p className="mt-2 text-sm leading-6 text-stone-600">Available tokens for new generations.</p>
     </section>
   );
 }

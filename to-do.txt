@@ -1,17 +1,17 @@
-1. Don't show the prompt in "jobs"
-2. Add being able to delete images, just like how we're able to delete references
-3. Dollar usage bug
-4. Image generated twice
+1. Don't show the prompt in "jobs" ✅
+2. Add being able to delete images, just like how we're able to delete references ✅
+3. Dollar usage bug ✅
+4. Image generated twice ✅
 5. Supabase not finished
 6. Come up with a name
 7. Google oauth settings fix 
 8. Fix invisibility issue
-9. Refine the main page
-10. Delete "Provider Environment" and "Models And Usage" from settings
-11. Set hybrid mode as default
+9. Refine the main page ✅
+10. Delete "Provider Environment" and "Models And Usage" from settings ✅
+11. Set hybrid mode as default ✅
 12. Email fix
-13. "String too small" bug when generating references
-14. Fix the settings for Nano Banana Pro
+13. "String too small" bug when generating references ✅
+14. Fix the settings for Nano Banana Pro ✅
 15. Studio redirects to pricing otherwise
 16. Money generating bug
 17. Check supabase again

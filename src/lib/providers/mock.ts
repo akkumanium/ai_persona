@@ -4,6 +4,7 @@ import type {
   VideoGenerationRequest,
   VideoGenerationResult,
 } from "@/lib/providers/types";
+import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "@/lib/pricing";
 
 function encodedSvg(label: string, detail: string, palette: string[]) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
@@ -36,7 +37,7 @@ export async function mockImageGeneration(
     provider: "demo",
     model: request.model,
     assets,
-    costEstimateCents: request.generationType.includes("avatar") ? 12 : 18,
+    costEstimateCents: estimateImageGenerationPricing(request).tokens,
     raw: { demo: true, prompt: request.prompt },
   };
 }
@@ -54,7 +55,7 @@ export async function mockVideoGeneration(
       mimeType: "video/mp4",
       providerAssetId: `demo-video-asset-${Date.now()}`,
     },
-    costEstimateCents: request.mode === "motion" ? 95 : Math.max(50, request.durationSeconds * 14),
+    costEstimateCents: estimateVideoGenerationPricing(request).tokens,
     raw: {
       demo: true,
       mode: request.mode,

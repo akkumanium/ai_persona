@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { imageProvider } from "@/lib/providers";
 import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
-import type { ProviderImageInput } from "@/lib/providers/types";
+import type { ImageGenerationRequest, ProviderImageInput } from "@/lib/providers/types";
+import { estimateImageGenerationPricing } from "@/lib/pricing";
 import { promptForReferenceSlot } from "@/lib/reference-prompts";
 import { imageGenerationSchema } from "@/lib/schemas";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 
     const finalPrompt = [basePrompt, input.additionalPrompt.trim()].filter(Boolean).join("\n");
 
-    const result = await imageProvider.generate({
+    const providerRequest: ImageGenerationRequest = {
       prompt: [
         finalPrompt,
         referenceUrls.length ? `Keep facial identity consistent with reference persona ${input.personaName}.` : "",
@@ -56,7 +58,11 @@ export async function POST(request: Request) {
       count: input.count,
       referenceImages,
       generationType,
-    });
+    };
+    const estimatedPricing = estimateImageGenerationPricing(providerRequest);
+    await assertSufficientTokens(auth.user?.id, estimatedPricing.tokens);
+
+    const result = await imageProvider.generate(providerRequest);
 
     const createdAt = nowIso();
     const visiblePrompt = isReferenceAvatar ? input.additionalPrompt.trim() : input.prompt.trim();
@@ -87,7 +93,7 @@ export async function POST(request: Request) {
       generationType,
       prompt: visiblePrompt,
       personaId: input.personaId,
-      costEstimateCents: result.costEstimateCents,
+      costEstimateCents: estimatedPricing.tokens,
       rawProviderResponse: result.raw,
       createdAt,
       updatedAt: createdAt,
@@ -117,6 +123,10 @@ export async function POST(request: Request) {
       job,
     });
   } catch (error) {
+    if (error instanceof InsufficientTokensError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Image generation failed." },
       { status: 500 },

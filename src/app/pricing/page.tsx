@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Pricing | Persona Studio",
-  description: "Choose a Persona Studio plan for saved personas, assets, and generation credits.",
+  description: "Choose a Persona Studio plan for saved personas, assets, and generation tokens.",
 };
 
 export const dynamic = "force-dynamic";
@@ -50,10 +50,10 @@ export default async function PricingPage() {
           Back to homepage
         </Link>
         <h1 className="mx-auto mt-7 max-w-4xl text-4xl font-semibold leading-tight tracking-normal sm:text-6xl">
-          Choose the monthly balance that fits your production pace.
+          Choose the monthly token balance that fits your production pace.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#aeb4c6]">
-          Plans unlock the studio and add generation credit after each successful subscription payment.
+          Plans unlock the studio and add generation tokens after each successful subscription payment.
         </p>
       </section>
 
@@ -62,7 +62,7 @@ export default async function PricingPage() {
           title={initialUserId ? "Select your plan" : "Sign in, then select a plan"}
           copy={
             initialUserId
-              ? "Your subscription connects to your saved workspace and credit balance."
+              ? "Your subscription connects to your saved workspace and token balance."
               : "Authentication connects the Paddle payment to your workspace before checkout."
           }
           userId={initialUserId}

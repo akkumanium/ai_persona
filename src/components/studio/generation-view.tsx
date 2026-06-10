@@ -27,10 +27,9 @@ import { cn } from "@/lib/utils";
 const klingAspectRatios = ["16:9", "9:16", "1:1"];
 const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
-const videoResolutionOptions = ["480p", "720p", "1080p"];
 const imageAspectRatioOptions = ["1:1", "3:4", "4:5", "9:16", "16:9"];
 const imageSizeOptions = ["1K", "2K", "4K"];
-const imageQualityOptions = ["auto", "low", "medium", "high"];
+const imageQualityOptions = ["low", "medium", "high"];
 
 export function GenerationView({
   mode,
@@ -57,7 +56,7 @@ export function GenerationView({
   const [imageModel, setImageModel] = useState("gemini-3-pro-image-preview");
   const [imageAspectRatio, setImageAspectRatio] = useState("4:5");
   const [imageSize, setImageSize] = useState("2K");
-  const [imageQuality, setImageQuality] = useState("auto");
+  const [imageQuality, setImageQuality] = useState("medium");
   const [videoModel, setVideoModel] = useState("wan-2.2");
   const [motionVideoModel, setMotionVideoModel] = useState("wan-animate");
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
@@ -71,7 +70,7 @@ export function GenerationView({
   const [videoProviderMode, setVideoProviderMode] = useState<"std" | "pro">("std");
   const [videoCfgScale, setVideoCfgScale] = useState(0.5);
   const [videoGenerateAudio, setVideoGenerateAudio] = useState(false);
-  const [videoResolution, setVideoResolution] = useState<"480p" | "720p" | "1080p">("720p");
+  const [videoResolution, setVideoResolution] = useState<"480p" | "720p" | "1080p" | "4K">("720p");
   const [videoReturnLastFrame, setVideoReturnLastFrame] = useState(false);
   const [motionReference, setMotionReference] = useState("slow head turn, right hand product reveal");
   const [motionReferenceImage, setMotionReferenceImage] = useState<SourceImageInput | undefined>();
@@ -122,8 +121,11 @@ export function GenerationView({
     ? videoAspectRatio
     : videoAspectRatioOptions[0];
   const safeVideoDuration = clampNumber(videoDurationSeconds, durationBounds.min, durationBounds.max);
-  const safeVideoResolution =
-    videoModel.includes("fast") && videoResolution === "1080p" ? "720p" : videoResolution;
+  const videoResolutionOptionsForModel = resolutionsForVideoModel(videoModel);
+  const safeVideoResolution = videoResolutionOptionsForModel.includes(videoResolution)
+    ? videoResolution
+    : videoResolutionOptionsForModel[0];
+  const normalVideoRequiresStartFrame = requiresStartFrame(videoModel);
   const latestAssets = useMemo(
     () =>
       assets.filter((asset) => {
@@ -172,6 +174,10 @@ export function GenerationView({
     setVideoDurationSeconds((current) => clampNumber(current, nextDurationBounds.min, nextDurationBounds.max));
     if (modelId.includes("fast") && videoResolution === "1080p") {
       setVideoResolution("720p");
+    }
+    const nextResolutions = resolutionsForVideoModel(modelId);
+    if (!nextResolutions.includes(videoResolution)) {
+      setVideoResolution(nextResolutions.includes("720p") ? "720p" : nextResolutions[0]);
     }
   }
 
@@ -222,7 +228,7 @@ export function GenerationView({
     if (!selectedPersona) return;
     const startFrameAsset = mode === "normal" ? selectedVideoStartFrame : undefined;
     const endFrameAsset = mode === "normal" ? selectedVideoEndFrame : undefined;
-    if (mode === "normal" && !startFrameAsset) return;
+    if (mode === "normal" && normalVideoRequiresStartFrame && !startFrameAsset) return;
     const referenceImageUrl =
       mode === "motion"
         ? motionReferenceImage
@@ -442,20 +448,22 @@ export function GenerationView({
                 <RangeField label="CFG" value={videoCfgScale} min={0} max={1} step={0.05} onChange={setVideoCfgScale} />
               </>
             ) : null}
-            {isSeedanceVideoModel(videoModel) ? (
+            {showsResolutionControl(videoModel) ? (
               <>
                 <SelectField
                   label="Resolution"
                   value={safeVideoResolution}
-                  options={videoModel.includes("fast") ? ["480p", "720p"] : videoResolutionOptions}
-                  onChange={(value) => setVideoResolution(value as "480p" | "720p" | "1080p")}
-                />
-                <CheckboxField
-                  label="Return last frame"
-                  checked={videoReturnLastFrame}
-                  onChange={setVideoReturnLastFrame}
+                  options={videoResolutionOptionsForModel}
+                  onChange={(value) => setVideoResolution(value as "480p" | "720p" | "1080p" | "4K")}
                 />
               </>
+            ) : null}
+            {isSeedanceVideoModel(videoModel) ? (
+              <CheckboxField
+                label="Return last frame"
+                checked={videoReturnLastFrame}
+                onChange={setVideoReturnLastFrame}
+              />
             ) : null}
             <CheckboxField label="Generate audio" checked={videoGenerateAudio} onChange={setVideoGenerateAudio} />
             <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={5} />
@@ -464,7 +472,7 @@ export function GenerationView({
               loading={isGeneratingVideo}
               icon={Play}
               label="Generate video"
-              disabled={!selectedPersona || !selectedVideoStartFrame}
+              disabled={!selectedPersona || (normalVideoRequiresStartFrame && !selectedVideoStartFrame)}
             />
           </form>
         ) : null}
@@ -618,8 +626,10 @@ function aspectRatiosForVideoModel(modelId: string) {
 }
 
 function durationBoundsForVideoModel(modelId: string) {
+  if (isKling30VideoModel(modelId)) return { min: 3, max: 15, step: 1 };
   if (isKlingVideoModel(modelId)) return { min: 5, max: 10, step: 5 };
   if (isSeedanceVideoModel(modelId)) return { min: 4, max: 15, step: 1 };
+  if (modelId === "wan-2.7") return { min: 3, max: 15, step: 1 };
   return { min: 3, max: 15, step: 1 };
 }
 
@@ -627,8 +637,29 @@ function isKlingVideoModel(modelId: string) {
   return modelId === "kling" || modelId.startsWith("kling-");
 }
 
+function isKling30VideoModel(modelId: string) {
+  return modelId === "kling-v3" || modelId === "kling-v3-0" || modelId === "kling-v3-0-4k";
+}
+
 function isSeedanceVideoModel(modelId: string) {
   return modelId === "seedance" || modelId.includes("seedance");
+}
+
+function showsResolutionControl(modelId: string) {
+  return isSeedanceVideoModel(modelId) || modelId.startsWith("wan-") || isKling30VideoModel(modelId);
+}
+
+function resolutionsForVideoModel(modelId: string): Array<"480p" | "720p" | "1080p" | "4K"> {
+  if (modelId.includes("seedance") && modelId.includes("fast")) return ["480p", "720p"];
+  if (isSeedanceVideoModel(modelId)) return ["480p", "720p", "1080p"];
+  if (modelId === "wan-2.2" || modelId === "wan-animate") return ["480p", "720p"];
+  if (modelId === "wan-2.7") return ["720p", "1080p"];
+  if (isKling30VideoModel(modelId)) return ["720p", "1080p", "4K"];
+  return ["720p"];
+}
+
+function requiresStartFrame(modelId: string) {
+  return isKlingVideoModel(modelId) || modelId === "wan-2.2" || modelId === "wan-animate";
 }
 
 function clampNumber(value: number, min: number, max: number) {

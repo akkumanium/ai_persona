@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { videoProvider } from "@/lib/providers";
+import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -18,6 +20,9 @@ export async function POST(request: Request) {
         : input.startFrameImageUrl || input.referenceImageUrl
           ? "video_normal"
           : "video_prompt";
+    const estimatedPricing = estimateVideoGenerationPricing(input);
+    await assertSufficientTokens(auth.user?.id, estimatedPricing.tokens);
+
     const result = await videoProvider.submit(input);
     const createdAt = nowIso();
     const jobId = crypto.randomUUID();
@@ -45,7 +50,7 @@ export async function POST(request: Request) {
       generationType,
       prompt: input.prompt,
       personaId: input.personaId,
-      costEstimateCents: result.costEstimateCents,
+      costEstimateCents: estimatedPricing.tokens,
       rawProviderResponse: result.raw,
       createdAt,
       updatedAt: createdAt,
@@ -64,6 +69,10 @@ export async function POST(request: Request) {
       providerJobId: result.providerJobId,
     });
   } catch (error) {
+    if (error instanceof InsufficientTokensError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Video generation failed." },
       { status: 500 },

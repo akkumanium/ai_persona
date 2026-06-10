@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { mockImageGeneration } from "@/lib/providers/mock";
+import { estimateImageGenerationPricing } from "@/lib/pricing";
 import type {
   ImageGenerationRequest,
   ImageGenerationResult,
@@ -28,7 +28,7 @@ export class NanoBananaProvider implements ImageProvider {
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     if (!env.geminiApiKey) {
-      return mockImageGeneration(request);
+      throw new Error("GEMINI_API_KEY is not configured. Nano Banana Pro API generation is not connected.");
     }
 
     const model = request.model || env.nanoBananaModel;
@@ -98,7 +98,7 @@ export class NanoBananaProvider implements ImageProvider {
       provider: this.name,
       model,
       assets: assets.slice(0, request.count),
-      costEstimateCents: request.generationType.includes("avatar") ? 12 : 18,
+      costEstimateCents: estimateImageGenerationPricing({ ...request, model }).tokens,
       raw: json,
     };
   }

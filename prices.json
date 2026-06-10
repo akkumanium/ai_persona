@@ -1,0 +1,501 @@
+{
+"currency": "USD",
+"last_verified": "2026-06-10",
+"purpose": "Website API model pricing ingestion",
+"important_notes": [
+"Prices are raw API or gateway costs and do not include your website markup, storage, CDN, failed generations, retries, payment fees, or support margin.",
+"Video model pricing is provider-specific. Do not mix credits or prices across PoYo, Fal, BytePlus, Kie, or other providers.",
+"For frontend display, consider storing provider, model, workflow, resolution, duration, audio, billing_unit, raw_price_usd, and customer_price_usd separately.",
+"Only GPT Image 2 is included for OpenAI image pricing.",
+"Wan 2.7 edit-video and the Wan 2.7 5-second example are intentionally excluded."
+],
+"models": [
+{
+"model_key": "nano_banana_pro",
+"display_name": "Nano Banana Pro / Gemini 3 Pro Image",
+"provider": "Google Gemini API",
+"category": "image",
+"pricing_type": "per_image_or_token_equivalent",
+"settings": [
+{
+"workflow": "image_input",
+"tier": "standard",
+"unit": "input_image",
+"raw_price_usd": 0.0011,
+"token_equivalent": 560,
+"notes": "Approximate image input cost based on 560 input tokens."
+},
+{
+"workflow": "image_output",
+"tier": "standard",
+"resolution": "1K",
+"unit": "output_image",
+"raw_price_usd": 0.134,
+"token_equivalent": 1120
+},
+{
+"workflow": "image_output",
+"tier": "standard",
+"resolution": "2K",
+"unit": "output_image",
+"raw_price_usd": 0.134,
+"token_equivalent": 1120
+},
+{
+"workflow": "image_output",
+"tier": "standard",
+"resolution": "4K",
+"unit": "output_image",
+"raw_price_usd": 0.24,
+"token_equivalent": 2000
+},
+{
+"workflow": "image_output",
+"tier": "priority",
+"resolution": "1K",
+"unit": "output_image",
+"estimated_raw_price_usd": 0.242,
+"notes": "Derived from priority image output token pricing."
+},
+{
+"workflow": "image_output",
+"tier": "priority",
+"resolution": "2K",
+"unit": "output_image",
+"estimated_raw_price_usd": 0.242,
+"notes": "Derived from priority image output token pricing."
+},
+{
+"workflow": "image_output",
+"tier": "priority",
+"resolution": "4K",
+"unit": "output_image",
+"estimated_raw_price_usd": 0.432,
+"notes": "Derived from priority image output token pricing."
+},
+{
+"workflow": "grounding_or_search",
+"unit": "1000_search_queries",
+"raw_price_usd": 14,
+"free_quota": "5000 prompts/month",
+"notes": "Only applies when grounding/search is enabled."
+}
+]
+},
+{
+"model_key": "gpt_image_2",
+"display_name": "GPT Image 2",
+"provider": "OpenAI",
+"category": "image",
+"pricing_type": "per_output_image",
+"settings": [
+{
+"quality": "low",
+"size": "1024x1024",
+"unit": "image",
+"raw_price_usd": 0.006
+},
+{
+"quality": "low",
+"size": "1024x1536",
+"unit": "image",
+"raw_price_usd": 0.005
+},
+{
+"quality": "low",
+"size": "1536x1024",
+"unit": "image",
+"raw_price_usd": 0.005
+},
+{
+"quality": "medium",
+"size": "1024x1024",
+"unit": "image",
+"raw_price_usd": 0.053
+},
+{
+"quality": "medium",
+"size": "1024x1536",
+"unit": "image",
+"raw_price_usd": 0.041
+},
+{
+"quality": "medium",
+"size": "1536x1024",
+"unit": "image",
+"raw_price_usd": 0.041
+},
+{
+"quality": "high",
+"size": "1024x1024",
+"unit": "image",
+"raw_price_usd": 0.211
+},
+{
+"quality": "high",
+"size": "1024x1536",
+"unit": "image",
+"raw_price_usd": 0.165
+},
+{
+"quality": "high",
+"size": "1536x1024",
+"unit": "image",
+"raw_price_usd": 0.165
+}
+],
+"notes": [
+"Custom GPT Image 2 resolutions may require token-based cost estimation instead of this fixed table.",
+"Multiply raw_price_usd by number of requested output images."
+]
+},
+{
+"model_key": "kling_2_6",
+"display_name": "Kling 2.6",
+"provider": "PoYo",
+"category": "video",
+"pricing_type": "credits_or_estimated_usd",
+"credit_to_usd_estimate": 0.005,
+"settings": [
+{
+"workflow": "standard_video_generation",
+"resolution": "1080p",
+"duration_seconds": 5,
+"audio": false,
+"unit": "generation",
+"raw_price_credits": 65,
+"estimated_raw_price_usd": 0.325
+},
+{
+"workflow": "standard_video_generation",
+"resolution": "1080p",
+"duration_seconds": 10,
+"audio": false,
+"unit": "generation",
+"raw_price_credits": 130,
+"estimated_raw_price_usd": 0.65
+},
+{
+"workflow": "standard_video_generation",
+"resolution": "1080p",
+"duration_seconds": 5,
+"audio": true,
+"unit": "generation",
+"raw_price_credits": 120,
+"estimated_raw_price_usd": 0.6
+},
+{
+"workflow": "standard_video_generation",
+"resolution": "1080p",
+"duration_seconds": 10,
+"audio": true,
+"unit": "generation",
+"raw_price_credits": 240,
+"estimated_raw_price_usd": 1.2
+},
+{
+"workflow": "motion_control",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 8,
+"estimated_raw_price_usd_per_second": 0.04
+},
+{
+"workflow": "motion_control",
+"resolution": "1080p",
+"unit": "second",
+"raw_price_credits_per_second": 12,
+"estimated_raw_price_usd_per_second": 0.06
+}
+]
+},
+{
+"model_key": "kling_3_0",
+"display_name": "Kling 3.0",
+"provider": "PoYo",
+"category": "video",
+"pricing_type": "per_second",
+"settings": [
+{
+"variant": "standard",
+"resolution": "720p",
+"audio": false,
+"unit": "second",
+"raw_price_usd_per_second": 0.135
+},
+{
+"variant": "standard",
+"resolution": "720p",
+"audio": true,
+"unit": "second",
+"raw_price_usd_per_second": 0.195
+},
+{
+"variant": "pro",
+"resolution": "1080p",
+"audio": false,
+"unit": "second",
+"raw_price_usd_per_second": 0.195
+},
+{
+"variant": "pro",
+"resolution": "1080p",
+"audio": true,
+"unit": "second",
+"raw_price_usd_per_second": 0.245
+},
+{
+"variant": "4k",
+"resolution": "4K",
+"audio": null,
+"unit": "second",
+"raw_price_usd_per_second": 0.25,
+"notes": "Audio-specific split was not listed separately."
+}
+]
+},
+{
+"model_key": "wan_2_2",
+"display_name": "Wan 2.2",
+"category": "video",
+"pricing_type": "provider_specific",
+"providers": [
+{
+"provider": "Fal",
+"variant": "Wan 2.2 A14B",
+"billing_unit": "second",
+"settings": [
+{
+"resolution": "480p",
+"raw_price_usd_per_second": 0.04
+},
+{
+"resolution": "580p",
+"raw_price_usd_per_second": 0.06
+},
+{
+"resolution": "720p",
+"raw_price_usd_per_second": 0.08
+}
+],
+"notes": "Fal calculates video seconds at 16 fps."
+},
+{
+"provider": "PoYo",
+"variant": "Wan 2.2 Fast",
+"billing_unit": "generation",
+"settings": [
+{
+"resolution": "480p",
+"raw_price_credits": 6,
+"raw_price_usd": 0.03
+},
+{
+"resolution": "720p",
+"raw_price_credits": 12,
+"raw_price_usd": 0.06
+}
+]
+}
+]
+},
+{
+"model_key": "wan_2_7",
+"display_name": "Wan 2.7",
+"provider": "PoYo",
+"category": "video",
+"pricing_type": "per_second",
+"excluded_workflows": [
+"edit_video"
+],
+"settings": [
+{
+"workflow": "text_to_video",
+"supported_duration_seconds": [5, 10, 15],
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 12,
+"raw_price_usd_per_second": 0.06
+},
+{
+"workflow": "text_to_video",
+"supported_duration_seconds": [5, 10, 15],
+"resolution": "1080p",
+"unit": "second",
+"raw_price_credits_per_second": 18,
+"raw_price_usd_per_second": 0.09
+},
+{
+"workflow": "image_to_video",
+"supported_duration_seconds": "2-15",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 12,
+"raw_price_usd_per_second": 0.06
+},
+{
+"workflow": "image_to_video",
+"supported_duration_seconds": "2-15",
+"resolution": "1080p",
+"unit": "second",
+"raw_price_credits_per_second": 18,
+"raw_price_usd_per_second": 0.09
+},
+{
+"workflow": "reference_to_video",
+"supported_duration_seconds": "2-10",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 12,
+"raw_price_usd_per_second": 0.06
+},
+{
+"workflow": "reference_to_video",
+"supported_duration_seconds": "2-10",
+"resolution": "1080p",
+"unit": "second",
+"raw_price_credits_per_second": 18,
+"raw_price_usd_per_second": 0.09
+}
+]
+},
+{
+"model_key": "seedance_2_0",
+"display_name": "Seedance 2.0",
+"provider": "PoYo",
+"category": "video",
+"pricing_type": "per_second",
+"settings": [
+{
+"variant": "standard",
+"input_mode": "with_video_input",
+"resolution": "480p",
+"unit": "second",
+"raw_price_credits_per_second": 10,
+"raw_price_usd_per_second": 0.05
+},
+{
+"variant": "standard",
+"input_mode": "text_or_image_to_video",
+"resolution": "480p",
+"unit": "second",
+"raw_price_credits_per_second": 20,
+"raw_price_usd_per_second": 0.1
+},
+{
+"variant": "standard",
+"input_mode": "with_video_input",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 20,
+"raw_price_usd_per_second": 0.1
+},
+{
+"variant": "standard",
+"input_mode": "text_or_image_to_video",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 40,
+"raw_price_usd_per_second": 0.2
+},
+{
+"variant": "standard",
+"input_mode": "with_video_input",
+"resolution": "1080p",
+"unit": "second",
+"raw_price_credits_per_second": 45,
+"raw_price_usd_per_second": 0.225
+},
+{
+"variant": "standard",
+"input_mode": "text_or_image_to_video",
+"resolution": "1080p",
+"unit": "second",
+"raw_price_credits_per_second": 90,
+"raw_price_usd_per_second": 0.45
+}
+],
+"asset_limits": {
+"max_images": 9,
+"max_video_clips": 3,
+"max_audio_files": 3,
+"max_combined_reference_assets": 12
+}
+},
+{
+"model_key": "seedance_2_0_fast",
+"display_name": "Seedance 2.0 Fast",
+"provider": "PoYo",
+"category": "video",
+"pricing_type": "per_second",
+"settings": [
+{
+"variant": "fast",
+"input_mode": "with_video_input",
+"resolution": "480p",
+"unit": "second",
+"raw_price_credits_per_second": 8,
+"raw_price_usd_per_second": 0.04
+},
+{
+"variant": "fast",
+"input_mode": "text_or_image_to_video",
+"resolution": "480p",
+"unit": "second",
+"raw_price_credits_per_second": 14,
+"raw_price_usd_per_second": 0.07
+},
+{
+"variant": "fast",
+"input_mode": "with_video_input",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 16,
+"raw_price_usd_per_second": 0.08
+},
+{
+"variant": "fast",
+"input_mode": "text_or_image_to_video",
+"resolution": "720p",
+"unit": "second",
+"raw_price_credits_per_second": 28,
+"raw_price_usd_per_second": 0.14
+}
+],
+"unsupported_settings": [
+{
+"resolution": "1080p",
+"reason": "Seedance 2.0 Fast pricing table only listed 480p and 720p."
+}
+]
+}
+],
+"recommended_database_schema": {
+"table_name": "ai_model_pricing",
+"fields": [
+"id",
+"model_key",
+"display_name",
+"provider",
+"category",
+"workflow",
+"variant",
+"input_mode",
+"resolution",
+"quality",
+"duration_seconds",
+"audio",
+"billing_unit",
+"raw_price_usd",
+"raw_price_usd_per_second",
+"raw_price_credits",
+"raw_price_credits_per_second",
+"customer_price_usd",
+"customer_price_usd_per_second",
+"notes",
+"is_active",
+"created_at",
+"updated_at"
+]
+}
+}

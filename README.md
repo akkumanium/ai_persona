@@ -11,9 +11,9 @@ The app currently has a polished home page at `/`, Supabase Auth entry points, a
 - Generate avatars from prompts or by blending uploaded face references.
 - Generate persona-consistent still images from one or more references.
 - Generate normal and motion-control videos from selected images or reference media.
-- Track generation jobs, assets, and estimated credit usage in the UI.
+- Track generation jobs, assets, and estimated token usage in the UI.
 - Sign up and log in with Supabase Auth using Google or email and password.
-- Fall back to demo output when provider API keys are not configured.
+- Require provider API keys for runtime generation instead of silently returning demo output.
 
 ## Stack
 
@@ -30,15 +30,15 @@ The app currently has a polished home page at `/`, Supabase Auth entry points, a
 Image generation:
 
 - Nano Banana Pro / Gemini image generation, default model `gemini-3-pro-image-preview`
-- OpenAI image generation, default model `gpt-image-1`
+- OpenAI image generation, default model `gpt-image-2`
 
 Video generation:
 
-- Wan adapter, including `wan-2.2` and `wan-animate`
-- Kling image-to-video, default model `kling-v2-6`
+- Wan adapter, including `wan-2.2`, `wan-2.7`, and `wan-animate`
+- Kling image-to-video, including `kling-v2-6` and `kling-v3-0`
 - Seedance 2.0, including standard and fast model options
 
-If the relevant provider key is missing, the adapter returns demo assets instead of breaking the workspace.
+If the relevant provider key is missing, the adapter returns a clear API-not-configured error instead of a demo asset. The test suite still imports mock providers directly.
 
 ## Project Structure
 
@@ -71,7 +71,7 @@ Open `http://localhost:3000` for the home page or `http://localhost:3000/studio`
 
 ## Environment Variables
 
-The app runs without provider keys by using demo-mode fallbacks. Add keys when you want real generations:
+Add provider keys before running real generations:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
@@ -107,7 +107,7 @@ The initial schema is in `supabase/migrations/001_initial_schema.sql`. It define
 - private storage buckets for uploads and generated media
 - row-level security policies for user-owned data
 
-`supabase/migrations/002_auth_account_security.sql` adds account profiles, credit balances, auth user profile creation, stronger storage path policies, and asset metadata needed for persisted references.
+`supabase/migrations/002_auth_account_security.sql` adds account profiles, token balances stored in the existing balance column, auth user profile creation, stronger storage path policies, and asset metadata needed for persisted references.
 
 When Supabase is configured, `/studio` and the generation API routes require an authenticated user. The current workspace still keeps personas, assets, jobs, and usage in local UI state until the persistence layer is connected to Supabase queries and storage writes.
 

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { imageProvider } from "@/lib/providers";
+import type { ImageGenerationRequest } from "@/lib/providers/types";
+import { estimateImageGenerationPricing } from "@/lib/pricing";
 import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
 import { avatarGenerationSchema } from "@/lib/schemas";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
     const referenceImages = input.mode === "prompt" ? [] : input.sourceImages;
     const referenceImageNames = referenceImages.map((image) => image.name).filter(Boolean).join(", ");
 
-    const result = await imageProvider.generate({
+    const providerRequest: ImageGenerationRequest = {
       prompt: [
         finalPrompt,
         `Persona name: ${input.personaName}.`,
@@ -75,7 +78,11 @@ export async function POST(request: Request) {
       count: input.count,
       referenceImages,
       generationType,
-    });
+    };
+    const estimatedPricing = estimateImageGenerationPricing(providerRequest);
+    await assertSufficientTokens(auth.user?.id, estimatedPricing.tokens);
+
+    const result = await imageProvider.generate(providerRequest);
 
     const createdAt = nowIso();
     const personaId = input.personaId ?? crypto.randomUUID();
@@ -112,7 +119,7 @@ export async function POST(request: Request) {
       generationType,
       prompt: visiblePrompt,
       personaId,
-      costEstimateCents: result.costEstimateCents,
+      costEstimateCents: estimatedPricing.tokens,
       rawProviderResponse: result.raw,
       createdAt,
       updatedAt: createdAt,
@@ -142,6 +149,10 @@ export async function POST(request: Request) {
       job,
     });
   } catch (error) {
+    if (error instanceof InsufficientTokensError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Avatar generation failed." },
       { status: 500 },

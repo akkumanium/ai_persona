@@ -11,7 +11,7 @@ import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { StudioInitialData } from "@/lib/studio-records";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
-import { cn, formatCredits } from "@/lib/utils";
+import { cn, formatTokens } from "@/lib/utils";
 
 const navItems = [
   { id: "personas", label: "Personas", icon: UserRound },
@@ -284,8 +284,8 @@ export function StudioWorkspace({
 
         <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-stone-200 bg-stone-50 p-4">
           <p className="text-sm font-semibold text-stone-900">Balance</p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatCredits(displayedBalanceCents)}</p>
-          <p className="mt-1 text-xs leading-5 text-stone-500">Available credit for new generations.</p>
+          <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</p>
+          <p className="mt-1 text-xs leading-5 text-stone-500">Available tokens for new generations.</p>
         </div>
       </aside>
 

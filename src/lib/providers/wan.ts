@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
-import { mockVideoGeneration } from "@/lib/providers/mock";
 import { normalizeVideoStatus, videoAssetFromUrl } from "@/lib/providers/video-utils";
+import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import type {
   VideoGenerationRequest,
   VideoGenerationResult,
@@ -12,7 +12,7 @@ export class WanVideoProvider implements VideoProvider {
 
   async submit(request: VideoGenerationRequest): Promise<VideoGenerationResult> {
     if (!env.wanApiBaseUrl || !env.wanApiKey) {
-      return mockVideoGeneration(request);
+      throw new Error("WAN_API_BASE_URL and WAN_API_KEY are required. Wan API generation is not connected.");
     }
 
     const response = await fetch(`${env.wanApiBaseUrl.replace(/\/$/, "")}/v1/video/generations`, {
@@ -57,21 +57,14 @@ export class WanVideoProvider implements VideoProvider {
       status: normalizeVideoStatus(json.status),
       providerJobId: String(json.id ?? json.job_id ?? json.task_id),
       asset: videoAssetFromUrl(json.video_url ?? json.url, json.asset_id ?? json.id ?? json.job_id),
-      costEstimateCents: request.mode === "motion" ? 95 : 70,
+      costEstimateCents: estimateVideoGenerationPricing(request).tokens,
       raw: json,
     };
   }
 
   async poll(providerJobId: string): Promise<VideoGenerationResult> {
     if (!env.wanApiBaseUrl || !env.wanApiKey) {
-      return mockVideoGeneration({
-        prompt: "Demo poll result",
-        model: "wan-animate",
-        mode: "motion",
-        referenceImageUrl: "",
-        durationSeconds: 5,
-        aspectRatio: "9:16",
-      });
+      throw new Error("WAN_API_BASE_URL and WAN_API_KEY are required. Wan API polling is not connected.");
     }
 
     const response = await fetch(
