@@ -167,10 +167,14 @@ function normalizeImageQuality(quality: ImageGenerationRequest["imageQuality"]) 
 function mapImageSize(aspectRatio: string) {
   switch (aspectRatio) {
     case "16:9":
+    case "5:4":
+    case "4:3":
+    case "3:2":
       return "1536x1024";
     case "9:16":
     case "4:5":
     case "3:4":
+    case "2:3":
       return "1024x1536";
     default:
       return "1024x1024";

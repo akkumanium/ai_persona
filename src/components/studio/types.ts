@@ -1,7 +1,10 @@
 export type SourceImageInput = {
   name: string;
   mimeType: string;
-  data: string;
+  data?: string;
+  url?: string;
+  storageBucket?: string;
+  storagePath?: string;
 };
 
 export type SourceVideoInput = {

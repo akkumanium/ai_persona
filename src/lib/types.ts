@@ -26,6 +26,8 @@ export type Asset = {
   id: string;
   kind: AssetKind;
   url: string;
+  storageBucket?: string;
+  storagePath?: string;
   title: string;
   prompt: string;
   personaId?: string;

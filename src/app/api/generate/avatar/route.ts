@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { imageProvider } from "@/lib/providers";
+import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
 import type { ImageGenerationRequest } from "@/lib/providers/types";
 import { estimateImageGenerationPricing } from "@/lib/pricing";
 import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
@@ -24,14 +25,16 @@ export async function POST(request: Request) {
       );
     }
 
-    if (input.mode === "blend" && input.sourceImages.length < 2) {
+    const sourceInputCount = input.sourceImages.length + input.sourceImageUrls.length;
+
+    if (input.mode === "blend" && sourceInputCount < 2) {
       return NextResponse.json(
         { error: "Blend mode requires at least two source images." },
         { status: 400 },
       );
     }
 
-    if (input.mode === "normalization" && input.sourceImages.length < 1) {
+    if (input.mode === "normalization" && sourceInputCount < 1) {
       return NextResponse.json(
         { error: "Normalization mode requires at least one reference image." },
         { status: 400 },
@@ -53,7 +56,17 @@ export async function POST(request: Request) {
         : input.mode === "normalization"
           ? "avatar_normalization"
           : "avatar_prompt";
-    const referenceImages = input.mode === "prompt" ? [] : input.sourceImages;
+    const remoteReferenceImages =
+      input.mode === "prompt"
+        ? []
+        : (
+            await Promise.all(
+              input.sourceImageUrls.map((url, index) =>
+                imageUrlToProviderInput(url, `${input.personaName}-source-${index + 1}`),
+              ),
+            )
+          ).filter((image): image is NonNullable<typeof image> => Boolean(image));
+    const referenceImages = input.mode === "prompt" ? [] : [...input.sourceImages, ...remoteReferenceImages];
     const referenceImageNames = referenceImages.map((image) => image.name).filter(Boolean).join(", ");
 
     const providerRequest: ImageGenerationRequest = {

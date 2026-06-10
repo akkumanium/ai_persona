@@ -48,6 +48,8 @@ export async function persistGenerationRecords({
           user_id: userId,
           persona_id: asset.personaId ?? null,
           kind: asset.kind,
+          storage_bucket: asset.storageBucket ?? null,
+          storage_path: asset.storagePath ?? null,
           public_url: asset.url,
           title: asset.title,
           prompt: asset.prompt,

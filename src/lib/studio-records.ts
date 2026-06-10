@@ -14,6 +14,8 @@ type AssetRow = {
   id: string;
   kind: Asset["kind"];
   public_url: string | null;
+  storage_bucket?: string | null;
+  storage_path?: string | null;
   title: string;
   prompt: string | null;
   persona_id: string | null;
@@ -86,6 +88,8 @@ export function mapAsset(row: AssetRow): Asset {
     id: row.id,
     kind: row.kind,
     url: row.public_url ?? "",
+    storageBucket: row.storage_bucket ?? undefined,
+    storagePath: row.storage_path ?? undefined,
     title: row.title,
     prompt: row.prompt ?? "",
     personaId: row.persona_id ?? undefined,

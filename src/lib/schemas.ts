@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const aspectRatioSchema = z.enum(["1:1", "3:4", "4:5", "9:16", "16:9"]);
+export const aspectRatioSchema = z.enum(["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9"]);
 export const videoAspectRatioSchema = z.enum(["auto", "1:1", "3:4", "4:3", "4:5", "9:16", "16:9", "21:9"]);
 export const imageSizeSchema = z.enum(["1K", "2K", "4K"]);
 export const imageQualitySchema = z.enum(["auto", "low", "medium", "high"]);
@@ -37,6 +37,7 @@ export const avatarGenerationSchema = z.object({
   titlePrefix: z.string().max(120).optional(),
   sourceImageNames: z.array(z.string()).min(0).default([]),
   sourceImages: z.array(providerImageInputSchema).min(0).default([]),
+  sourceImageUrls: z.array(z.string().min(1)).min(0).default([]),
   confirmsRights: z.boolean(),
   confirmsAdultPersona: z.boolean(),
 });

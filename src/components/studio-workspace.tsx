@@ -225,6 +225,9 @@ export function StudioWorkspace({
     const client = supabaseClient();
     if (client) {
       void client.from("assets").delete().eq("id", assetId);
+      if (asset.storageBucket && asset.storagePath) {
+        void client.storage.from(asset.storageBucket).remove([asset.storagePath]);
+      }
       if (asset.personaId && (asset.kind === "avatar" || asset.kind === "upload")) {
         const remainingReferences = assets.filter(
           (item) =>
@@ -318,6 +321,7 @@ export function StudioWorkspace({
             <PersonasView
               personas={personas}
               assets={assets}
+              supabaseReady={supabaseReady}
               selectedPersonaId={selectedPersona?.id}
               onSelect={setSelectedPersonaId}
               onUpdatePersona={updatePersona}
@@ -348,6 +352,7 @@ export function StudioWorkspace({
             <GeneratePersonaView
               personas={personas}
               assets={assets}
+              supabaseReady={supabaseReady}
               selectedPersona={selectedPersona}
               initialSlotId={generateInitialSlotId}
               onAssetsCreated={(nextAssets, job) => {
@@ -393,6 +398,8 @@ function assetToInsert(asset: Asset, userId: string) {
     user_id: userId,
     persona_id: asset.personaId ?? null,
     kind: asset.kind,
+    storage_bucket: asset.storageBucket ?? null,
+    storage_path: asset.storagePath ?? null,
     public_url: asset.url,
     title: asset.title,
     prompt: asset.prompt,

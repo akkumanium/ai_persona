@@ -2,7 +2,7 @@
 2. Add being able to delete images, just like how we're able to delete references ✅
 3. Dollar usage bug ✅
 4. Image generated twice ✅
-5. Supabase not finished
+5. Supabase not finished ✅
 6. Come up with a name
 7. Google oauth settings fix 
 8. Fix invisibility issue
@@ -17,11 +17,14 @@
 17. Check supabase again
 18. Not able to generate images with "prompt only" mode
 19. Edit text at the main page and delete the miniature
-20. Add kling 3.0 too
+20. Add kling 3.0 too ✅
 21. It says "Add references" twice at images
 22. Adjust prices
 23. Make sure Wan Animate model used is correct
 24. Add infinitetalk
+25. 10MB problem
+26. Add token price near each generation button
+27. Not every aspect ratio is supported for NBP
 
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com

@@ -21,13 +21,15 @@ import {
   UploadBox,
 } from "@/components/studio/ui";
 import { modelsForCapability } from "@/lib/model-registry";
+import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatTokens } from "@/lib/utils";
 
 const klingAspectRatios = ["16:9", "9:16", "1:1"];
 const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
-const imageAspectRatioOptions = ["1:1", "3:4", "4:5", "9:16", "16:9"];
+const nanoBananaAspectRatios = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9"];
+const openAiImageAspectRatios = ["1:1", "9:16", "16:9"];
 const imageSizeOptions = ["1K", "2K", "4K"];
 const imageQualityOptions = ["low", "medium", "high"];
 
@@ -77,6 +79,7 @@ export function GenerationView({
   const [motionReferenceVideo, setMotionReferenceVideo] = useState<SourceVideoInput | undefined>();
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [generationError, setGenerationError] = useState("");
   const personaOptions = useMemo(() => personas, [personas]);
   const imageModelOptions = modelsForCapability("image-reference");
   const videoModelOptions = modelsForCapability("video-normal");
@@ -116,6 +119,10 @@ export function GenerationView({
     (asset) => asset.id === (selectedPersona ? videoEndFrameByPersona[selectedPersona.id] : ""),
   );
   const videoAspectRatioOptions = aspectRatiosForVideoModel(videoModel);
+  const imageAspectRatioOptions = aspectRatiosForImageModel(imageModel);
+  const safeImageAspectRatio = imageAspectRatioOptions.includes(imageAspectRatio)
+    ? imageAspectRatio
+    : imageAspectRatioOptions[0];
   const durationBounds = durationBoundsForVideoModel(videoModel);
   const safeVideoAspectRatio = videoAspectRatioOptions.includes(videoAspectRatio)
     ? videoAspectRatio
@@ -136,6 +143,59 @@ export function GenerationView({
     [assets, mode, selectedPersona?.id],
   );
   const isGenerating = mode === "images" ? isGeneratingImage : isGeneratingVideo;
+  const imageCostLabel = formatTokens(
+    estimateImageGenerationPricing({
+      prompt: imagePrompt,
+      model: imageModel,
+      aspectRatio: safeImageAspectRatio,
+      imageSize,
+      imageQuality: imageQuality as "low" | "medium" | "high",
+      count: 1,
+      referenceImages: useImageReferences
+        ? selectedReferenceSelection.map((asset) => ({
+            name: asset.title,
+            mimeType: asset.mimeType,
+            data: "x",
+          }))
+        : [],
+      generationType: useImageReferences ? "image_from_reference" : "image_from_prompt",
+    }).tokens,
+  );
+  const normalVideoCostLabel = formatTokens(
+    estimateVideoGenerationPricing({
+      prompt: videoPrompt,
+      model: videoModel,
+      mode: "normal",
+      durationSeconds: safeVideoDuration,
+      aspectRatio: safeVideoAspectRatio,
+      negativePrompt: videoNegativePrompt,
+      providerMode: selectedVideoEndFrame ? "pro" : videoProviderMode,
+      cfgScale: videoCfgScale,
+      generateAudio: videoGenerateAudio,
+      resolution: safeVideoResolution,
+      returnLastFrame: videoReturnLastFrame,
+      endFrameImageUrl: selectedVideoEndFrame?.url,
+    }).tokens,
+  );
+  const motionVideoCostLabel = formatTokens(
+    estimateVideoGenerationPricing({
+      prompt: videoPrompt,
+      model: motionVideoModel,
+      mode: "motion",
+      durationSeconds: 5,
+      aspectRatio: "9:16",
+      resolution: "720p",
+      motionReference,
+    }).tokens,
+  );
+
+  function changeImageModel(modelId: string) {
+    setImageModel(modelId);
+    const nextAspectRatios = aspectRatiosForImageModel(modelId);
+    if (!nextAspectRatios.includes(imageAspectRatio)) {
+      setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
+    }
+  }
 
   function toggleReferenceSelection(assetId: string) {
     if (!selectedPersona) return;
@@ -186,8 +246,10 @@ export function GenerationView({
     if (!selectedPersona) return;
     const referenceAssets = useImageReferences ? selectedReferenceSelection : [];
     if (useImageReferences && !referenceAssets.length) return;
+    if (imagePrompt.trim().length < 10) return;
     const referenceImageUrls = referenceAssets.map((asset) => asset.url);
     setIsGeneratingImage(true);
+    setGenerationError("");
     try {
       const requestBody = {
         personaId: selectedPersona.id,
@@ -195,7 +257,7 @@ export function GenerationView({
         prompt: imagePrompt,
         model: imageModel,
         styleNotes: selectedPersona.styleNotes,
-        aspectRatio: imageAspectRatio,
+        aspectRatio: safeImageAspectRatio,
         imageSize,
         imageQuality,
         count: 1,
@@ -218,6 +280,8 @@ export function GenerationView({
         referenceAssetIds,
       }));
       onAssetsCreated(nextAssets, payload.job);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Generation failed.");
     } finally {
       setIsGeneratingImage(false);
     }
@@ -237,6 +301,7 @@ export function GenerationView({
         : startFrameAsset?.url;
     if (mode === "motion" && !referenceImageUrl) return;
     setIsGeneratingVideo(true);
+    setGenerationError("");
     try {
       const requestBody = {
         personaId: selectedPersona.id,
@@ -283,6 +348,8 @@ export function GenerationView({
           ]
         : [];
       onAssetsCreated(nextAssets, payload.job);
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Generation failed.");
     } finally {
       setIsGeneratingVideo(false);
     }
@@ -295,7 +362,9 @@ export function GenerationView({
 
   async function captureMotionReferenceVideo(files: FileList | null) {
     const [video] = await encodeFiles(files, "video/mp4");
-    setMotionReferenceVideo(video);
+    setMotionReferenceVideo(
+      video?.data ? { name: video.name, mimeType: video.mimeType, data: video.data } : undefined,
+    );
   }
 
   const PanelIcon = mode === "images" ? ImageIcon : mode === "videos" ? Clapperboard : Play;
@@ -363,10 +432,10 @@ export function GenerationView({
           <form onSubmit={generateImage}>
             <PanelTitle icon={ImageIcon} title="Image Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-            <ModelSelect label="Image model" value={imageModel} options={imageModelOptions} onChange={setImageModel} />
+            <ModelSelect label="Image model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
             <SelectField
               label="Aspect ratio"
-              value={imageAspectRatio}
+              value={safeImageAspectRatio}
               options={imageAspectRatioOptions}
               onChange={setImageAspectRatio}
             />
@@ -387,18 +456,28 @@ export function GenerationView({
               totalCount={selectedReferenceAssets.length}
             />
             {useImageReferences ? (
-              <ReferencePicker
-                references={selectedReferenceAssets}
-                selectedIds={selectedReferenceIds}
-                onToggle={toggleReferenceSelection}
-              />
+              selectedReferenceAssets.length ? (
+                <ReferencePicker
+                  references={selectedReferenceAssets}
+                  selectedIds={selectedReferenceIds}
+                  onToggle={toggleReferenceSelection}
+                />
+              ) : null
             ) : null}
             <TextArea label="Image prompt" value={imagePrompt} onChange={setImagePrompt} rows={6} />
+            {generationError ? (
+              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
+            ) : null}
             <SubmitButton
               loading={isGeneratingImage}
               icon={ImageIcon}
               label="Generate images"
-              disabled={!selectedPersona || (useImageReferences && !selectedReferenceSelection.length)}
+              costLabel={imageCostLabel}
+              disabled={
+                !selectedPersona ||
+                imagePrompt.trim().length < 10 ||
+                (useImageReferences && !selectedReferenceSelection.length)
+              }
             />
           </form>
         ) : null}
@@ -468,10 +547,14 @@ export function GenerationView({
             <CheckboxField label="Generate audio" checked={videoGenerateAudio} onChange={setVideoGenerateAudio} />
             <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={5} />
             <TextArea label="Negative prompt" value={videoNegativePrompt} onChange={setVideoNegativePrompt} rows={3} />
+            {generationError ? (
+              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
+            ) : null}
             <SubmitButton
               loading={isGeneratingVideo}
               icon={Play}
               label="Generate video"
+              costLabel={normalVideoCostLabel}
               disabled={!selectedPersona || (normalVideoRequiresStartFrame && !selectedVideoStartFrame)}
             />
           </form>
@@ -502,10 +585,14 @@ export function GenerationView({
             />
             <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={5} />
             <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
+            {generationError ? (
+              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
+            ) : null}
             <SubmitButton
               loading={isGeneratingVideo}
               icon={Play}
               label="Generate motion video"
+              costLabel={motionVideoCostLabel}
               disabled={!selectedPersona || (!selectedReference && !motionReferenceImage) || !motionReferenceVideo}
             />
           </form>
@@ -631,6 +718,11 @@ function durationBoundsForVideoModel(modelId: string) {
   if (isSeedanceVideoModel(modelId)) return { min: 4, max: 15, step: 1 };
   if (modelId === "wan-2.7") return { min: 3, max: 15, step: 1 };
   return { min: 3, max: 15, step: 1 };
+}
+
+function aspectRatiosForImageModel(modelId: string) {
+  if (modelId === "gpt-image-2") return openAiImageAspectRatios;
+  return nanoBananaAspectRatios;
 }
 
 function isKlingVideoModel(modelId: string) {

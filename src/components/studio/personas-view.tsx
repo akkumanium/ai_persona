@@ -12,6 +12,7 @@ import { cn, initials } from "@/lib/utils";
 export function PersonasView({
   personas,
   assets,
+  supabaseReady,
   selectedPersonaId,
   onSelect,
   onUpdatePersona,
@@ -25,6 +26,7 @@ export function PersonasView({
 }: {
   personas: Persona[];
   assets: Asset[];
+  supabaseReady?: boolean;
   selectedPersonaId?: string;
   onSelect: (id: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
@@ -74,6 +76,7 @@ export function PersonasView({
         key={managedPersona.id}
         persona={managedPersona}
         assets={assets}
+        supabaseReady={supabaseReady}
         onBack={() => setManagedPersonaId(undefined)}
         onDeletePersona={(personaId) => {
           onDeletePersona(personaId);
@@ -174,6 +177,7 @@ export function PersonasView({
 function PersonaManagementView({
   persona,
   assets,
+  supabaseReady,
   onBack,
   onDeletePersona,
   onUpdatePersona,
@@ -185,6 +189,7 @@ function PersonaManagementView({
 }: {
   persona: Persona;
   assets: Asset[];
+  supabaseReady?: boolean;
   onBack: () => void;
   onDeletePersona: (personaId: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
@@ -227,7 +232,11 @@ function PersonaManagementView({
   }
 
   async function captureSlotUpload(slot: (typeof referenceSlots)[number], files: FileList | null) {
-    const images = await encodeFiles(files, "image/png");
+    const images = await encodeFiles(files, "image/png", {
+      enabled: supabaseReady,
+      bucket: "uploads",
+      folder: `references/${persona.id}/${slot.id}`,
+    });
     if (!images.length) return;
     const createdAt = new Date().toISOString();
     const hasDefault = referenceAssets.some((asset) => asset.isDefaultReference);
@@ -236,6 +245,8 @@ function PersonaManagementView({
       kind: "upload",
       title: `${slot.label} reference ${assetsForSlot(slot.id).length + index + 1}`,
       url: sourceImageToDataUrl(image),
+      storageBucket: image.storageBucket,
+      storagePath: image.storagePath,
       prompt: "Uploaded local reference.",
       personaId: persona.id,
       referenceSlot: slot.id,

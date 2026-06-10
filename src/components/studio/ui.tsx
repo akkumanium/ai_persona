@@ -258,11 +258,13 @@ export function SubmitButton({
   loading,
   icon: Icon,
   label,
+  costLabel,
   disabled,
 }: {
   loading: boolean;
   icon: LucideIcon;
   label: string;
+  costLabel?: string;
   disabled?: boolean;
 }) {
   return (
@@ -273,6 +275,9 @@ export function SubmitButton({
     >
       {loading ? <Loader2 className="animate-spin" size={18} /> : <Icon size={18} />}
       {label}
+      {costLabel ? (
+        <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{costLabel}</span>
+      ) : null}
     </button>
   );
 }

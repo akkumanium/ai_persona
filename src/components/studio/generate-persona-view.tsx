@@ -19,16 +19,19 @@ import {
   UploadBox,
 } from "@/components/studio/ui";
 import { modelsForCapability } from "@/lib/model-registry";
+import { estimateImageGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, formatTokens } from "@/lib/utils";
 
-const imageAspectRatios = ["1:1", "3:4", "4:5", "9:16", "16:9"];
+const nanoBananaAspectRatios = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9"];
+const openAiImageAspectRatios = ["1:1", "9:16", "16:9"];
 const imageSizes = ["1K", "2K", "4K"];
 const imageQualities = ["low", "medium", "high"];
 
 export function GeneratePersonaView({
   personas,
   assets,
+  supabaseReady,
   selectedPersona,
   initialSlotId,
   onAssetsCreated,
@@ -37,6 +40,7 @@ export function GeneratePersonaView({
 }: {
   personas: Persona[];
   assets: Asset[];
+  supabaseReady?: boolean;
   selectedPersona?: Persona;
   initialSlotId?: ReferenceSlotId;
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
@@ -63,6 +67,8 @@ export function GeneratePersonaView({
   const avatarModelOptions = modelsForCapability("avatar");
   const imageModelOptions = modelsForCapability("image-reference");
   const modelOptions = selectedSlotId === "face" ? avatarModelOptions : imageModelOptions;
+  const imageAspectRatios = aspectRatiosForImageModel(selectedModel);
+  const safeAspectRatio = imageAspectRatios.includes(aspectRatio) ? aspectRatio : imageAspectRatios[0];
   const selectedReferenceAssets = useMemo(
     () =>
       assets.filter(
@@ -101,6 +107,31 @@ export function GeneratePersonaView({
   );
   const isScratchFace = selectedSlotId === "face" && generationMode === "scratch";
   const isHybridFace = selectedSlotId === "face" && generationMode === "hybrid";
+  const referenceInputCount = isHybridFace
+    ? hybridSources.length
+    : selectedSlotId === "face"
+      ? 0
+      : selectedReferenceSelection.length;
+  const referenceCostLabel = formatTokens(
+    estimateImageGenerationPricing({
+      prompt: isScratchFace ? scratchPrompt : additionalPrompt || activeSlot.prompt,
+      model: selectedModel,
+      aspectRatio: safeAspectRatio,
+      imageSize,
+      imageQuality: imageQuality as "low" | "medium" | "high",
+      count: 1,
+      referenceImages: Array.from({ length: referenceInputCount }, (_, index) => ({
+        name: `reference-${index + 1}`,
+        mimeType: "image/png",
+        data: "x",
+      })),
+      generationType: isHybridFace
+        ? "avatar_image_blend"
+        : selectedSlotId === "face"
+          ? "avatar_prompt"
+          : "image_from_reference",
+    }).tokens,
+  );
 
   function selectSlot(slotId: ReferenceSlotId) {
     const nextSlot = referenceSlots.find((slot) => slot.id === slotId) ?? referenceSlots[0];
@@ -111,6 +142,14 @@ export function GeneratePersonaView({
     setScratchPrompt("");
     setAdditionalPrompt("");
     setGenerationError("");
+  }
+
+  function changeModel(modelId: string) {
+    setSelectedModel(modelId);
+    const nextAspectRatios = aspectRatiosForImageModel(modelId);
+    if (!nextAspectRatios.includes(aspectRatio)) {
+      setAspectRatio(nextAspectRatios.includes(activeSlot.aspectRatio) ? activeSlot.aspectRatio : nextAspectRatios[0]);
+    }
   }
 
   function toggleReferenceSelection(assetId: string) {
@@ -125,7 +164,11 @@ export function GeneratePersonaView({
   }
 
   async function captureHybridSources(files: FileList | null) {
-    const newImages = await encodeFiles(files, "image/png");
+    const newImages = await encodeFiles(files, "image/png", {
+      enabled: supabaseReady,
+      bucket: "uploads",
+      folder: `hybrid-sources/${selectedPersona?.id ?? "unassigned"}`,
+    });
     setHybridSources((current) => [...current, ...newImages].slice(0, 2));
   }
 
@@ -160,14 +203,21 @@ export function GeneratePersonaView({
             model: selectedModel,
             prompt: isScratchFace ? scratchPrompt.trim() : undefined,
             additionalPrompt: isScratchFace ? "" : additionalPrompt.trim(),
-            aspectRatio,
+            aspectRatio: safeAspectRatio,
             imageSize,
             imageQuality,
             count: 1,
             referenceSlot: activeSlot.id,
             isDefaultReference: !hasDefault,
             titlePrefix,
-            sourceImages: isHybridFace ? hybridSources : [],
+            sourceImages: isHybridFace
+              ? hybridSources
+                  .filter((image) => image.data)
+                  .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }))
+              : [],
+            sourceImageUrls: isHybridFace
+              ? hybridSources.map((image) => image.url).filter((url): url is string => Boolean(url))
+              : [],
             confirmsRights,
             confirmsAdultPersona,
           }),
@@ -186,7 +236,7 @@ export function GeneratePersonaView({
             model: selectedModel,
             additionalPrompt: additionalPrompt.trim(),
             styleNotes: selectedPersona.styleNotes,
-            aspectRatio,
+            aspectRatio: safeAspectRatio,
             imageSize,
             imageQuality,
             count: 1,
@@ -305,8 +355,8 @@ export function GeneratePersonaView({
             />
           ) : null}
 
-          <ModelSelect label="Model" value={selectedModel} options={modelOptions} onChange={setSelectedModel} />
-          <SelectField label="Aspect ratio" value={aspectRatio} options={imageAspectRatios} onChange={setAspectRatio} />
+          <ModelSelect label="Model" value={selectedModel} options={modelOptions} onChange={changeModel} />
+          <SelectField label="Aspect ratio" value={safeAspectRatio} options={imageAspectRatios} onChange={setAspectRatio} />
           <SelectField label="Image size" value={imageSize} options={imageSizes} onChange={setImageSize} />
           <SelectField label="Quality" value={imageQuality} options={imageQualities} onChange={setImageQuality} />
 
@@ -379,6 +429,7 @@ export function GeneratePersonaView({
             loading={isGenerating}
             icon={WandSparkles}
             label="Generate reference"
+            costLabel={referenceCostLabel}
             disabled={
               !selectedPersona ||
               !confirmsRights ||
@@ -392,4 +443,9 @@ export function GeneratePersonaView({
       </aside>
     </div>
   );
+}
+
+function aspectRatiosForImageModel(modelId: string) {
+  if (modelId === "gpt-image-2") return openAiImageAspectRatios;
+  return nanoBananaAspectRatios;
 }
