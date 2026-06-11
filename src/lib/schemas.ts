@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const aspectRatioSchema = z.enum(["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9"]);
+export const aspectRatioSchema = z.enum(["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"]);
 export const videoAspectRatioSchema = z.enum(["auto", "1:1", "3:4", "4:3", "4:5", "9:16", "16:9", "21:9"]);
 export const imageSizeSchema = z.enum(["1K", "2K", "4K"]);
 export const imageQualitySchema = z.enum(["auto", "low", "medium", "high"]);
@@ -23,7 +23,7 @@ export const avatarGenerationSchema = z.object({
   mode: z.enum(["prompt", "normalization", "blend"]),
   personaName: z.string().min(2).max(80),
   description: z.string().max(600).default(""),
-  model: z.string().min(1).default("gemini-3-pro-image-preview"),
+  model: z.string().min(1).default("gemini-3-pro-image"),
   prompt: z.string().max(2000).optional().default(""),
   additionalPrompt: z.string().max(1000).optional().default(""),
   styleNotes: z.string().max(1000).optional().default(""),
@@ -45,7 +45,7 @@ export const avatarGenerationSchema = z.object({
 export const imageGenerationSchema = z.object({
   personaId: z.string().min(1),
   personaName: z.string().min(1),
-  model: z.string().min(1).default("gemini-3-pro-image-preview"),
+  model: z.string().min(1).default("gemini-3-pro-image"),
   referenceImageUrl: z.string().min(1).optional(),
   referenceImageUrls: z.array(z.string().min(1)).min(0).default([]),
   prompt: z.string().max(2000).optional().default(""),
@@ -81,4 +81,5 @@ export const videoGenerationSchema = z.object({
   returnLastFrame: z.boolean().optional().default(false),
   motionReference: z.string().max(500).optional().default(""),
   motionReferenceVideo: providerMediaInputSchema.optional(),
+  motionReferenceVideoUrl: z.string().min(1).optional(),
 });

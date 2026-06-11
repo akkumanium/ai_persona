@@ -88,7 +88,7 @@ describe("provider fallbacks", () => {
   it("returns generated image assets in demo mode", async () => {
     const result = await mockImageGeneration({
       prompt: "Create a reference avatar.",
-      model: "gemini-3-pro-image-preview",
+      model: "gemini-3-pro-image",
       aspectRatio: "4:5",
       imageSize: "2K",
       count: 2,

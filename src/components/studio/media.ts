@@ -1,4 +1,5 @@
 import type { SourceImageInput } from "@/components/studio/types";
+import { buildStorageObjectUrl } from "@/lib/media-urls";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type StorageUploadOptions = {
@@ -46,29 +47,16 @@ export async function encodeFiles(
           throw uploadError;
         }
 
-        const { data: signed, error: signedError } = await storageContext.client.storage
-          .from(storage.bucket)
-          .createSignedUrl(storagePath, 60 * 60 * 24 * 365);
-
-        if (signedError || !signed?.signedUrl) {
-          throw signedError ?? new Error("Could not create a signed URL for the uploaded image.");
-        }
-
         return {
           name: file.name,
           mimeType,
-          url: signed.signedUrl,
+          url: buildStorageObjectUrl(storage.bucket, storagePath),
           storageBucket: storage.bucket,
           storagePath,
         };
       }
 
-      const dataUrl = await fileToDataUrl(file);
-      return {
-        name: file.name,
-        mimeType: file.type || fallbackMimeType,
-        data: dataUrl.split(",")[1] ?? "",
-      };
+      return uploadFileToTemp(file, fallbackMimeType);
     }),
   );
 }
@@ -90,6 +78,32 @@ async function getStorageContext() {
   }
 
   return { client, userId: user.id };
+}
+
+async function uploadFileToTemp(file: File, fallbackMimeType: string): Promise<SourceImageInput> {
+  const formData = new FormData();
+  formData.set("file", file);
+
+  const response = await fetch("/api/media/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const fallbackDataUrl = await fileToDataUrl(file);
+    return {
+      name: file.name,
+      mimeType: file.type || fallbackMimeType,
+      data: fallbackDataUrl.split(",")[1] ?? "",
+    };
+  }
+
+  const payload = (await response.json()) as { name: string; mimeType: string; url: string };
+  return {
+    name: payload.name,
+    mimeType: payload.mimeType || file.type || fallbackMimeType,
+    url: payload.url,
+  };
 }
 
 function safeFileName(name: string) {

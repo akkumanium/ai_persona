@@ -1,4 +1,5 @@
 import { hasSupabaseEnv } from "@/lib/env";
+import { sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { createServerSupabaseClient, createServiceSupabaseClient } from "@/lib/supabase/server";
 import type { Asset, GenerationJob } from "@/lib/types";
 
@@ -35,7 +36,7 @@ export async function persistGenerationRecords({
       input_params: inputParams,
       output_asset_ids: outputAssetIds,
       cost_estimate_cents: job.costEstimateCents,
-      raw_provider_response: job.rawProviderResponse ?? null,
+      raw_provider_response: sanitizeProviderPayload(job.rawProviderResponse ?? null),
       error_message: job.errorMessage ?? null,
       created_at: job.createdAt,
       updated_at: job.updatedAt,
@@ -65,27 +66,6 @@ export async function persistGenerationRecords({
           created_at: asset.createdAt,
         })),
       );
-    }
-
-    if (job.costEstimateCents > 0) {
-      await supabase.from("credit_ledger").insert({
-        id: crypto.randomUUID(),
-        user_id: userId,
-        job_id: job.id,
-        amount_cents: -job.costEstimateCents,
-        description: `${job.generationType.replaceAll("_", " ")} generation`,
-      });
-
-      const { data: profile } = await supabase
-        .from("account_profiles")
-        .select("credit_balance_cents")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const currentBalance = profile?.credit_balance_cents ?? 0;
-      await supabase.from("account_profiles").upsert({
-        user_id: userId,
-        credit_balance_cents: Math.max(0, currentBalance - job.costEstimateCents),
-      });
     }
   } catch (error) {
     console.error("Failed to persist generation records", error);

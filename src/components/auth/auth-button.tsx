@@ -178,12 +178,12 @@ export function AuthButton({
       )}
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/64 px-4 py-6">
-          <div className="w-full max-w-md rounded-lg border border-[#ffffff24] bg-[#10151d] p-5 text-white shadow-2xl shadow-black/45">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/64 px-4 py-6 sm:items-center">
+          <div className="my-auto w-full max-w-md rounded-lg border border-[#ffffff24] bg-[#10151d] p-5 text-white shadow-2xl shadow-black/45 sm:max-h-[calc(100vh-3rem)] sm:overflow-y-auto">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-lg font-semibold">Persona Studio access</p>
-                <p className="mt-1 text-sm leading-6 text-[#b9c4d3]">
+                <p className="mt-1 text-sm leading-6 text-[#d7dfeb]">
                   Sign in to keep account data, assets, and token usage tied to your Supabase user.
                 </p>
               </div>
@@ -203,12 +203,12 @@ export function AuthButton({
               </div>
             ) : (
               <>
-                <div className="mt-5 grid grid-cols-2 rounded-md border border-[#ffffff1f] p-1">
+                <div className="mt-5 grid grid-cols-2 rounded-md border border-[#ffffff1f] bg-[#0d1219] p-1">
                   <button
                     type="button"
                     onClick={() => setMode("signin")}
                     className={`h-10 rounded text-sm font-semibold transition ${
-                      mode === "signin" ? "bg-white text-[#10151d]" : "text-[#c8d4e5]"
+                      mode === "signin" ? "bg-white text-[#10151d]" : "text-[#e3e9f4]"
                     }`}
                   >
                     Sign in
@@ -217,7 +217,7 @@ export function AuthButton({
                     type="button"
                     onClick={() => setMode("signup")}
                     className={`h-10 rounded text-sm font-semibold transition ${
-                      mode === "signup" ? "bg-white text-[#10151d]" : "text-[#c8d4e5]"
+                      mode === "signup" ? "bg-white text-[#10151d]" : "text-[#e3e9f4]"
                     }`}
                   >
                     Sign up
@@ -244,7 +244,7 @@ export function AuthButton({
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
                         required
-                        className="h-11 w-full rounded-md border border-[#ffffff1f] bg-[#ffffff0c] px-10 text-sm text-white outline-none transition placeholder:text-[#8090a3] focus:border-[#25c4a4]"
+                        className="h-11 w-full rounded-md border border-[#ffffff24] bg-[#ffffff14] px-10 text-sm text-white outline-none transition placeholder:text-[#97a6ba] focus:border-[#25c4a4]"
                         placeholder="you@example.com"
                       />
                     </span>
@@ -259,7 +259,7 @@ export function AuthButton({
                         onChange={(event) => setPassword(event.target.value)}
                         required
                         minLength={6}
-                        className="h-11 w-full rounded-md border border-[#ffffff1f] bg-[#ffffff0c] px-10 text-sm text-white outline-none transition placeholder:text-[#8090a3] focus:border-[#25c4a4]"
+                        className="h-11 w-full rounded-md border border-[#ffffff24] bg-[#ffffff14] px-10 text-sm text-white outline-none transition placeholder:text-[#97a6ba] focus:border-[#25c4a4]"
                         placeholder="At least 6 characters"
                       />
                     </span>

@@ -66,5 +66,13 @@ export default async function StudioPage() {
     balanceCents: access.balanceCents,
   };
 
-  return <StudioWorkspace initialData={initialData} supabaseReady={supabaseReady} />;
+  return (
+    <StudioWorkspace
+      initialData={initialData}
+      supabaseReady={supabaseReady}
+      initialUserId={user.id}
+      initialUserEmail={user.email}
+      paddleConfig={paddleConfig}
+    />
+  );
 }

@@ -13,22 +13,24 @@ export type ModelRegistryEntry = {
   notes: string;
 };
 
+import { CHATGPT_IMAGE_MODEL_ID, NANO_BANANA_PRO_MODEL_ID } from "@/lib/image-model-options";
+
 export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   {
-    id: "gemini-3-pro-image-preview",
+    id: NANO_BANANA_PRO_MODEL_ID,
     label: "Nano Banana Pro",
     provider: "nano-banana-pro",
     capabilities: ["avatar", "image-reference"],
     enabled: true,
-    notes: "Google Gemini image model used for prompt and reference-image generation.",
+    notes: "Google Gemini 3 Pro Image model with reference-image generation, aspect ratio, and 1K/2K/4K size controls.",
   },
   {
-    id: "gpt-image-2",
+    id: CHATGPT_IMAGE_MODEL_ID,
     label: "ChatGPT Image 2",
     provider: "openai",
     capabilities: ["avatar", "image-reference"],
     enabled: true,
-    notes: "OpenAI GPT Image 2 model with generation, edit/reference inputs, quality, size, and multi-image output controls.",
+    notes: "OpenAI image model with generation, edit/reference inputs, quality, and fixed output size controls.",
   },
   {
     id: "wan-2.2",

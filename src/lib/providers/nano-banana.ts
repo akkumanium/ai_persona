@@ -53,10 +53,12 @@ export class NanoBananaProvider implements ImageProvider {
         body: JSON.stringify({
           contents: [{ parts }],
           generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-            imageConfig: {
-              aspectRatio: request.aspectRatio,
-              imageSize: request.imageSize,
+            responseModalities: ["IMAGE"],
+            responseFormat: {
+              image: {
+                aspectRatio: request.aspectRatio,
+                imageSize: request.imageSize,
+              },
             },
           },
         }),

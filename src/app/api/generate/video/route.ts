@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
+import { mediaUrlToProviderInput } from "@/lib/providers/media-inputs";
 import { videoProvider } from "@/lib/providers";
 import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
+import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError } from "@/lib/server/token-billing";
+import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -14,6 +16,11 @@ export async function POST(request: Request) {
     if (auth.response) return auth.response;
 
     const input = videoGenerationSchema.parse(await request.json());
+    const motionReferenceVideo =
+      input.motionReferenceVideo ??
+      (input.motionReferenceVideoUrl
+        ? await mediaUrlToProviderInput(input.motionReferenceVideoUrl, `${input.personaName}-motion-reference`, auth.user?.id)
+        : undefined);
     const generationType =
       input.mode === "motion"
         ? "video_motion"
@@ -21,53 +28,71 @@ export async function POST(request: Request) {
           ? "video_normal"
           : "video_prompt";
     const estimatedPricing = estimateVideoGenerationPricing(input);
-    await assertSufficientTokens(auth.user?.id, estimatedPricing.tokens);
-
-    const result = await videoProvider.submit(input);
-    const createdAt = nowIso();
     const jobId = crypto.randomUUID();
-    const asset: Asset | undefined = result.asset
-      ? {
-          id: crypto.randomUUID(),
-          kind: "video",
-          title: `${input.personaName} ${input.mode} video`,
-          prompt: input.prompt,
-          personaId: input.personaId,
-          generationType,
-          provider: result.provider,
-          providerJobId: result.providerJobId,
-          model: result.model,
-          createdAt,
-          ...result.asset,
-        }
-      : undefined;
-    const job: GenerationJob = {
-      id: jobId,
-      status: result.status,
-      provider: result.provider,
-      providerJobId: result.providerJobId,
-      model: result.model,
-      generationType,
-      prompt: input.prompt,
-      personaId: input.personaId,
-      costEstimateCents: estimatedPricing.tokens,
-      rawProviderResponse: result.raw,
-      createdAt,
-      updatedAt: createdAt,
-    };
+    await reserveTokens(
+      auth.user?.id,
+      estimatedPricing.tokens,
+      jobId,
+      `${generationType.replaceAll("_", " ")} generation`,
+    );
 
-    await persistGenerationRecords({
-      userId: auth.user?.id,
-      assets: asset ? [asset] : [],
-      job,
-      inputParams: input,
-    });
+    try {
+      const result = await videoProvider.submit({
+        ...input,
+        motionReferenceVideo,
+      });
+      const createdAt = nowIso();
+      const asset: Asset | undefined = result.asset
+        ? await materializeGeneratedAsset({
+            id: crypto.randomUUID(),
+            kind: "video",
+            title: `${input.personaName} ${input.mode} video`,
+            prompt: input.prompt,
+            personaId: input.personaId,
+            generationType,
+            provider: result.provider,
+            providerJobId: result.providerJobId,
+            model: result.model,
+            createdAt,
+            ...result.asset,
+          }, auth.user?.id)
+        : undefined;
+      const job: GenerationJob = {
+        id: jobId,
+        status: result.status,
+        provider: result.provider,
+        providerJobId: result.providerJobId,
+        model: result.model,
+        generationType,
+        prompt: input.prompt,
+        personaId: input.personaId,
+        costEstimateCents: estimatedPricing.tokens,
+        rawProviderResponse: sanitizeProviderPayload(result.raw),
+        createdAt,
+        updatedAt: createdAt,
+      };
 
-    return NextResponse.json({
-      asset,
-      job,
-      providerJobId: result.providerJobId,
-    });
+      await persistGenerationRecords({
+        userId: auth.user?.id,
+        assets: asset ? [asset] : [],
+        job,
+        inputParams: input,
+      });
+
+      return NextResponse.json({
+        asset,
+        job,
+        providerJobId: result.providerJobId,
+      });
+    } catch (error) {
+      await refundTokens(
+        auth.user?.id,
+        estimatedPricing.tokens,
+        jobId,
+        `${generationType.replaceAll("_", " ")} refund`,
+      );
+      throw error;
+    }
   } catch (error) {
     if (error instanceof InsufficientTokensError) {
       return NextResponse.json({ error: error.message }, { status: 402 });

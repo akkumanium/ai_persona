@@ -4,7 +4,7 @@ export const env = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   geminiApiKey: process.env.GEMINI_API_KEY,
   openaiApiKey: process.env.OPENAI_API_KEY,
-  nanoBananaModel: process.env.NANO_BANANA_MODEL ?? "gemini-3-pro-image-preview",
+  nanoBananaModel: process.env.NANO_BANANA_MODEL ?? "gemini-3-pro-image",
   wanApiBaseUrl: process.env.WAN_API_BASE_URL,
   wanApiKey: process.env.WAN_API_KEY,
   klingApiBaseUrl: process.env.KLING_API_BASE_URL ?? "https://api-singapore.klingai.com",

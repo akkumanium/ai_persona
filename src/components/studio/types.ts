@@ -10,7 +10,8 @@ export type SourceImageInput = {
 export type SourceVideoInput = {
   name: string;
   mimeType: string;
-  data: string;
+  data?: string;
+  url?: string;
 };
 
 export type View = "personas" | "generate" | "images" | "videos" | "motion" | "assets" | "jobs" | "settings";

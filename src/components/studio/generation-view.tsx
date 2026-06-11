@@ -20,6 +20,15 @@ import {
   TextField,
   UploadBox,
 } from "@/components/studio/ui";
+import {
+  aspectRatiosForImageModel,
+  CHATGPT_IMAGE_MODEL_ID,
+  NANO_BANANA_PRO_MODEL_ID,
+  chatGptImageQualities,
+  nanoBananaProImageSizes,
+  supportsImageQuality,
+  supportsImageSize,
+} from "@/lib/image-model-options";
 import { modelsForCapability } from "@/lib/model-registry";
 import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
@@ -28,11 +37,6 @@ import { cn, formatTokens } from "@/lib/utils";
 const klingAspectRatios = ["16:9", "9:16", "1:1"];
 const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
-const nanoBananaAspectRatios = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9"];
-const openAiImageAspectRatios = ["1:1", "9:16", "16:9"];
-const imageSizeOptions = ["1K", "2K", "4K"];
-const imageQualityOptions = ["low", "medium", "high"];
-
 export function GenerationView({
   mode,
   personas,
@@ -55,7 +59,7 @@ export function GenerationView({
   const [imagePrompt, setImagePrompt] = useState("Editorial product photo for a social launch campaign.");
   const [videoPrompt, setVideoPrompt] = useState("Short vertical clip with a confident camera turn and subtle smile.");
   const [useImageReferences, setUseImageReferences] = useState(true);
-  const [imageModel, setImageModel] = useState("gemini-3-pro-image-preview");
+  const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [imageAspectRatio, setImageAspectRatio] = useState("4:5");
   const [imageSize, setImageSize] = useState("2K");
   const [imageQuality, setImageQuality] = useState("medium");
@@ -143,13 +147,15 @@ export function GenerationView({
     [assets, mode, selectedPersona?.id],
   );
   const isGenerating = mode === "images" ? isGeneratingImage : isGeneratingVideo;
+  const imageModelSupportsSize = supportsImageSize(imageModel);
+  const imageModelSupportsQuality = supportsImageQuality(imageModel);
   const imageCostLabel = formatTokens(
     estimateImageGenerationPricing({
       prompt: imagePrompt,
       model: imageModel,
       aspectRatio: safeImageAspectRatio,
-      imageSize,
-      imageQuality: imageQuality as "low" | "medium" | "high",
+      imageSize: imageModelSupportsSize ? imageSize : "2K",
+      imageQuality: imageModelSupportsQuality ? (imageQuality as "low" | "medium" | "high") : undefined,
       count: 1,
       referenceImages: useImageReferences
         ? selectedReferenceSelection.map((asset) => ({
@@ -194,6 +200,9 @@ export function GenerationView({
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(imageAspectRatio)) {
       setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
+    }
+    if (modelId === CHATGPT_IMAGE_MODEL_ID && imageAspectRatio === "21:9") {
+      setImageAspectRatio("3:2");
     }
   }
 
@@ -258,8 +267,8 @@ export function GenerationView({
         model: imageModel,
         styleNotes: selectedPersona.styleNotes,
         aspectRatio: safeImageAspectRatio,
-        imageSize,
-        imageQuality,
+        imageSize: imageModelSupportsSize ? imageSize : "2K",
+        imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
         count: 1,
         ...(referenceImageUrls.length
           ? { referenceImageUrl: referenceImageUrls[0], referenceImageUrls }
@@ -318,7 +327,8 @@ export function GenerationView({
         resolution: mode === "normal" ? safeVideoResolution : "720p",
         returnLastFrame: mode === "normal" ? videoReturnLastFrame : false,
         motionReference: mode === "motion" ? motionReference : "",
-        motionReferenceVideo: mode === "motion" ? motionReferenceVideo : undefined,
+        motionReferenceVideo: mode === "motion" && motionReferenceVideo?.data ? motionReferenceVideo : undefined,
+        motionReferenceVideoUrl: mode === "motion" ? motionReferenceVideo?.url : undefined,
         ...(referenceImageUrl ? { referenceImageUrl, startFrameImageUrl: referenceImageUrl } : {}),
         ...(mode === "normal" && endFrameAsset ? { endFrameImageUrl: endFrameAsset.url } : {}),
       };
@@ -363,7 +373,7 @@ export function GenerationView({
   async function captureMotionReferenceVideo(files: FileList | null) {
     const [video] = await encodeFiles(files, "video/mp4");
     setMotionReferenceVideo(
-      video?.data ? { name: video.name, mimeType: video.mimeType, data: video.data } : undefined,
+      video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
     );
   }
 
@@ -439,8 +449,12 @@ export function GenerationView({
               options={imageAspectRatioOptions}
               onChange={setImageAspectRatio}
             />
-            <SelectField label="Image size" value={imageSize} options={imageSizeOptions} onChange={setImageSize} />
-            <SelectField label="Quality" value={imageQuality} options={imageQualityOptions} onChange={setImageQuality} />
+            {imageModelSupportsSize ? (
+              <SelectField label="Image size" value={imageSize} options={nanoBananaProImageSizes} onChange={setImageSize} />
+            ) : null}
+            {imageModelSupportsQuality ? (
+              <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
+            ) : null}
             <ModeToggle
               label="Reference mode"
               value={useImageReferences ? "references" : "prompt"}
@@ -718,11 +732,6 @@ function durationBoundsForVideoModel(modelId: string) {
   if (isSeedanceVideoModel(modelId)) return { min: 4, max: 15, step: 1 };
   if (modelId === "wan-2.7") return { min: 3, max: 15, step: 1 };
   return { min: 3, max: 15, step: 1 };
-}
-
-function aspectRatiosForImageModel(modelId: string) {
-  if (modelId === "gpt-image-2") return openAiImageAspectRatios;
-  return nanoBananaAspectRatios;
 }
 
 function isKlingVideoModel(modelId: string) {

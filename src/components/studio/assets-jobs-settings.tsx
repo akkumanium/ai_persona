@@ -2,8 +2,10 @@
 
 import { Coins, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { BillingPlans } from "@/components/billing-plans";
 import type { AssetFilter } from "@/components/studio/types";
 import { ModeToggle, PanelTitle } from "@/components/studio/ui";
+import type { PublicPaddleConfig } from "@/lib/billing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { formatTokens } from "@/lib/utils";
 
@@ -119,12 +121,47 @@ export function JobsView({ jobs }: { jobs: GenerationJob[] }) {
   );
 }
 
-export function SettingsView({ balanceCents }: { balanceCents: number }) {
+export function SettingsView({
+  balanceCents,
+  supabaseReady,
+  userId,
+  userEmail,
+  paddleConfig,
+  onBalanceRefresh,
+}: {
+  balanceCents: number;
+  supabaseReady: boolean;
+  userId?: string;
+  userEmail?: string;
+  paddleConfig: PublicPaddleConfig;
+  onBalanceRefresh?: (balanceCents: number) => void;
+}) {
   return (
-    <section className="max-w-xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-      <PanelTitle icon={Coins} title="Balance" />
-      <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>
-      <p className="mt-2 text-sm leading-6 text-stone-600">Available tokens for new generations.</p>
+    <section className="grid gap-6">
+      <div className="max-w-xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <PanelTitle icon={Coins} title="Balance" />
+        <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>
+        <p className="mt-2 text-sm leading-6 text-stone-600">Available tokens for new generations.</p>
+      </div>
+
+      <div className="rounded-lg border border-stone-200 bg-white py-4 shadow-sm">
+        <BillingPlans
+          title="Buy additional tokens"
+          copy="Use the same secure checkout here to top up your studio balance without leaving Settings."
+          userId={userId}
+          userEmail={userEmail}
+          supabaseReady={supabaseReady}
+          config={paddleConfig}
+          compact
+          theme="light"
+          actionLabel="Buy top-up"
+          onStatusResolved={(status) => {
+            if (typeof status.balanceCents === "number") {
+              onBalanceRefresh?.(status.balanceCents);
+            }
+          }}
+        />
+      </div>
     </section>
   );
 }

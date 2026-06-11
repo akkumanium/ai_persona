@@ -12,6 +12,12 @@ export type BillingPlan = {
   description: string;
 };
 
+export type PublicPaddleConfig = {
+  clientToken: string;
+  environment: "sandbox" | "production";
+  plans: Array<BillingPlan & { priceId: string }>;
+};
+
 export const billingPlans: BillingPlan[] = [
   {
     id: "starter",
@@ -61,5 +67,5 @@ export function getPublicPaddleConfig() {
       priceId: plan.priceId ?? "",
       description: plan.description,
     })),
-  };
+  } satisfies PublicPaddleConfig;
 }

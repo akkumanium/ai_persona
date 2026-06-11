@@ -25,6 +25,50 @@ export async function assertSufficientTokens(userId: string | undefined, require
   }
 }
 
+export async function reserveTokens(userId: string | undefined, requiredTokens: number, jobId: string, description: string) {
+  if (!hasSupabaseEnv() || !userId) return undefined;
+
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceSupabaseClient()
+    : await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("consume_credits", {
+    p_user_id: userId,
+    p_amount_cents: requiredTokens,
+    p_job_id: jobId,
+    p_description: description,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (data === null) {
+    const balance = await getTokenBalance(userId);
+    throw new InsufficientTokensError(requiredTokens, balance ?? 0);
+  }
+
+  return Number(data);
+}
+
+export async function refundTokens(userId: string | undefined, amountTokens: number, jobId: string, description: string) {
+  if (!hasSupabaseEnv() || !userId || amountTokens <= 0) return undefined;
+
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceSupabaseClient()
+    : await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("refund_credits", {
+    p_user_id: userId,
+    p_amount_cents: amountTokens,
+    p_job_id: jobId,
+    p_description: description,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Number(data);
+}
+
 export class InsufficientTokensError extends Error {
   constructor(
     public readonly requiredTokens: number,

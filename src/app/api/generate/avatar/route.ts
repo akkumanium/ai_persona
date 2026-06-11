@@ -6,8 +6,9 @@ import type { ImageGenerationRequest } from "@/lib/providers/types";
 import { estimateImageGenerationPricing } from "@/lib/pricing";
 import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
 import { avatarGenerationSchema } from "@/lib/schemas";
+import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError } from "@/lib/server/token-billing";
+import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
         : (
             await Promise.all(
               input.sourceImageUrls.map((url, index) =>
-                imageUrlToProviderInput(url, `${input.personaName}-source-${index + 1}`),
+                imageUrlToProviderInput(url, `${input.personaName}-source-${index + 1}`, auth.user?.id),
               ),
             )
           ).filter((image): image is NonNullable<typeof image> => Boolean(image));
@@ -93,74 +94,89 @@ export async function POST(request: Request) {
       generationType,
     };
     const estimatedPricing = estimateImageGenerationPricing(providerRequest);
-    await assertSufficientTokens(auth.user?.id, estimatedPricing.tokens);
-
-    const result = await imageProvider.generate(providerRequest);
-
-    const createdAt = nowIso();
     const personaId = input.personaId ?? crypto.randomUUID();
-    const visiblePrompt = input.mode === "prompt" && input.prompt.trim() ? input.prompt.trim() : input.additionalPrompt.trim();
-    const assets: Asset[] = result.assets.map((asset, index) => ({
-      id: crypto.randomUUID(),
-      kind: "avatar",
-      title: input.titlePrefix ?? `${input.personaName} reference ${index + 1}`,
-      prompt: visiblePrompt,
-      personaId,
-      referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
-      referenceSlot: input.referenceSlot,
-      isDefaultReference: input.isDefaultReference && index === 0,
-      generationType,
-      provider: result.provider,
-      model: result.model,
-      createdAt,
-      ...asset,
-    }));
-    const persona: Persona = {
-      id: personaId,
-      name: input.personaName,
-      description: input.description,
-      styleNotes: input.styleNotes,
-      status: "active",
-      referenceAssetId: assets[0]?.id,
-      createdAt,
-    };
-    const job: GenerationJob = {
-      id: crypto.randomUUID(),
-      status: "succeeded",
-      provider: result.provider,
-      model: result.model,
-      generationType,
-      prompt: visiblePrompt,
-      personaId,
-      costEstimateCents: estimatedPricing.tokens,
-      rawProviderResponse: result.raw,
-      createdAt,
-      updatedAt: createdAt,
-    };
+    const jobId = crypto.randomUUID();
+    await reserveTokens(
+      auth.user?.id,
+      estimatedPricing.tokens,
+      jobId,
+      `${generationType.replaceAll("_", " ")} generation`,
+    );
 
-    await persistGenerationRecords({
-      userId: auth.user?.id,
-      assets,
-      job,
-      inputParams: {
+    try {
+      const result = await imageProvider.generate(providerRequest);
+      const createdAt = nowIso();
+      const visiblePrompt = input.mode === "prompt" && input.prompt.trim() ? input.prompt.trim() : input.additionalPrompt.trim();
+      const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
+        id: crypto.randomUUID(),
+        kind: "avatar",
+        title: input.titlePrefix ?? `${input.personaName} reference ${index + 1}`,
         prompt: visiblePrompt,
-        additionalPrompt: input.additionalPrompt.trim(),
-        mode: input.mode,
-        model: input.model,
+        personaId,
+        referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
         referenceSlot: input.referenceSlot,
-        aspectRatio: input.aspectRatio,
-        imageSize: input.imageSize,
-        imageQuality: input.imageQuality,
-        count: input.count,
-        hiddenPromptUsed: !input.prompt.trim() || input.mode !== "prompt",
-      },
-    });
+        isDefaultReference: input.isDefaultReference && index === 0,
+        generationType,
+        provider: result.provider,
+        model: result.model,
+        createdAt,
+        ...asset,
+      }, auth.user?.id)));
+      const persona: Persona = {
+        id: personaId,
+        name: input.personaName,
+        description: input.description,
+        styleNotes: input.styleNotes,
+        status: "active",
+        referenceAssetId: assets[0]?.id,
+        createdAt,
+      };
+      const job: GenerationJob = {
+        id: jobId,
+        status: "succeeded",
+        provider: result.provider,
+        model: result.model,
+        generationType,
+        prompt: visiblePrompt,
+        personaId,
+        costEstimateCents: estimatedPricing.tokens,
+        rawProviderResponse: sanitizeProviderPayload(result.raw),
+        createdAt,
+        updatedAt: createdAt,
+      };
 
-    return NextResponse.json({
-      persona,
-      assets,
-      job,
-    });
+      await persistGenerationRecords({
+        userId: auth.user?.id,
+        assets,
+        job,
+        inputParams: {
+          prompt: visiblePrompt,
+          additionalPrompt: input.additionalPrompt.trim(),
+          mode: input.mode,
+          model: input.model,
+          referenceSlot: input.referenceSlot,
+          aspectRatio: input.aspectRatio,
+          imageSize: input.imageSize,
+          imageQuality: input.imageQuality,
+          count: input.count,
+          hiddenPromptUsed: !input.prompt.trim() || input.mode !== "prompt",
+        },
+      });
+
+      return NextResponse.json({
+        persona,
+        assets,
+        job,
+      });
+    } catch (error) {
+      await refundTokens(
+        auth.user?.id,
+        estimatedPricing.tokens,
+        jobId,
+        `${generationType.replaceAll("_", " ")} refund`,
+      );
+      throw error;
+    }
   } catch (error) {
     if (error instanceof InsufficientTokensError) {
       return NextResponse.json({ error: error.message }, { status: 402 });

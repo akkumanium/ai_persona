@@ -18,15 +18,19 @@ import {
   TextArea,
   UploadBox,
 } from "@/components/studio/ui";
+import {
+  aspectRatiosForImageModel,
+  CHATGPT_IMAGE_MODEL_ID,
+  NANO_BANANA_PRO_MODEL_ID,
+  chatGptImageQualities,
+  nanoBananaProImageSizes,
+  supportsImageQuality,
+  supportsImageSize,
+} from "@/lib/image-model-options";
 import { modelsForCapability } from "@/lib/model-registry";
 import { estimateImageGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatTokens } from "@/lib/utils";
-
-const nanoBananaAspectRatios = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9"];
-const openAiImageAspectRatios = ["1:1", "9:16", "16:9"];
-const imageSizes = ["1K", "2K", "4K"];
-const imageQualities = ["low", "medium", "high"];
 
 export function GeneratePersonaView({
   personas,
@@ -53,7 +57,7 @@ export function GeneratePersonaView({
   const [scratchPrompt, setScratchPrompt] = useState("");
   const [additionalPrompt, setAdditionalPrompt] = useState("");
   const [hybridSources, setHybridSources] = useState<SourceImageInput[]>([]);
-  const [selectedModel, setSelectedModel] = useState("gemini-3-pro-image-preview");
+  const [selectedModel, setSelectedModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [aspectRatio, setAspectRatio] = useState<string>(initialSlot.aspectRatio);
   const [imageSize, setImageSize] = useState("4K");
   const [imageQuality, setImageQuality] = useState("medium");
@@ -107,6 +111,8 @@ export function GeneratePersonaView({
   );
   const isScratchFace = selectedSlotId === "face" && generationMode === "scratch";
   const isHybridFace = selectedSlotId === "face" && generationMode === "hybrid";
+  const imageModelSupportsSize = supportsImageSize(selectedModel);
+  const imageModelSupportsQuality = supportsImageQuality(selectedModel);
   const referenceInputCount = isHybridFace
     ? hybridSources.length
     : selectedSlotId === "face"
@@ -117,8 +123,8 @@ export function GeneratePersonaView({
       prompt: isScratchFace ? scratchPrompt : additionalPrompt || activeSlot.prompt,
       model: selectedModel,
       aspectRatio: safeAspectRatio,
-      imageSize,
-      imageQuality: imageQuality as "low" | "medium" | "high",
+      imageSize: imageModelSupportsSize ? imageSize : "2K",
+      imageQuality: imageModelSupportsQuality ? (imageQuality as "low" | "medium" | "high") : undefined,
       count: 1,
       referenceImages: Array.from({ length: referenceInputCount }, (_, index) => ({
         name: `reference-${index + 1}`,
@@ -149,6 +155,9 @@ export function GeneratePersonaView({
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(aspectRatio)) {
       setAspectRatio(nextAspectRatios.includes(activeSlot.aspectRatio) ? activeSlot.aspectRatio : nextAspectRatios[0]);
+    }
+    if (modelId === CHATGPT_IMAGE_MODEL_ID && imageSize !== "2K") {
+      setImageSize("2K");
     }
   }
 
@@ -204,8 +213,8 @@ export function GeneratePersonaView({
             prompt: isScratchFace ? scratchPrompt.trim() : undefined,
             additionalPrompt: isScratchFace ? "" : additionalPrompt.trim(),
             aspectRatio: safeAspectRatio,
-            imageSize,
-            imageQuality,
+            imageSize: imageModelSupportsSize ? imageSize : "2K",
+            imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
             count: 1,
             referenceSlot: activeSlot.id,
             isDefaultReference: !hasDefault,
@@ -237,8 +246,8 @@ export function GeneratePersonaView({
             additionalPrompt: additionalPrompt.trim(),
             styleNotes: selectedPersona.styleNotes,
             aspectRatio: safeAspectRatio,
-            imageSize,
-            imageQuality,
+            imageSize: imageModelSupportsSize ? imageSize : "2K",
+            imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
             count: 1,
             assetKind: "avatar",
             referenceSlot: activeSlot.id,
@@ -357,8 +366,12 @@ export function GeneratePersonaView({
 
           <ModelSelect label="Model" value={selectedModel} options={modelOptions} onChange={changeModel} />
           <SelectField label="Aspect ratio" value={safeAspectRatio} options={imageAspectRatios} onChange={setAspectRatio} />
-          <SelectField label="Image size" value={imageSize} options={imageSizes} onChange={setImageSize} />
-          <SelectField label="Quality" value={imageQuality} options={imageQualities} onChange={setImageQuality} />
+          {imageModelSupportsSize ? (
+            <SelectField label="Image size" value={imageSize} options={nanoBananaProImageSizes} onChange={setImageSize} />
+          ) : null}
+          {imageModelSupportsQuality ? (
+            <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
+          ) : null}
 
           {isHybridFace ? (
             <>
@@ -443,9 +456,4 @@ export function GeneratePersonaView({
       </aside>
     </div>
   );
-}
-
-function aspectRatiosForImageModel(modelId: string) {
-  if (modelId === "gpt-image-2") return openAiImageAspectRatios;
-  return nanoBananaAspectRatios;
 }

@@ -8,6 +8,7 @@ import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import type { ReferenceSlotId, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
+import type { PublicPaddleConfig } from "@/lib/billing";
 import type { StudioInitialData } from "@/lib/studio-records";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
@@ -26,16 +27,22 @@ const navItems = [
 export function StudioWorkspace({
   initialData,
   supabaseReady,
+  initialUserId,
+  initialUserEmail,
+  paddleConfig,
 }: {
   initialData?: StudioInitialData;
   supabaseReady?: boolean;
+  initialUserId?: string;
+  initialUserEmail?: string;
+  paddleConfig: PublicPaddleConfig;
 }) {
   const [view, setView] = useState<View>("personas");
   const [personas, setPersonas] = useState<Persona[]>(initialData?.personas ?? demoPersonas);
   const [assets, setAssets] = useState<Asset[]>(initialData?.assets ?? demoAssets);
   const [jobs, setJobs] = useState<GenerationJob[]>(initialData?.jobs ?? demoJobs);
   const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 5000));
-  const [userId, setUserId] = useState<string | undefined>();
+  const [userId, setUserId] = useState<string | undefined>(initialUserId);
   const [selectedPersonaId, setSelectedPersonaId] = useState(
     initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
   );
@@ -385,7 +392,19 @@ export function StudioWorkspace({
           )}
           {view === "assets" && <AssetsView assets={assets} personas={personas} onDeleteAsset={deleteAsset} />}
           {view === "jobs" && <JobsView jobs={jobs} />}
-          {view === "settings" && <SettingsView balanceCents={displayedBalanceCents} />}
+          {view === "settings" && (
+            <SettingsView
+              balanceCents={displayedBalanceCents}
+              supabaseReady={Boolean(supabaseReady)}
+              userId={userId}
+              userEmail={initialUserEmail}
+              paddleConfig={paddleConfig}
+              onBalanceRefresh={(nextBalance) => {
+                setBalanceCents(nextBalance);
+                setNotice("Your balance was refreshed after checkout.");
+              }}
+            />
+          )}
         </div>
       </main>
     </div>

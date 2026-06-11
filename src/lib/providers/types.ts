@@ -54,6 +54,7 @@ export type VideoGenerationRequest = {
   returnLastFrame?: boolean;
   motionReference?: string;
   motionReferenceVideo?: ProviderMediaInput;
+  motionReferenceVideoUrl?: string;
 };
 
 export type VideoGenerationResult = {

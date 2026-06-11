@@ -4,14 +4,8 @@ import { AlertCircle, Check, CreditCard, Loader2, RefreshCw } from "lucide-react
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import type { BillingPlan } from "@/lib/billing";
+import type { BillingPlan, PublicPaddleConfig } from "@/lib/billing";
 import { formatTokens } from "@/lib/utils";
-
-type PublicPaddleConfig = {
-  clientToken: string;
-  environment: "sandbox" | "production";
-  plans: Array<BillingPlan & { priceId: string }>;
-};
 
 type CheckoutState = "idle" | "loading" | "waiting" | "success" | "error";
 
@@ -49,6 +43,8 @@ export function BillingPlans({
   config,
   compact = false,
   theme = "light",
+  actionLabel = "Subscribe",
+  onStatusResolved,
 }: {
   title?: string;
   copy?: string;
@@ -58,6 +54,8 @@ export function BillingPlans({
   config: PublicPaddleConfig;
   compact?: boolean;
   theme?: "light" | "dark";
+  actionLabel?: string;
+  onStatusResolved?: (status: { hasStudioAccess?: boolean; balanceCents?: number }) => void;
 }) {
   const router = useRouter();
   const [scriptReady, setScriptReady] = useState(false);
@@ -91,6 +89,7 @@ export function BillingPlans({
         return false;
       }
       const data = (await response.json()) as { hasStudioAccess?: boolean; balanceCents?: number };
+      onStatusResolved?.(data);
       if (data.hasStudioAccess) {
         setCheckoutState("success");
         setMessage(`Studio access is active. Balance: ${formatTokens(data.balanceCents ?? 0)}.`);
@@ -103,7 +102,7 @@ export function BillingPlans({
       setMessage("Payment may be complete, but the billing status could not be checked. Try refreshing in a moment.");
       return false;
     }
-  }, [router]);
+  }, [onStatusResolved, router]);
 
   const pollBillingStatus = useCallback(async () => {
     for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -281,7 +280,7 @@ export function BillingPlans({
                 className={styles.button}
               >
                 {isBusy ? <Loader2 size={17} className="animate-spin" /> : <CreditCard size={17} />}
-                {isBusy ? "Finalizing..." : `Subscribe for ${plan.priceLabel}`}
+                {isBusy ? "Finalizing..." : `${actionLabel} for ${plan.priceLabel}`}
               </button>
             </article>
           );

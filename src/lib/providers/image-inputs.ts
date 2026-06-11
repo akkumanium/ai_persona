@@ -1,4 +1,5 @@
 import type { ProviderImageInput } from "@/lib/providers/types";
+import { mediaUrlToBase64Input } from "@/lib/server/media-storage";
 
 export function parseDataUrlImage(url: string, name?: string): ProviderImageInput | undefined {
   const match = url.match(/^data:([^;,]+);base64,(.+)$/);
@@ -16,27 +17,21 @@ export function parseDataUrlImage(url: string, name?: string): ProviderImageInpu
 export async function imageUrlToProviderInput(
   url: string,
   name = "reference-image",
+  userId?: string,
 ): Promise<ProviderImageInput | undefined> {
   const dataUrlImage = parseDataUrlImage(url, name);
   if (dataUrlImage) {
     return dataUrlImage;
   }
 
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+  try {
+    const media = await mediaUrlToBase64Input(url, userId);
+    return {
+      name,
+      mimeType: media.mimeType,
+      data: media.data,
+    };
+  } catch {
     return undefined;
   }
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    return undefined;
-  }
-
-  const mimeType = response.headers.get("content-type")?.split(";")[0] ?? "image/png";
-  const arrayBuffer = await response.arrayBuffer();
-
-  return {
-    name,
-    mimeType,
-    data: Buffer.from(arrayBuffer).toString("base64"),
-  };
 }
