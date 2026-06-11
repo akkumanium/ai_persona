@@ -2,14 +2,17 @@
 7. Google oauth settings fix 
 8. Fix invisibility issue
 12. Email fix
-15. Studio redirects to pricing otherwise
 17. Check supabase again - does the sync really work correctly all the time?
-19. Edit text at the main page and delete the miniature
+19. Edit text at the main page
 23. Make sure Wan Animate model used is correct
 24. Add infinitetalk
 32. Change tokens buy up design
 35. Maybe transfer prompts to somewhere else
 36. Check data usage
+37. Contact us button
+38. Main page button
+39. Use pink, instead of green
+40. Make favicon
 
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com

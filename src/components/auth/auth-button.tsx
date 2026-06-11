@@ -250,7 +250,7 @@ export function AuthButton({
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
                             required
-                            className="h-11 w-full rounded-md border border-[#ffffff24] bg-[#ffffff14] px-10 text-sm text-white outline-none transition placeholder:text-[#97a6ba] focus:border-[#25c4a4]"
+                            className="h-11 w-full rounded-md border border-[#ffffff24] bg-[#ffffff14] px-10 text-sm text-white outline-none transition placeholder:text-[#97a6ba] focus:border-[#ff4fa3]"
                             placeholder="you@example.com"
                           />
                         </span>
@@ -265,7 +265,7 @@ export function AuthButton({
                             onChange={(event) => setPassword(event.target.value)}
                             required
                             minLength={6}
-                            className="h-11 w-full rounded-md border border-[#ffffff24] bg-[#ffffff14] px-10 text-sm text-white outline-none transition placeholder:text-[#97a6ba] focus:border-[#25c4a4]"
+                            className="h-11 w-full rounded-md border border-[#ffffff24] bg-[#ffffff14] px-10 text-sm text-white outline-none transition placeholder:text-[#97a6ba] focus:border-[#ff4fa3]"
                             placeholder="At least 6 characters"
                           />
                         </span>
@@ -274,7 +274,7 @@ export function AuthButton({
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#25c4a4] px-4 text-sm font-semibold text-[#07110f] transition hover:bg-[#38d9b7] disabled:cursor-not-allowed disabled:opacity-70"
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#ff4fa3] px-4 text-sm font-semibold text-[#120913] transition hover:bg-[#ff77b8] disabled:cursor-not-allowed disabled:opacity-70"
                       >
                         {isSubmitting ? (
                           <Loader2 size={17} className="animate-spin" />
@@ -287,7 +287,7 @@ export function AuthButton({
                       </button>
                     </form>
 
-                    {status ? <p className="mt-4 text-sm leading-6 text-[#8fd067]">{status}</p> : null}
+                    {status ? <p className="mt-4 text-sm leading-6 text-[#ffd0e7]">{status}</p> : null}
                     {error ? <p className="mt-4 text-sm leading-6 text-[#ff9cae]">{error}</p> : null}
                   </>
                 )}

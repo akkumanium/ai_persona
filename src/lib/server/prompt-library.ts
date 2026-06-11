@@ -8,7 +8,10 @@ export type PromptSuggestion = {
 
 export async function loadImagePromptSuggestions(): Promise<PromptSuggestion[]> {
   try {
-    const promptFile = await readFile(path.join(process.cwd(), "prompts"), "utf8");
+    const promptFile = await readFile(
+      path.join(process.cwd(), "src", "data", "image-prompt-suggestions.md"),
+      "utf8",
+    );
     return parsePromptSuggestions(promptFile);
   } catch {
     return [];

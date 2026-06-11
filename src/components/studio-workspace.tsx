@@ -1,6 +1,7 @@
 "use client";
 
-import { Activity, Clapperboard, ImageIcon, Play, Settings, Sparkles, UserRound } from "lucide-react";
+import { Activity, Clapperboard, Home, ImageIcon, Mail, Play, Settings, Sparkles, UserRound } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { AssetsView, JobsView, SettingsView } from "@/components/studio/assets-jobs-settings";
 import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
@@ -296,10 +297,26 @@ export function StudioWorkspace({
           })}
         </nav>
 
-        <div className="absolute bottom-5 left-4 right-4 rounded-lg border border-stone-200 bg-stone-50 p-4">
-          <p className="text-sm font-semibold text-stone-900">Balance</p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</p>
-          <p className="mt-1 text-xs leading-5 text-stone-500">Available tokens for new generations.</p>
+        <div className="absolute bottom-5 left-4 right-4 grid gap-2">
+          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+            <p className="text-sm font-semibold text-stone-900">Balance</p>
+            <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</p>
+            <p className="mt-1 text-xs leading-5 text-stone-500">Available tokens for new generations.</p>
+          </div>
+          <Link
+            href="/contact"
+            className="flex h-11 items-center gap-3 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
+          >
+            <Mail size={18} />
+            Contact us
+          </Link>
+          <Link
+            href="/"
+            className="flex h-11 items-center gap-3 rounded-md bg-emerald-800 px-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
+          >
+            <Home size={18} />
+            Main page
+          </Link>
         </div>
       </aside>
 
@@ -323,6 +340,20 @@ export function StudioWorkspace({
                   {item.label}
                 </button>
               ))}
+              <Link
+                href="/contact"
+                className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700"
+              >
+                <Mail size={16} />
+                Contact
+              </Link>
+              <Link
+                href="/"
+                className="flex h-10 shrink-0 items-center gap-2 rounded-md bg-emerald-800 px-3 text-sm font-medium text-white"
+              >
+                <Home size={16} />
+                Main
+              </Link>
             </div>
           </div>
         </header>

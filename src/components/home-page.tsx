@@ -116,9 +116,20 @@ export function HomePage({
             <Link href="/pricing" className="transition hover:text-white">
               Pricing
             </Link>
+            <Link href="/contact" className="transition hover:text-white">
+              Contact
+            </Link>
           </nav>
 
-          <AuthButton initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} variant="dark" />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/contact"
+              className="hidden h-11 items-center rounded-md border border-[#ffffff1f] bg-[#ffffff12] px-4 text-sm font-semibold text-white transition hover:border-[#ff4fa3] hover:bg-[#ffffff1c] sm:inline-flex"
+            >
+              Contact us
+            </Link>
+            <AuthButton initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} variant="dark" />
+          </div>
         </div>
       </header>
 
@@ -151,6 +162,13 @@ export function HomePage({
             >
               View pricing
               <ChevronRight size={18} />
+            </Link>
+            <Link
+              href="/contact"
+              className="inline-flex h-12 items-center gap-2 rounded-md border border-white/[0.14] bg-white/[0.08] px-5 text-sm font-semibold text-white transition hover:border-[#ff4fa3]/70 hover:bg-white/[0.12]"
+            >
+              Contact us
+              <MessageSquareText size={18} />
             </Link>
           </div>
 
