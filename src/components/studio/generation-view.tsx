@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, X } from "lucide-react";
+import { Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, WandSparkles, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { GenerationMode, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
@@ -37,12 +37,14 @@ import { cn, formatTokens } from "@/lib/utils";
 const klingAspectRatios = ["16:9", "9:16", "1:1"];
 const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
+type PromptSuggestion = { title: string; prompt: string };
 export function GenerationView({
   mode,
   personas,
   assets,
   selectedPersona,
   selectedReference,
+  imagePromptSuggestions = [],
   onAssetsCreated,
   onSelectPersona,
   onDeleteAsset,
@@ -52,6 +54,7 @@ export function GenerationView({
   assets: Asset[];
   selectedPersona?: Persona;
   selectedReference?: Asset;
+  imagePromptSuggestions?: PromptSuggestion[];
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onDeleteAsset: (assetId: string) => void;
@@ -204,6 +207,12 @@ export function GenerationView({
     if (modelId === CHATGPT_IMAGE_MODEL_ID && imageAspectRatio === "21:9") {
       setImageAspectRatio("3:2");
     }
+  }
+
+  function applyRandomImagePrompt() {
+    if (!imagePromptSuggestions.length) return;
+    const nextPrompt = imagePromptSuggestions[Math.floor(Math.random() * imagePromptSuggestions.length)];
+    setImagePrompt(nextPrompt.prompt);
   }
 
   function toggleReferenceSelection(assetId: string) {
@@ -413,6 +422,9 @@ export function GenerationView({
                       <div className="min-w-0">
                         <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
                         <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
+                        {asset.prompt ? (
+                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{asset.prompt}</p>
+                        ) : null}
                       </div>
                       <button
                         type="button"
@@ -478,7 +490,23 @@ export function GenerationView({
                 />
               ) : null
             ) : null}
-            <TextArea label="Image prompt" value={imagePrompt} onChange={setImagePrompt} rows={6} />
+            <TextArea
+              label="Image prompt"
+              value={imagePrompt}
+              onChange={setImagePrompt}
+              rows={6}
+              action={
+                <button
+                  type="button"
+                  onClick={applyRandomImagePrompt}
+                  disabled={!imagePromptSuggestions.length}
+                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-stone-200 px-2.5 text-xs font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-stone-950 disabled:opacity-50"
+                >
+                  <WandSparkles size={14} />
+                  Magic
+                </button>
+              }
+            />
             {generationError ? (
               <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
             ) : null}

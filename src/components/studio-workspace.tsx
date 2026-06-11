@@ -14,6 +14,8 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatTokens } from "@/lib/utils";
 
+type PromptSuggestion = { title: string; prompt: string };
+
 const navItems = [
   { id: "personas", label: "Personas", icon: UserRound },
   { id: "images", label: "Images", icon: ImageIcon },
@@ -30,12 +32,14 @@ export function StudioWorkspace({
   initialUserId,
   initialUserEmail,
   paddleConfig,
+  imagePromptSuggestions = [],
 }: {
   initialData?: StudioInitialData;
   supabaseReady?: boolean;
   initialUserId?: string;
   initialUserEmail?: string;
   paddleConfig: PublicPaddleConfig;
+  imagePromptSuggestions?: PromptSuggestion[];
 }) {
   const [view, setView] = useState<View>("personas");
   const [personas, setPersonas] = useState<Persona[]>(initialData?.personas ?? demoPersonas);
@@ -381,6 +385,7 @@ export function StudioWorkspace({
               assets={assets}
               selectedPersona={selectedPersona}
               selectedReference={selectedReference}
+              imagePromptSuggestions={imagePromptSuggestions}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);
                 addJob(job);

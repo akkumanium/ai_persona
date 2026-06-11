@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Asset, Persona } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -146,15 +147,20 @@ export function TextArea({
   value,
   onChange,
   rows = 3,
+  action,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   rows?: number;
+  action?: ReactNode;
 }) {
   return (
     <label className="mt-4 block">
-      <span className="text-sm font-medium text-stone-700">{label}</span>
+      <span className="flex min-h-8 items-center justify-between gap-3 text-sm font-medium text-stone-700">
+        {label}
+        {action}
+      </span>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}

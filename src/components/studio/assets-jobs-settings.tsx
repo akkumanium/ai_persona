@@ -2,7 +2,7 @@
 
 import { Coins, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { BillingPlans } from "@/components/billing-plans";
+import { TokenTopUps } from "@/components/billing-plans";
 import type { AssetFilter } from "@/components/studio/types";
 import { ModeToggle, PanelTitle } from "@/components/studio/ui";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -56,6 +56,9 @@ export function AssetsView({
                   <p className="mt-1 text-xs text-stone-500">
                     {persona?.name ?? "Unassigned"} / {asset.kind}
                   </p>
+                  {asset.prompt ? (
+                    <p className="mt-3 line-clamp-3 text-xs leading-5 text-stone-600">{asset.prompt}</p>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <a
                       href={asset.url}
@@ -112,6 +115,7 @@ export function JobsView({ jobs }: { jobs: GenerationJob[] }) {
           <div>
             <p className="font-medium capitalize text-stone-950">{job.generationType.replaceAll("_", " ")}</p>
             <p className="mt-1 text-stone-500">{new Date(job.createdAt).toLocaleString()}</p>
+            {job.prompt ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{job.prompt}</p> : null}
           </div>
           <span className="font-medium capitalize text-emerald-800">{job.status}</span>
           <span className="text-stone-600">{formatTokens(job.costEstimateCents)}</span>
@@ -144,17 +148,12 @@ export function SettingsView({
         <p className="mt-2 text-sm leading-6 text-stone-600">Available tokens for new generations.</p>
       </div>
 
-      <div className="rounded-lg border border-stone-200 bg-white py-4 shadow-sm">
-        <BillingPlans
-          title="Buy additional tokens"
-          copy="Use the same secure checkout here to top up your studio balance without leaving Settings."
+      <div className="max-w-4xl">
+        <TokenTopUps
           userId={userId}
           userEmail={userEmail}
           supabaseReady={supabaseReady}
           config={paddleConfig}
-          compact
-          theme="light"
-          actionLabel="Buy top-up"
           onStatusResolved={(status) => {
             if (typeof status.balanceCents === "number") {
               onBalanceRefresh?.(status.balanceCents);

@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import { getPublicPaddleConfig } from "@/lib/billing";
 import { StudioPaywall } from "@/components/studio-paywall";
 import { StudioWorkspace } from "@/components/studio-workspace";
 import { hasSupabaseEnv } from "@/lib/env";
 import { getBillingAccess } from "@/lib/server/billing-access";
+import { loadImagePromptSuggestions } from "@/lib/server/prompt-library";
 import {
   emptyStudioData,
   mapAsset,
@@ -35,27 +37,21 @@ export default async function StudioPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <StudioPaywall supabaseReady={supabaseReady} paddleConfig={paddleConfig} />;
+    redirect("/auth/signin?next=/studio");
   }
 
   const access = await getBillingAccess(supabase, user.id);
 
   if (!access.hasStudioAccess) {
-    return (
-      <StudioPaywall
-        userId={user.id}
-        userEmail={user.email}
-        supabaseReady={supabaseReady}
-        paddleConfig={paddleConfig}
-      />
-    );
+    redirect("/pricing");
   }
 
-  const [personas, assets, jobs, ledger] = await Promise.all([
+  const [personas, assets, jobs, ledger, imagePromptSuggestions] = await Promise.all([
     supabase.from("personas").select("*").order("created_at", { ascending: false }),
     supabase.from("assets").select("*").order("created_at", { ascending: false }),
     supabase.from("generation_jobs").select("*").order("created_at", { ascending: false }),
     supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }),
+    loadImagePromptSuggestions(),
   ]);
 
   initialData = {
@@ -73,6 +69,7 @@ export default async function StudioPage() {
       initialUserId={user.id}
       initialUserEmail={user.email}
       paddleConfig={paddleConfig}
+      imagePromptSuggestions={imagePromptSuggestions}
     />
   );
 }

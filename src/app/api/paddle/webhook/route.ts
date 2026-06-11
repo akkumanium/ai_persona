@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
-import { getPlanById, getPlanByPriceId } from "@/lib/billing";
+import { getBillingOptionById, getBillingOptionByPriceId } from "@/lib/billing";
 import { env, hasSupabaseEnv } from "@/lib/env";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
@@ -115,7 +115,7 @@ function verifyPaddleSignature(signatureHeader: string, rawBody: string, secret:
 function getBillingEventDetails(eventType: string, data: Record<string, unknown>): BillingEventDetails {
   if (eventType === "transaction.completed") {
     const priceId = findPriceId(data);
-    const plan = getPlanByPriceId(priceId) ?? getPlanById(getCustomDataValue(data, "plan_id"));
+    const plan = getBillingOptionByPriceId(priceId) ?? getBillingOptionById(getCustomDataValue(data, "plan_id"));
     return {
       userId: getCustomDataValue(data, "app_user_id"),
       planId: plan?.id,
@@ -123,14 +123,14 @@ function getBillingEventDetails(eventType: string, data: Record<string, unknown>
       amountCents: plan?.creditCents ?? 0,
       subscriptionId: getString(data.subscription_id),
       customerId: getString(data.customer_id),
-      subscriptionStatus: "active",
+      subscriptionStatus: plan?.kind === "topup" ? "top_up" : "active",
       entityId: getString(data.id),
     };
   }
 
   if (eventType.startsWith("subscription.")) {
     const priceId = findPriceId(data);
-    const plan = getPlanByPriceId(priceId) ?? getPlanById(getCustomDataValue(data, "plan_id"));
+    const plan = getBillingOptionByPriceId(priceId) ?? getBillingOptionById(getCustomDataValue(data, "plan_id"));
     return {
       userId: getCustomDataValue(data, "app_user_id"),
       planId: plan?.id,
