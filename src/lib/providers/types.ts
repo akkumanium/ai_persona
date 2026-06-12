@@ -67,6 +67,51 @@ export type VideoGenerationResult = {
   raw: unknown;
 };
 
+export type SpeechGenerationRequest = {
+  text: string;
+  voiceId: string;
+  model: "eleven_multilingual_v2" | "eleven_v3";
+  outputFormat: "mp3_44100_128" | "mp3_44100_192" | "wav_44100";
+  stability?: number;
+  similarityBoost?: number;
+  style?: number;
+  speed?: number;
+  useSpeakerBoost?: boolean;
+  seed?: number;
+  languageCode?: string;
+};
+
+export type SpeechGenerationResult = {
+  provider: ProviderName | "demo";
+  model: string;
+  asset: GeneratedAssetPayload;
+  costEstimateCents: number;
+  raw: unknown;
+};
+
+export type AvatarGenerationRequest = {
+  prompt?: string;
+  imageUrl?: string;
+  image?: ProviderImageInput;
+  audioUrl?: string;
+  audio?: ProviderMediaInput;
+  maskImageUrl?: string;
+  resolution: "480p" | "720p";
+  seed?: number;
+  durationSeconds: number;
+  model?: string;
+};
+
+export type AvatarGenerationResult = {
+  provider: ProviderName | "demo";
+  model: string;
+  status: JobStatus;
+  providerJobId: string;
+  asset?: GeneratedAssetPayload;
+  costEstimateCents: number;
+  raw: unknown;
+};
+
 export interface ImageProvider {
   name: ProviderName;
   generate(request: ImageGenerationRequest): Promise<ImageGenerationResult>;
@@ -76,4 +121,14 @@ export interface VideoProvider {
   name: ProviderName;
   submit(request: VideoGenerationRequest): Promise<VideoGenerationResult>;
   poll(providerJobId: string): Promise<VideoGenerationResult>;
+}
+
+export interface SpeechProvider {
+  name: ProviderName;
+  generate(request: SpeechGenerationRequest): Promise<SpeechGenerationResult>;
+}
+
+export interface AvatarProvider {
+  name: ProviderName;
+  submit(request: AvatarGenerationRequest): Promise<AvatarGenerationResult>;
 }

@@ -15,8 +15,8 @@ export async function materializeGeneratedAsset(
 
   if (hasSupabaseEnv() && userId && env.supabaseServiceRoleKey) {
     const supabase = createServiceSupabaseClient();
-    const bucket = asset.kind === "video" ? "generated-videos" : "generated-images";
-    const folder = asset.kind === "video" ? "videos" : "images";
+    const bucket = asset.kind === "video" ? "generated-videos" : asset.kind === "audio" ? "generated-audio" : "generated-images";
+    const folder = asset.kind === "video" ? "videos" : asset.kind === "audio" ? "audio" : "images";
     const storagePath = `${userId}/${folder}/${asset.id}.${extension}`;
     const { error } = await supabase.storage.from(bucket).upload(storagePath, content.bytes, {
       contentType: content.mimeType,
@@ -85,7 +85,7 @@ export function sanitizeProviderPayload(value: unknown): unknown {
   );
 }
 
-async function resolveAssetContent(url: string, userId?: string) {
+export async function resolveAssetContent(url: string, userId?: string) {
   const dataUrlMatch = url.match(/^data:([^;,]+);base64,(.+)$/);
   if (dataUrlMatch) {
     return {
@@ -150,6 +150,13 @@ function extensionFromMimeType(mimeType: string) {
   if (mimeType.includes("gif")) return "gif";
   if (mimeType.includes("mp4")) return "mp4";
   if (mimeType.includes("webm")) return "webm";
+  if (mimeType.includes("mpeg") || mimeType.includes("mp3")) return "mp3";
+  if (mimeType.includes("wav")) return "wav";
+  if (mimeType.includes("ogg")) return "ogg";
+  if (mimeType.includes("opus")) return "opus";
+  if (mimeType.includes("aac")) return "aac";
+  if (mimeType.includes("flac")) return "flac";
+  if (mimeType.includes("m4a")) return "m4a";
   return "png";
 }
 

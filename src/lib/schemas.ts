@@ -83,3 +83,38 @@ export const videoGenerationSchema = z.object({
   motionReferenceVideo: providerMediaInputSchema.optional(),
   motionReferenceVideoUrl: z.string().min(1).optional(),
 });
+
+export const speechGenerationSchema = z.object({
+  personaId: z.string().min(1),
+  personaName: z.string().min(1),
+  text: z.string().min(1).max(5000),
+  voiceId: z.string().min(1).max(120),
+  model: z.enum(["eleven_multilingual_v2", "eleven_v3"]).default("eleven_multilingual_v2"),
+  outputFormat: z.enum(["mp3_44100_128", "mp3_44100_192", "wav_44100"]).default("mp3_44100_128"),
+  stability: z.number().min(0).max(1).optional(),
+  similarityBoost: z.number().min(0).max(1).optional(),
+  style: z.number().min(0).max(1).optional(),
+  speed: z.number().min(0.7).max(1.2).optional(),
+  useSpeakerBoost: z.boolean().optional().default(true),
+  seed: z.number().int().min(0).max(4294967295).optional(),
+  languageCode: z.string().min(2).max(8).optional(),
+});
+
+export const talkingAvatarGenerationSchema = z.object({
+  personaId: z.string().min(1),
+  personaName: z.string().min(1),
+  imageAssetUrl: z.string().min(1).optional(),
+  imageAssetId: z.string().min(1).optional(),
+  audioAssetUrl: z.string().min(1).optional(),
+  audioAssetId: z.string().min(1).optional(),
+  uploadedAudio: z.object({
+    name: z.string().max(200).optional(),
+    mimeType: z.string().min(3).max(120),
+    data: z.string().min(1).optional(),
+    url: z.string().min(1).optional(),
+  }).optional(),
+  prompt: z.string().max(1000).optional().default(""),
+  resolution: z.enum(["480p", "720p"]).default("480p"),
+  durationSeconds: z.number().int().min(1).max(600).default(5),
+  seed: z.number().int().min(-1).max(2147483647).optional().default(-1),
+});

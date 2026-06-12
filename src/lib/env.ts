@@ -13,6 +13,8 @@ export const env = {
   seedanceApiBaseUrl: process.env.SEEDANCE_API_BASE_URL ?? "https://ark.ap-southeast.bytepluses.com",
   seedanceApiKey: process.env.SEEDANCE_API_KEY,
   seedanceModel: process.env.SEEDANCE_MODEL ?? "dreamina-seedance-2-0-260128",
+  wavespeedApiKey: process.env.WAVESPEED_API_KEY,
+  elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "imblueop@gmail.com",
   paddleClientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
   paddleEnvironment: process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "sandbox",

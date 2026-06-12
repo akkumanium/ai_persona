@@ -1,4 +1,4 @@
-export type AssetKind = "avatar" | "image" | "video" | "upload";
+export type AssetKind = "avatar" | "image" | "video" | "audio" | "upload";
 export type GenerationType =
   | "avatar_prompt"
   | "avatar_image_blend"
@@ -6,11 +6,13 @@ export type GenerationType =
   | "reference_upload"
   | "image_from_reference"
   | "image_from_prompt"
+  | "speech_text"
+  | "avatar_talking"
   | "video_normal"
   | "video_motion"
   | "video_prompt";
 export type JobStatus = "queued" | "running" | "succeeded" | "failed";
-export type ProviderName = "nano-banana-pro" | "openai" | "wan" | "kling" | "seedance";
+export type ProviderName = "nano-banana-pro" | "openai" | "wan" | "kling" | "seedance" | "wavespeed" | "elevenlabs";
 
 export type Persona = {
   id: string;

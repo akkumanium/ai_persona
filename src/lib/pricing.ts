@@ -1,4 +1,9 @@
-import type { ImageGenerationRequest, VideoGenerationRequest } from "@/lib/providers/types";
+import type {
+  AvatarGenerationRequest,
+  ImageGenerationRequest,
+  SpeechGenerationRequest,
+  VideoGenerationRequest,
+} from "@/lib/providers/types";
 
 export const TOKENS_PER_USD = 1000;
 
@@ -82,6 +87,27 @@ export function estimateVideoGenerationPricing(request: VideoGenerationRequest):
   return {
     rawUsd: 0.06 * duration,
     tokens: usdToTokens(0.06 * duration),
+  };
+}
+
+export function estimateSpeechGenerationPricing(request: Pick<SpeechGenerationRequest, "text">): PricingBreakdown {
+  const rawUsd = Math.max(1, request.text.length) * 0.1 / 1000;
+  return {
+    rawUsd,
+    tokens: usdToTokens(rawUsd),
+  };
+}
+
+export function estimateAvatarGenerationPricing(
+  request: Pick<AvatarGenerationRequest, "durationSeconds" | "resolution">,
+): PricingBreakdown {
+  const billedSeconds = Math.min(600, Math.max(5, Math.ceil(request.durationSeconds)));
+  const perSecondUsd = request.resolution === "720p" ? 0.06 : 0.03;
+  const rawUsd = perSecondUsd * billedSeconds;
+  return {
+    rawUsd,
+    tokens: usdToTokens(rawUsd),
+    notes: "InfiniteTalk is billed with a 5 second minimum and 10 minute cap.",
   };
 }
 

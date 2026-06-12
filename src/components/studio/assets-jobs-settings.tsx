@@ -33,6 +33,7 @@ export function AssetsView({
             { value: "upload", label: "Uploads" },
             { value: "image", label: "Images" },
             { value: "video", label: "Videos" },
+            { value: "audio", label: "Audio" },
           ]}
           onChange={(value) => setFilter(value as AssetFilter)}
         />
@@ -45,7 +46,14 @@ export function AssetsView({
             return (
               <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
                 <div className="aspect-[4/5] bg-stone-100">
-                  {asset.kind === "video" ? (
+                  {asset.kind === "audio" ? (
+                    <div className="flex h-full flex-col items-center justify-center p-4">
+                      <div className="flex size-14 items-center justify-center rounded-md bg-emerald-50 text-emerald-800">
+                        <Coins size={24} />
+                      </div>
+                      <audio src={asset.url} className="mt-5 w-full" controls />
+                    </div>
+                  ) : asset.kind === "video" ? (
                     <video src={asset.url} className="h-full w-full object-cover" controls />
                   ) : (
                     <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />

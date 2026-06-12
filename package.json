@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.52.0",
     "@google/genai": "^2.2.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.4",
@@ -19,6 +20,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tailwind-merge": "^3.6.0",
+    "wavespeed": "^0.2.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

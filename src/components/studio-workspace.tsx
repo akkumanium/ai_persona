@@ -1,12 +1,13 @@
 "use client";
 
-import { Activity, Clapperboard, Home, ImageIcon, Mail, Play, Settings, Sparkles, UserRound } from "lucide-react";
+import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, Play, Settings, Sparkles, UserRound, Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AssetsView, JobsView, SettingsView } from "@/components/studio/assets-jobs-settings";
 import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
+import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
 import type { ReferenceSlotId, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -22,6 +23,8 @@ const navItems = [
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "videos", label: "Videos", icon: Clapperboard },
   { id: "motion", label: "Motion Control", icon: Play },
+  { id: "speech", label: "Speech", icon: AudioLines },
+  { id: "avatar", label: "Avatar", icon: Video },
   { id: "assets", label: "Assets", icon: ImageIcon },
   { id: "jobs", label: "Jobs", icon: Activity },
   { id: "settings", label: "Settings", icon: Settings },
@@ -421,6 +424,34 @@ export function StudioWorkspace({
                 addAssets(nextAssets, job);
                 addJob(job);
                 setNotice(`${nextAssets.length} asset${nextAssets.length === 1 ? "" : "s"} generated.`);
+              }}
+              onSelectPersona={setSelectedPersonaId}
+              onDeleteAsset={deleteAsset}
+            />
+          )}
+          {view === "speech" && (
+            <SpeechView
+              personas={personas}
+              assets={assets}
+              selectedPersona={selectedPersona}
+              onAssetsCreated={(nextAssets, job) => {
+                addAssets(nextAssets, job);
+                addJob(job);
+                setNotice(`${nextAssets.length} audio asset${nextAssets.length === 1 ? "" : "s"} generated.`);
+              }}
+              onSelectPersona={setSelectedPersonaId}
+              onDeleteAsset={deleteAsset}
+            />
+          )}
+          {view === "avatar" && (
+            <AvatarView
+              personas={personas}
+              assets={assets}
+              selectedPersona={selectedPersona}
+              onAssetsCreated={(nextAssets, job) => {
+                addAssets(nextAssets, job);
+                addJob(job);
+                setNotice(`${nextAssets.length} avatar video${nextAssets.length === 1 ? "" : "s"} generated.`);
               }}
               onSelectPersona={setSelectedPersonaId}
               onDeleteAsset={deleteAsset}

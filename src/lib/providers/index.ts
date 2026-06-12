@@ -1,30 +1,43 @@
 import { NanoBananaProvider } from "@/lib/providers/nano-banana";
 import { OpenAIImageProvider } from "@/lib/providers/openai-image";
 import { KlingVideoProvider } from "@/lib/providers/kling";
+import { ElevenLabsSpeechProvider } from "@/lib/providers/elevenlabs";
 import { SeedanceVideoProvider } from "@/lib/providers/seedance";
 import { WanVideoProvider } from "@/lib/providers/wan";
-import type { ImageProvider, VideoProvider } from "@/lib/providers/types";
+import { WavespeedAvatarProvider, WavespeedMediaProvider } from "@/lib/providers/wavespeed";
+import type { AvatarProvider, ImageProvider, SpeechProvider, VideoProvider } from "@/lib/providers/types";
 
 const nanoBananaProvider = new NanoBananaProvider();
 const openAIImageProvider = new OpenAIImageProvider();
 const wanVideoProvider = new WanVideoProvider();
 const klingVideoProvider = new KlingVideoProvider();
 const seedanceVideoProvider = new SeedanceVideoProvider();
+const wavespeedMediaProvider = new WavespeedMediaProvider();
+const elevenLabsSpeechProvider = new ElevenLabsSpeechProvider();
+const wavespeedAvatarProvider = new WavespeedAvatarProvider();
 
 export const imageProvider: ImageProvider = {
-	name: "nano-banana-pro",
+	name: "wavespeed",
 	async generate(request) {
-		if (request.model.startsWith("gpt-")) {
-			return openAIImageProvider.generate(request);
-		}
+    if (process.env.USE_LEGACY_IMAGE_PROVIDERS === "true") {
+      if (request.model.startsWith("gpt-")) {
+        return openAIImageProvider.generate(request);
+      }
 
-		return nanoBananaProvider.generate(request);
+      return nanoBananaProvider.generate(request);
+    }
+
+		return wavespeedMediaProvider.generate(request);
 	},
 };
 
 export const videoProvider: VideoProvider = {
-  name: "wan",
+  name: "wavespeed",
   async submit(request) {
+    if (process.env.USE_LEGACY_VIDEO_PROVIDERS !== "true") {
+      return wavespeedMediaProvider.submit(request);
+    }
+
     if (request.model === "kling" || request.model.startsWith("kling-")) {
       return klingVideoProvider.submit(request);
     }
@@ -63,3 +76,6 @@ export const videoProvider: VideoProvider = {
     return wanVideoProvider.poll(providerJobId);
   },
 };
+
+export const speechProvider: SpeechProvider = elevenLabsSpeechProvider;
+export const avatarProvider: AvatarProvider = wavespeedAvatarProvider;

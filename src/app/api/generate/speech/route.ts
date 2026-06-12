@@ -1,0 +1,91 @@
+import { NextResponse } from "next/server";
+import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
+import { speechProvider } from "@/lib/providers";
+import type { SpeechGenerationRequest } from "@/lib/providers/types";
+import { estimateSpeechGenerationPricing } from "@/lib/pricing";
+import { speechGenerationSchema } from "@/lib/schemas";
+import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
+import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import type { Asset, GenerationJob } from "@/lib/types";
+import { nowIso } from "@/lib/utils";
+
+export async function POST(request: Request) {
+  try {
+    const auth = await requireUserWhenSupabaseIsConfigured();
+    if (auth.response) return auth.response;
+
+    const input = speechGenerationSchema.parse(await request.json());
+    const providerRequest: SpeechGenerationRequest = {
+      text: input.text,
+      voiceId: input.voiceId,
+      model: input.model,
+      outputFormat: input.outputFormat,
+      stability: input.stability,
+      similarityBoost: input.similarityBoost,
+      style: input.style,
+      speed: input.speed,
+      useSpeakerBoost: input.useSpeakerBoost,
+      seed: input.seed,
+      languageCode: input.languageCode,
+    };
+    const estimatedPricing = estimateSpeechGenerationPricing(providerRequest);
+    const jobId = crypto.randomUUID();
+    await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
+
+    try {
+      const result = await speechProvider.generate(providerRequest);
+      const createdAt = nowIso();
+      const asset: Asset = await materializeGeneratedAsset({
+        id: crypto.randomUUID(),
+        kind: "audio",
+        title: `${input.personaName} speech`,
+        prompt: input.text,
+        personaId: input.personaId,
+        generationType: "speech_text",
+        provider: result.provider,
+        model: result.model,
+        createdAt,
+        ...result.asset,
+      }, auth.user?.id);
+      const job: GenerationJob = {
+        id: jobId,
+        status: "succeeded",
+        provider: result.provider,
+        model: result.model,
+        generationType: "speech_text",
+        prompt: input.text,
+        personaId: input.personaId,
+        costEstimateCents: estimatedPricing.tokens,
+        rawProviderResponse: sanitizeProviderPayload(result.raw),
+        createdAt,
+        updatedAt: createdAt,
+      };
+
+      await persistGenerationRecords({
+        userId: auth.user?.id,
+        assets: [asset],
+        job,
+        inputParams: {
+          ...input,
+          textLength: input.text.length,
+          text: input.text,
+        },
+      });
+
+      return NextResponse.json({ asset, job });
+    } catch (error) {
+      await refundTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text refund");
+      throw error;
+    }
+  } catch (error) {
+    if (error instanceof InsufficientTokensError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Speech generation failed." },
+      { status: 500 },
+    );
+  }
+}
