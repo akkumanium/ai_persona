@@ -266,20 +266,17 @@ export function StudioWorkspace({
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 hidden w-68 border-r border-stone-200 bg-white/82 px-4 py-5 backdrop-blur lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-68 flex-col border-r border-stone-200 bg-white/82 px-4 py-4 backdrop-blur lg:flex">
         <div className="flex items-center gap-3 px-2">
-          <div className="flex size-11 items-center justify-center rounded-lg bg-emerald-800 text-white">
-            <Sparkles size={22} />
+          <div className="flex size-10 items-center justify-center rounded-md bg-emerald-800 text-white">
+            <Sparkles size={20} />
           </div>
           <div>
-            <p className="text-lg font-semibold tracking-normal">Persona Studio</p>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-stone-500">
-              Creator SaaS
-            </p>
+            <p className="text-base font-semibold tracking-normal">Persona Studio</p>
           </div>
         </div>
 
-        <nav className="mt-8 grid gap-1">
+        <nav className="mt-6 grid flex-1 content-start gap-1 overflow-y-auto pb-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -287,7 +284,7 @@ export function StudioWorkspace({
                 key={item.id}
                 onClick={() => setView(item.id)}
                 className={cn(
-                  "flex h-11 items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-stone-600 transition",
+                  "flex h-10 items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-stone-600 transition",
                   view === item.id
                     ? "tab-selected text-white"
                     : "hover:bg-stone-100 hover:text-stone-950",
@@ -300,22 +297,21 @@ export function StudioWorkspace({
           })}
         </nav>
 
-        <div className="absolute bottom-5 left-4 right-4 grid gap-2">
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <p className="text-sm font-semibold text-stone-900">Balance</p>
-            <p className="mt-1 text-2xl font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</p>
-            <p className="mt-1 text-xs leading-5 text-stone-500">Available tokens for new generations.</p>
+        <div className="grid shrink-0 gap-2 border-t border-stone-200 pt-3">
+          <div className="flex h-10 items-center justify-between gap-3 rounded-md bg-stone-50 px-3 text-sm">
+            <span className="font-medium text-stone-600">Balance</span>
+            <span className="font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</span>
           </div>
           <Link
             href="/contact"
-            className="flex h-11 items-center gap-3 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
+            className="flex h-10 items-center gap-3 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
           >
             <Mail size={18} />
             Contact us
           </Link>
           <Link
             href="/"
-            className="flex h-11 items-center gap-3 rounded-md bg-emerald-800 px-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
+            className="flex h-10 items-center gap-3 rounded-md bg-emerald-800 px-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
           >
             <Home size={18} />
             Main page

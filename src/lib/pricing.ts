@@ -14,7 +14,7 @@ export type PricingBreakdown = {
 };
 
 export function usdToTokens(rawUsd: number) {
-  return Math.max(1, Math.ceil(rawUsd * TOKENS_PER_USD - Number.EPSILON));
+  return Math.max(1, Math.ceil(rawUsd * TOKENS_PER_USD - 1e-9));
 }
 
 export function estimateImageGenerationPricing(request: ImageGenerationRequest): PricingBreakdown {
@@ -60,19 +60,28 @@ export function estimateVideoGenerationPricing(request: VideoGenerationRequest):
   }
 
   if (model === "wan-2.7") {
-    const perSecondUsd = request.resolution === "1080p" ? 0.09 : 0.06;
+    const perSecondUsd = request.resolution === "1080p" ? 0.15 : 0.1;
     return {
       rawUsd: perSecondUsd * duration,
       tokens: usdToTokens(perSecondUsd * duration),
     };
   }
 
-  if (model === "wan-2.2" || model === "wan-animate") {
-    const rawUsd = request.resolution === "480p" ? 0.03 : 0.06;
+  if (model === "wan-animate") {
+    const billedSeconds = Math.min(120, Math.max(5, Math.ceil(duration)));
+    const perSecondUsd = request.resolution === "480p" ? 0.04 : 0.08;
     return {
-      rawUsd,
-      tokens: usdToTokens(rawUsd),
-      notes: "Wan 2.2 pricing uses the PoYo Fast generation price. Fal pricing is intentionally ignored.",
+      rawUsd: perSecondUsd * billedSeconds,
+      tokens: usdToTokens(perSecondUsd * billedSeconds),
+      notes: "Wan 2.2 Animate is billed with a 5 second minimum and 120 second cap.",
+    };
+  }
+
+  if (model === "wan-2.2") {
+    const perSecondUsd = request.resolution === "480p" ? 0.03 : 0.06;
+    return {
+      rawUsd: perSecondUsd * duration,
+      tokens: usdToTokens(perSecondUsd * duration),
     };
   }
 
@@ -127,24 +136,30 @@ function gptImage2OutputUsd(quality: ImageGenerationRequest["imageQuality"], asp
 
 function kling26GenerationUsd(request: VideoGenerationRequest) {
   const durationMultiplier = request.durationSeconds >= 10 ? 2 : 1;
-  if (request.generateAudio) return 0.6 * durationMultiplier;
-  return 0.325 * durationMultiplier;
+  const isPro = request.providerMode === "pro" || Boolean(request.endFrameImageUrl || request.endFrameImage);
+  const baseUsd = isPro ? 0.35 : 0.21;
+  const soundMultiplier = isPro && request.generateAudio ? 2 : 1;
+  return baseUsd * durationMultiplier * soundMultiplier;
 }
 
 function kling30PerSecondUsd(request: VideoGenerationRequest) {
-  if (request.resolution === "4K" || request.model === "kling-v3-0-4k") return 0.25;
-  if (request.providerMode === "pro" || request.resolution === "1080p" || request.endFrameImageUrl) {
-    return request.generateAudio ? 0.245 : 0.195;
+  if (request.resolution === "4K" || request.model === "kling-v3-0-4k") return 0.42;
+  if (request.providerMode === "pro") {
+    return request.generateAudio ? 0.168 : 0.112;
   }
 
-  return request.generateAudio ? 0.195 : 0.135;
+  return request.generateAudio ? 0.126 : 0.084;
 }
 
 function seedancePerSecondUsd(request: VideoGenerationRequest) {
   const isFast = request.model.includes("fast");
-  if (isFast) return request.resolution === "480p" ? 0.07 : 0.14;
+  if (isFast) {
+    if (request.resolution === "1080p") return 0.5;
+    if (request.resolution === "480p") return 0.1;
+    return 0.2;
+  }
 
-  if (request.resolution === "1080p") return 0.45;
-  if (request.resolution === "480p") return 0.1;
-  return 0.2;
+  if (request.resolution === "1080p") return 0.6;
+  if (request.resolution === "480p") return 0.12;
+  return 0.24;
 }

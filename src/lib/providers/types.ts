@@ -43,7 +43,9 @@ export type VideoGenerationRequest = {
   mode: "normal" | "motion";
   referenceImageUrl?: string;
   startFrameImageUrl?: string;
+  startFrameImage?: ProviderImageInput;
   endFrameImageUrl?: string;
+  endFrameImage?: ProviderImageInput;
   durationSeconds: number;
   aspectRatio: string;
   negativePrompt?: string;
@@ -70,7 +72,7 @@ export type VideoGenerationResult = {
 export type SpeechGenerationRequest = {
   text: string;
   voiceId: string;
-  model: "eleven_multilingual_v2" | "eleven_v3";
+  model: "eleven_multilingual_v2";
   outputFormat: "mp3_44100_128" | "mp3_44100_192" | "wav_44100";
   stability?: number;
   similarityBoost?: number;

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const generationType =
       input.mode === "motion"
         ? "video_motion"
-        : input.startFrameImageUrl || input.referenceImageUrl
+        : input.startFrameImageUrl || input.startFrameImage || input.referenceImageUrl
           ? "video_normal"
           : "video_prompt";
     const estimatedPricing = estimateVideoGenerationPricing(input);

@@ -71,6 +71,8 @@ export function GenerationView({
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
   const [videoStartFrameByPersona, setVideoStartFrameByPersona] = useState<Record<string, string>>({});
   const [videoEndFrameByPersona, setVideoEndFrameByPersona] = useState<Record<string, string | undefined>>({});
+  const [uploadedVideoStartFrame, setUploadedVideoStartFrame] = useState<SourceImageInput | undefined>();
+  const [uploadedVideoEndFrame, setUploadedVideoEndFrame] = useState<SourceImageInput | undefined>();
   const [videoFrameSlot, setVideoFrameSlot] = useState<VideoFrameSlot>("start");
   const [videoImageSearch, setVideoImageSearch] = useState("");
   const [videoDurationSeconds, setVideoDurationSeconds] = useState(5);
@@ -178,12 +180,12 @@ export function GenerationView({
       durationSeconds: safeVideoDuration,
       aspectRatio: safeVideoAspectRatio,
       negativePrompt: videoNegativePrompt,
-      providerMode: selectedVideoEndFrame ? "pro" : videoProviderMode,
+      providerMode: selectedVideoEndFrame || uploadedVideoEndFrame ? "pro" : videoProviderMode,
       cfgScale: videoCfgScale,
       generateAudio: videoGenerateAudio,
       resolution: safeVideoResolution,
       returnLastFrame: videoReturnLastFrame,
-      endFrameImageUrl: selectedVideoEndFrame?.url,
+      endFrameImageUrl: uploadedVideoEndFrame ? sourceImageToDataUrl(uploadedVideoEndFrame) : selectedVideoEndFrame?.url,
     }).tokens,
   );
   const motionVideoCostLabel = formatTokens(
@@ -229,15 +231,18 @@ export function GenerationView({
   function selectVideoFrame(assetId: string) {
     if (!selectedPersona) return;
     if (videoFrameSlot === "start") {
+      setUploadedVideoStartFrame(undefined);
       setVideoStartFrameByPersona((current) => ({ ...current, [selectedPersona.id]: assetId }));
       return;
     }
 
+    setUploadedVideoEndFrame(undefined);
     setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: assetId }));
   }
 
   function clearVideoEndFrame() {
     if (!selectedPersona) return;
+    setUploadedVideoEndFrame(undefined);
     setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: undefined }));
   }
 
@@ -310,13 +315,24 @@ export function GenerationView({
     if (!selectedPersona) return;
     const startFrameAsset = mode === "normal" ? selectedVideoStartFrame : undefined;
     const endFrameAsset = mode === "normal" ? selectedVideoEndFrame : undefined;
-    if (mode === "normal" && normalVideoRequiresStartFrame && !startFrameAsset) return;
+    const uploadedStartFrameUrl = mode === "normal" && uploadedVideoStartFrame ? sourceImageToDataUrl(uploadedVideoStartFrame) : undefined;
+    const uploadedEndFrameUrl = mode === "normal" && uploadedVideoEndFrame ? sourceImageToDataUrl(uploadedVideoEndFrame) : undefined;
+    const uploadedStartFrameInput =
+      mode === "normal" && uploadedVideoStartFrame?.data
+        ? { name: uploadedVideoStartFrame.name, mimeType: uploadedVideoStartFrame.mimeType, data: uploadedVideoStartFrame.data }
+        : undefined;
+    const uploadedEndFrameInput =
+      mode === "normal" && uploadedVideoEndFrame?.data
+        ? { name: uploadedVideoEndFrame.name, mimeType: uploadedVideoEndFrame.mimeType, data: uploadedVideoEndFrame.data }
+        : undefined;
+    if (mode === "normal" && normalVideoRequiresStartFrame && !startFrameAsset && !uploadedStartFrameUrl) return;
     const referenceImageUrl =
       mode === "motion"
         ? motionReferenceImage
           ? sourceImageToDataUrl(motionReferenceImage)
           : selectedReference?.url
-        : startFrameAsset?.url;
+        : uploadedStartFrameUrl ?? startFrameAsset?.url;
+    const requestReferenceImageUrl = uploadedStartFrameInput ? undefined : referenceImageUrl;
     if (mode === "motion" && !referenceImageUrl) return;
     setIsGeneratingVideo(true);
     setGenerationError("");
@@ -330,7 +346,7 @@ export function GenerationView({
         durationSeconds: mode === "normal" ? safeVideoDuration : 5,
         aspectRatio: mode === "normal" ? safeVideoAspectRatio : "9:16",
         negativePrompt: mode === "normal" ? videoNegativePrompt : "",
-        providerMode: mode === "normal" ? videoProviderMode : "std",
+        providerMode: mode === "normal" ? (uploadedEndFrameUrl || endFrameAsset ? "pro" : videoProviderMode) : "std",
         cfgScale: mode === "normal" ? videoCfgScale : 0.5,
         generateAudio: mode === "normal" ? videoGenerateAudio : false,
         resolution: mode === "normal" ? safeVideoResolution : "720p",
@@ -338,8 +354,12 @@ export function GenerationView({
         motionReference: mode === "motion" ? motionReference : "",
         motionReferenceVideo: mode === "motion" && motionReferenceVideo?.data ? motionReferenceVideo : undefined,
         motionReferenceVideoUrl: mode === "motion" ? motionReferenceVideo?.url : undefined,
-        ...(referenceImageUrl ? { referenceImageUrl, startFrameImageUrl: referenceImageUrl } : {}),
-        ...(mode === "normal" && endFrameAsset ? { endFrameImageUrl: endFrameAsset.url } : {}),
+        ...(requestReferenceImageUrl ? { referenceImageUrl: requestReferenceImageUrl, startFrameImageUrl: requestReferenceImageUrl } : {}),
+        ...(uploadedStartFrameInput ? { startFrameImage: uploadedStartFrameInput } : {}),
+        ...(mode === "normal" && (uploadedEndFrameUrl || endFrameAsset?.url)
+          ? { endFrameImageUrl: uploadedEndFrameInput ? undefined : uploadedEndFrameUrl ?? endFrameAsset?.url }
+          : {}),
+        ...(uploadedEndFrameInput ? { endFrameImage: uploadedEndFrameInput } : {}),
       };
       const response = await fetch("/api/generate/video", {
         method: "POST",
@@ -352,7 +372,7 @@ export function GenerationView({
       }
       const referenceAssetIds =
         mode === "normal"
-          ? [startFrameAsset?.id, endFrameAsset?.id].filter((id): id is string => Boolean(id))
+          ? [uploadedStartFrameUrl ? undefined : startFrameAsset?.id, uploadedEndFrameUrl ? undefined : endFrameAsset?.id].filter((id): id is string => Boolean(id))
           : motionReferenceImage
             ? []
             : selectedReference
@@ -377,6 +397,16 @@ export function GenerationView({
   async function captureMotionReferenceImage(files: FileList | null) {
     const [image] = await encodeFiles(files, "image/png");
     setMotionReferenceImage(image);
+  }
+
+  async function captureVideoFrame(files: FileList | null, slot: VideoFrameSlot) {
+    const [image] = await encodeFiles(files, "image/png");
+    if (slot === "start") {
+      setUploadedVideoStartFrame(image);
+      return;
+    }
+
+    setUploadedVideoEndFrame(image);
   }
 
   async function captureMotionReferenceVideo(files: FileList | null) {
@@ -540,6 +570,22 @@ export function GenerationView({
               onSelect={selectVideoFrame}
               onClearEnd={clearVideoEndFrame}
             />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <UploadBox
+                accept="image/*"
+                icon={Upload}
+                label={uploadedVideoStartFrame ? uploadedVideoStartFrame.name : "Upload start frame"}
+                detail={uploadedVideoStartFrame ? "Using uploaded image." : ""}
+                onChange={(files) => void captureVideoFrame(files, "start")}
+              />
+              <UploadBox
+                accept="image/*"
+                icon={Upload}
+                label={uploadedVideoEndFrame ? uploadedVideoEndFrame.name : "Upload end frame"}
+                detail={uploadedVideoEndFrame ? "Using uploaded image." : ""}
+                onChange={(files) => void captureVideoFrame(files, "end")}
+              />
+            </div>
             <NumberField
               label="Duration"
               value={safeVideoDuration}
@@ -559,7 +605,7 @@ export function GenerationView({
               <>
                 <ModeToggle
                   label="Quality"
-                  value={selectedVideoEndFrame ? "pro" : videoProviderMode}
+                  value={selectedVideoEndFrame || uploadedVideoEndFrame ? "pro" : videoProviderMode}
                   options={[
                     { value: "std", label: "Standard" },
                     { value: "pro", label: "Pro" },
@@ -597,7 +643,7 @@ export function GenerationView({
               icon={Play}
               label="Generate video"
               costLabel={normalVideoCostLabel}
-              disabled={!selectedPersona || (normalVideoRequiresStartFrame && !selectedVideoStartFrame)}
+              disabled={!selectedPersona || (normalVideoRequiresStartFrame && !selectedVideoStartFrame && !uploadedVideoStartFrame)}
             />
           </form>
         ) : null}

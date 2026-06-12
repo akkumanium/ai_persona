@@ -67,7 +67,7 @@ describe("token pricing", () => {
         aspectRatio: "9:16",
         resolution: "1080p",
       }).tokens,
-    ).toBe(450);
+    ).toBe(750);
 
     expect(
       estimateVideoGenerationPricing({
@@ -80,7 +80,7 @@ describe("token pricing", () => {
         generateAudio: true,
         resolution: "1080p",
       }).tokens,
-    ).toBe(2450);
+    ).toBe(1680);
   });
 });
 

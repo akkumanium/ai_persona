@@ -1,10 +1,9 @@
 import { AudioLines, Clapperboard, Loader2, MessageSquareText, Trash2, Upload, Video } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
-import { encodeFiles } from "@/components/studio/media";
-import type { SourceAudioInput } from "@/components/studio/types";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import type { SourceAudioInput, SourceImageInput } from "@/components/studio/types";
 import {
   ModelSelect,
-  NumberField,
   PanelTitle,
   PersonaSelect,
   RangeField,
@@ -20,7 +19,6 @@ import { formatTokens } from "@/lib/utils";
 
 const speechModels = [
   { id: "eleven_multilingual_v2", label: "Multilingual v2" },
-  { id: "eleven_v3", label: "Eleven v3" },
 ];
 const outputFormats = ["mp3_44100_128", "mp3_44100_192", "wav_44100"];
 const avatarResolutions = ["480p", "720p"];
@@ -42,7 +40,7 @@ export function SpeechView({
 }) {
   const [text, setText] = useState("A short reusable voice line for the next avatar clip.");
   const [voiceId, setVoiceId] = useState("");
-  const [model, setModel] = useState<"eleven_multilingual_v2" | "eleven_v3">("eleven_multilingual_v2");
+  const [model, setModel] = useState<"eleven_multilingual_v2">("eleven_multilingual_v2");
   const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
   const [stability, setStability] = useState(0.5);
   const [similarityBoost, setSimilarityBoost] = useState(0.75);
@@ -195,25 +193,63 @@ export function AvatarView({
     [assets, selectedPersona?.id],
   );
   const [imageAssetId, setImageAssetId] = useState("");
+  const [uploadedImage, setUploadedImage] = useState<SourceImageInput | undefined>();
   const [audioAssetId, setAudioAssetId] = useState("");
   const [uploadedAudio, setUploadedAudio] = useState<SourceAudioInput | undefined>();
   const [resolution, setResolution] = useState<"480p" | "720p">("480p");
-  const [durationSeconds, setDurationSeconds] = useState(5);
+  const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | undefined>();
+  const [isReadingDuration, setIsReadingDuration] = useState(false);
   const [prompt, setPrompt] = useState("Natural talking head, subtle expression, steady camera.");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
   const selectedImage = imageAssets.find((asset) => asset.id === imageAssetId) ?? imageAssets[0];
   const selectedAudio = audioAssets.find((asset) => asset.id === audioAssetId) ?? audioAssets[0];
-  const costLabel = formatTokens(estimateAvatarGenerationPricing({ resolution, durationSeconds }).tokens);
+  const selectedImageUrl = uploadedImage ? sourceImageToDataUrl(uploadedImage) : selectedImage?.url;
+  const selectedAudioSource = uploadedAudio?.url ?? (uploadedAudio?.data ? `data:${uploadedAudio.mimeType};base64,${uploadedAudio.data}` : selectedAudio?.url);
+  const effectiveDurationSeconds = audioDurationSeconds ? Math.max(1, Math.ceil(audioDurationSeconds)) : 0;
+  const costLabel = audioDurationSeconds
+    ? formatTokens(estimateAvatarGenerationPricing({ resolution, durationSeconds: effectiveDurationSeconds }).tokens)
+    : undefined;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedAudioSource) {
+      setAudioDurationSeconds(undefined);
+      setIsReadingDuration(false);
+      return;
+    }
+
+    setIsReadingDuration(true);
+    getMediaDurationFromUrl(selectedAudioSource)
+      .then((duration) => {
+        if (!cancelled) setAudioDurationSeconds(duration);
+      })
+      .catch(() => {
+        if (!cancelled) setAudioDurationSeconds(undefined);
+      })
+      .finally(() => {
+        if (!cancelled) setIsReadingDuration(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAudioSource]);
+
+  async function captureImage(files: FileList | null) {
+    const [image] = await encodeFiles(files, "image/png");
+    setUploadedImage(image);
+  }
 
   async function captureAudio(files: FileList | null) {
     const [audio] = await encodeFiles(files, "audio/mpeg");
     setUploadedAudio(audio ? { name: audio.name, mimeType: audio.mimeType, data: audio.data, url: audio.url } : undefined);
+    setAudioAssetId("");
   }
 
   async function generateAvatar(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPersona || !selectedImage || (!selectedAudio && !uploadedAudio)) return;
+    if (!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds) return;
     setIsGenerating(true);
     setError("");
     try {
@@ -223,14 +259,14 @@ export function AvatarView({
         body: JSON.stringify({
           personaId: selectedPersona.id,
           personaName: selectedPersona.name,
-          imageAssetUrl: selectedImage.url,
-          imageAssetId: selectedImage.id,
+          imageAssetUrl: selectedImageUrl,
+          imageAssetId: uploadedImage ? undefined : selectedImage?.id,
           audioAssetUrl: uploadedAudio ? undefined : selectedAudio?.url,
           audioAssetId: uploadedAudio ? undefined : selectedAudio?.id,
           uploadedAudio,
           prompt,
           resolution,
-          durationSeconds,
+          durationSeconds: effectiveDurationSeconds,
           seed: -1,
         }),
       });
@@ -296,8 +332,31 @@ export function AvatarView({
         <form onSubmit={generateAvatar}>
           <PanelTitle icon={Clapperboard} title="Avatar Options" />
           <PersonaSelect personas={personas} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-          <AssetSelect label="Image" assets={imageAssets} value={selectedImage?.id ?? ""} onChange={setImageAssetId} />
-          <AssetSelect label="Saved audio" assets={audioAssets} value={uploadedAudio ? "" : selectedAudio?.id ?? ""} onChange={setAudioAssetId} />
+          <AssetSelect
+            label="Generated image"
+            assets={imageAssets}
+            value={uploadedImage ? "" : selectedImage?.id ?? ""}
+            onChange={(id) => {
+              setUploadedImage(undefined);
+              setImageAssetId(id);
+            }}
+          />
+          <UploadBox
+            accept="image/*"
+            icon={Upload}
+            label={uploadedImage ? uploadedImage.name : "Upload image"}
+            detail={uploadedImage ? "Uploaded image will be used instead of a generated image." : ""}
+            onChange={(files) => void captureImage(files)}
+          />
+          <AssetSelect
+            label="Saved audio"
+            assets={audioAssets}
+            value={uploadedAudio ? "" : selectedAudio?.id ?? ""}
+            onChange={(id) => {
+              setUploadedAudio(undefined);
+              setAudioAssetId(id);
+            }}
+          />
           <UploadBox
             accept="audio/*"
             icon={Upload}
@@ -306,7 +365,15 @@ export function AvatarView({
             onChange={(files) => void captureAudio(files)}
           />
           <SelectField label="Resolution" value={resolution} options={avatarResolutions} onChange={(value) => setResolution(value as typeof resolution)} />
-          <NumberField label="Billed duration" value={durationSeconds} min={1} max={600} suffix="s" onChange={setDurationSeconds} />
+          <div className="mt-4 rounded-lg bg-stone-50 px-4 py-3 text-sm text-stone-600">
+            {selectedAudioSource
+              ? isReadingDuration
+                ? "Reading audio length..."
+                : audioDurationSeconds
+                  ? `Duration: ${formatDuration(audioDurationSeconds)}. The avatar video will match the audio length.`
+                  : "The selected audio length could not be read yet."
+              : "Choose or upload audio before generating an avatar."}
+          </div>
           <TextArea label="Prompt" value={prompt} onChange={setPrompt} rows={4} />
           {error ? <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
           <SubmitButton
@@ -314,7 +381,7 @@ export function AvatarView({
             icon={Video}
             label="Generate avatar"
             costLabel={costLabel}
-            disabled={!selectedPersona || !selectedImage || (!selectedAudio && !uploadedAudio)}
+            disabled={!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds}
           />
         </form>
       </aside>
@@ -350,4 +417,27 @@ function AssetSelect({
       </select>
     </label>
   );
+}
+
+function getMediaDurationFromUrl(url: string) {
+  return new Promise<number>((resolve, reject) => {
+    const audio = document.createElement("audio");
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      const duration = audio.duration;
+      audio.removeAttribute("src");
+      audio.load();
+      Number.isFinite(duration) && duration > 0 ? resolve(duration) : reject(new Error("Invalid duration"));
+    };
+    audio.onerror = () => reject(new Error("Could not read audio duration"));
+    audio.src = url;
+  });
+}
+
+function formatDuration(durationSeconds: number) {
+  const totalSeconds = Math.max(1, Math.round(durationSeconds));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (!minutes) return `${seconds}s`;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }

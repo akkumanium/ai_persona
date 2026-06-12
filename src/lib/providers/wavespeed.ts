@@ -84,22 +84,35 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
 
   async submit(request: VideoGenerationRequest): Promise<VideoGenerationResult> {
     const client = wavespeedClient();
+    const startFrame = request.startFrameImage
+      ? await uploadProviderInput(client, request.startFrameImage, "image")
+      : request.startFrameImageUrl || request.referenceImageUrl;
+    const endFrame = request.endFrameImage
+      ? await uploadProviderInput(client, request.endFrameImage, "image")
+      : request.endFrameImageUrl;
+    const motionVideo = request.motionReferenceVideo
+      ? await uploadProviderInput(client, request.motionReferenceVideo, "video")
+      : request.motionReferenceVideoUrl;
     const model = wavespeedVideoModel(request);
     const result = await client.run(model, {
       prompt: request.prompt,
-      image: request.startFrameImageUrl || request.referenceImageUrl,
-      image_url: request.startFrameImageUrl || request.referenceImageUrl,
-      first_frame_image: request.startFrameImageUrl || request.referenceImageUrl,
-      end_image: request.endFrameImageUrl,
-      end_image_url: request.endFrameImageUrl,
-      last_frame_image: request.endFrameImageUrl,
+      image: startFrame,
+      image_url: startFrame,
+      first_frame_image: startFrame,
+      end_image: endFrame,
+      end_image_url: endFrame,
+      last_frame_image: endFrame,
+      video: motionVideo,
+      video_url: motionVideo,
       duration: request.durationSeconds,
       aspect_ratio: request.aspectRatio === "auto" ? undefined : request.aspectRatio,
       negative_prompt: request.negativePrompt || undefined,
       cfg_scale: request.cfgScale,
       resolution: request.resolution,
       generate_audio: request.generateAudio,
+      sound: request.generateAudio,
       return_last_frame: request.returnLastFrame,
+      mode: request.mode === "motion" ? "animate" : undefined,
       seed: -1,
     }, {
       pollInterval: 5,
@@ -194,7 +207,7 @@ async function uploadProviderImages(client: Client, images: ProviderImageInput[]
   return urls;
 }
 
-async function uploadProviderInput(client: Client, input: ProviderImageInput | ProviderMediaInput, fallbackKind: "image" | "audio") {
+async function uploadProviderInput(client: Client, input: ProviderImageInput | ProviderMediaInput, fallbackKind: "image" | "audio" | "video") {
   const bytes = Buffer.from(input.data, "base64");
   const extension = extensionFromMimeType(input.mimeType, fallbackKind);
   const tempDir = join(tmpdir(), "persona-studio-wavespeed");
@@ -219,24 +232,30 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
   if (request.model.includes("/")) return request.model;
   if (request.model.includes("seedance")) {
     const base = request.model.includes("fast") ? "bytedance/seedance-2.0-fast" : "bytedance/seedance-2.0";
-    if (request.endFrameImageUrl) return `${base}/image-to-video`;
-    return request.startFrameImageUrl || request.referenceImageUrl ? `${base}/image-to-video` : `${base}/text-to-video`;
+    if (request.endFrameImageUrl || request.endFrameImage) return `${base}/image-to-video`;
+    return request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl ? `${base}/image-to-video` : `${base}/text-to-video`;
   }
   if (request.model === "wan-2.7") {
-    return request.startFrameImageUrl || request.referenceImageUrl
+    return request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl
       ? "alibaba/wan-2.7/image-to-video"
       : "alibaba/wan-2.7/text-to-video";
   }
+  if (request.model === "wan-animate") {
+    return "wavespeed-ai/wan-2.2/animate";
+  }
   if (request.model === "wan-2.2") {
     const resolution = request.resolution === "480p" ? "480p" : "720p";
-    return request.startFrameImageUrl || request.referenceImageUrl
-      ? `alibaba/wan-2.2/i2v-${resolution}`
-      : `alibaba/wan-2.2/t2v-${resolution}`;
+    return request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl
+      ? `wavespeed-ai/wan-2.2/i2v-${resolution}`
+      : `wavespeed-ai/wan-2.2/t2v-${resolution}`;
   }
   if (request.model.startsWith("kling")) {
-    return request.startFrameImageUrl || request.referenceImageUrl
-      ? "kwaivgi/kling-v2.6-std/image-to-video"
-      : "kwaivgi/kling-v2.6-std/text-to-video";
+    const mode = request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl ? "image-to-video" : "text-to-video";
+    if (request.model === "kling-v3" || request.model === "kling-v3-0" || request.model === "kling-v3-0-4k") {
+      if (request.resolution === "4K" || request.model === "kling-v3-0-4k") return `kwaivgi/kling-v3.0-4k/${mode}`;
+      return `kwaivgi/kling-v3.0-${request.providerMode === "pro" ? "pro" : "std"}/${mode}`;
+    }
+    return `kwaivgi/kling-v2.6-${request.providerMode === "pro" || request.endFrameImageUrl || request.endFrameImage ? "pro" : "std"}/${mode}`;
   }
   return request.model;
 }
@@ -279,7 +298,7 @@ function mimeTypeFromUrl(url: string, fallback: string) {
   return fallback;
 }
 
-function extensionFromMimeType(mimeType: string, fallbackKind: "image" | "audio") {
+function extensionFromMimeType(mimeType: string, fallbackKind: "image" | "audio" | "video") {
   if (mimeType.includes("webp")) return "webp";
   if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
   if (mimeType.includes("gif")) return "gif";
@@ -288,5 +307,9 @@ function extensionFromMimeType(mimeType: string, fallbackKind: "image" | "audio"
   if (mimeType.includes("ogg")) return "ogg";
   if (mimeType.includes("flac")) return "flac";
   if (mimeType.includes("m4a")) return "m4a";
+  if (mimeType.includes("mp4")) return "mp4";
+  if (mimeType.includes("webm")) return "webm";
+  if (mimeType.includes("quicktime") || mimeType.includes("mov")) return "mov";
+  if (fallbackKind === "video") return "mp4";
   return fallbackKind === "audio" ? "mp3" : "png";
 }

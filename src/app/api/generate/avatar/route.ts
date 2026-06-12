@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     if (!input.imageAssetUrl) {
       return NextResponse.json({ error: "Choose an image asset for the avatar." }, { status: 400 });
     }
-    if (!input.audioAssetUrl && !input.uploadedAudio) {
+    if (!input.audioAssetUrl && !input.uploadedAudio?.data && !input.uploadedAudio?.url) {
       return NextResponse.json({ error: "Choose or upload audio for the avatar." }, { status: 400 });
     }
 
