@@ -54,6 +54,12 @@ export default async function StudioPage() {
     loadImagePromptSuggestions(),
   ]);
 
+  for (const result of [personas, assets, jobs, ledger]) {
+    if (result.error) {
+      throw new Error(`Could not load studio data: ${result.error.message}`);
+    }
+  }
+
   initialData = {
     personas: (personas.data ?? []).map(mapPersona),
     assets: (assets.data ?? []).map(mapAsset),

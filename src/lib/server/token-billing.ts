@@ -27,10 +27,11 @@ export async function assertSufficientTokens(userId: string | undefined, require
 
 export async function reserveTokens(userId: string | undefined, requiredTokens: number, jobId: string, description: string) {
   if (!hasSupabaseEnv() || !userId) return undefined;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to reserve generation credits.");
+  }
 
-  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? createServiceSupabaseClient()
-    : await createServerSupabaseClient();
+  const supabase = createServiceSupabaseClient();
   const { data, error } = await supabase.rpc("consume_credits", {
     p_user_id: userId,
     p_amount_cents: requiredTokens,
@@ -51,10 +52,11 @@ export async function reserveTokens(userId: string | undefined, requiredTokens: 
 
 export async function refundTokens(userId: string | undefined, amountTokens: number, jobId: string, description: string) {
   if (!hasSupabaseEnv() || !userId || amountTokens <= 0) return undefined;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to refund generation credits.");
+  }
 
-  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
-    ? createServiceSupabaseClient()
-    : await createServerSupabaseClient();
+  const supabase = createServiceSupabaseClient();
   const { data, error } = await supabase.rpc("refund_credits", {
     p_user_id: userId,
     p_amount_cents: amountTokens,

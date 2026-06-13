@@ -7,12 +7,14 @@ const TEMP_MEDIA_DIR = path.join(os.tmpdir(), "persona-studio-media");
 type TempMediaMetadata = {
   mimeType: string;
   originalName?: string;
+  userId?: string;
 };
 
 export async function saveTempMedia(params: {
   bytes: Uint8Array;
   mimeType: string;
   originalName?: string;
+  userId?: string;
 }) {
   const tempKey = crypto.randomUUID();
   const filePath = path.join(TEMP_MEDIA_DIR, `${tempKey}.bin`);
@@ -25,6 +27,7 @@ export async function saveTempMedia(params: {
     JSON.stringify({
       mimeType: params.mimeType,
       originalName: params.originalName,
+      userId: params.userId,
     } satisfies TempMediaMetadata),
     "utf8",
   );
@@ -35,7 +38,7 @@ export async function saveTempMedia(params: {
   };
 }
 
-export async function readTempMedia(tempKey: string) {
+export async function readTempMedia(tempKey: string, userId?: string) {
   const filePath = path.join(TEMP_MEDIA_DIR, `${tempKey}.bin`);
   const metaPath = path.join(TEMP_MEDIA_DIR, `${tempKey}.json`);
   const [bytes, metadataRaw] = await Promise.all([
@@ -44,6 +47,10 @@ export async function readTempMedia(tempKey: string) {
   ]);
 
   const metadata = JSON.parse(metadataRaw) as TempMediaMetadata;
+  if (metadata.userId && metadata.userId !== userId) {
+    throw new Error("Temp media is outside the current user scope.");
+  }
+
   return {
     bytes: new Uint8Array(bytes),
     mimeType: metadata.mimeType,

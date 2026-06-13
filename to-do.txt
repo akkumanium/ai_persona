@@ -11,13 +11,11 @@
 40. Make favicon
 41. Add carousel
 42. Add runninghub
-43. Balance overrides design
-44. You shouldn't be able to choose amount of seconds in Avatar, also check if you can generate without audio (it shouldn't be possible)
-45. Get rid of Eleven v3 model
 46. Maybe change "tokens" to tokens icon
-47. We don't need to upload references to Avatar, we need to upload images that we've generated OR upload images directly from PC.
 48. Look into chatbot.
 49. Probably change the prompt for body
+50. I uploaded a wav and it said "The selected audio length could not be read yet.", why?
+51. Check options for every video and clearly differentiate them.
 
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com

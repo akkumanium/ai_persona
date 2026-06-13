@@ -214,13 +214,20 @@ export function AvatarView({
   useEffect(() => {
     let cancelled = false;
     if (!selectedAudioSource) {
-      setAudioDurationSeconds(undefined);
-      setIsReadingDuration(false);
+      setTimeout(() => {
+        if (!cancelled) {
+          setAudioDurationSeconds(undefined);
+          setIsReadingDuration(false);
+        }
+      }, 0);
       return;
     }
 
-    setIsReadingDuration(true);
-    getMediaDurationFromUrl(selectedAudioSource)
+    Promise.resolve()
+      .then(() => {
+        if (!cancelled) setIsReadingDuration(true);
+        return getMediaDurationFromUrl(selectedAudioSource);
+      })
       .then((duration) => {
         if (!cancelled) setAudioDurationSeconds(duration);
       })
@@ -427,7 +434,11 @@ function getMediaDurationFromUrl(url: string) {
       const duration = audio.duration;
       audio.removeAttribute("src");
       audio.load();
-      Number.isFinite(duration) && duration > 0 ? resolve(duration) : reject(new Error("Invalid duration"));
+      if (Number.isFinite(duration) && duration > 0) {
+        resolve(duration);
+        return;
+      }
+      reject(new Error("Invalid duration"));
     };
     audio.onerror = () => reject(new Error("Could not read audio duration"));
     audio.src = url;

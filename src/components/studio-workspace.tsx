@@ -115,7 +115,10 @@ export function StudioWorkspace({
       ?.from("personas")
       .update({ reference_asset_id: nextReferenceId })
       .eq("id", personaId)
-      .is("reference_asset_id", null);
+      .is("reference_asset_id", null)
+      .then(({ error }) => {
+        if (error) setNotice(`Could not save default reference: ${error.message}`);
+      });
   }
 
   function updatePersona(personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) {
@@ -129,7 +132,10 @@ export function StudioWorkspace({
         description: updates.description,
         style_notes: updates.styleNotes,
       })
-      .eq("id", personaId);
+      .eq("id", personaId)
+      .then(({ error }) => {
+        if (error) setNotice(`Could not save persona changes: ${error.message}`);
+      });
   }
 
   function renameReferenceAsset(assetId: string, title: string) {
@@ -138,7 +144,13 @@ export function StudioWorkspace({
     setAssets((current) =>
       current.map((asset) => (asset.id === assetId ? { ...asset, title: nextTitle } : asset)),
     );
-    void supabaseClient()?.from("assets").update({ title: nextTitle }).eq("id", assetId);
+    void supabaseClient()
+      ?.from("assets")
+      .update({ title: nextTitle })
+      .eq("id", assetId)
+      .then(({ error }) => {
+        if (error) setNotice(`Could not save asset name: ${error.message}`);
+      });
   }
 
   function addPersona(persona: Persona) {
@@ -147,7 +159,7 @@ export function StudioWorkspace({
     void (async () => {
       const context = await supabaseContext();
       if (!context) return;
-      await context.client.from("personas").insert({
+      const { error } = await context.client.from("personas").insert({
         id: persona.id,
         user_id: context.userId,
         name: persona.name,
@@ -157,6 +169,11 @@ export function StudioWorkspace({
         reference_asset_id: persona.referenceAssetId ?? null,
         created_at: persona.createdAt,
       });
+      if (error) {
+        setPersonas((current) => current.filter((item) => item.id !== persona.id));
+        setSelectedPersonaId((current) => (current === persona.id ? "" : current));
+        setNotice(`Could not save persona: ${error.message}`);
+      }
     })();
   }
 
@@ -166,7 +183,13 @@ export function StudioWorkspace({
       if (currentId !== personaId) return currentId;
       return personas.find((persona) => persona.id !== personaId)?.id ?? "";
     });
-    void supabaseClient()?.from("personas").delete().eq("id", personaId);
+    void supabaseClient()
+      ?.from("personas")
+      .delete()
+      .eq("id", personaId)
+      .then(({ error }) => {
+        if (error) setNotice(`Could not delete persona: ${error.message}`);
+      });
   }
 
   function addReferenceAssets(personaId: string, nextAssets: Asset[]) {
@@ -185,15 +208,25 @@ export function StudioWorkspace({
       void (async () => {
         const context = await supabaseContext();
         if (!context) return;
-        await context.client.from("assets").insert(nextAssets.map((asset) => assetToInsert(asset, context.userId)));
+        const { error: assetsError } = await context.client
+          .from("assets")
+          .insert(nextAssets.map((asset) => assetToInsert(asset, context.userId)));
+        if (assetsError) {
+          setAssets((current) => current.filter((asset) => !nextAssets.some((item) => item.id === asset.id)));
+          setNotice(`Could not save reference assets: ${assetsError.message}`);
+          return;
+        }
         const nextReferenceId =
           nextAssets.find((asset) => asset.isDefaultReference)?.id ?? nextAssets[0]?.id;
         if (nextReferenceId) {
-          await context.client
+          const { error: personaError } = await context.client
             .from("personas")
             .update({ reference_asset_id: nextReferenceId })
             .eq("id", personaId)
             .is("reference_asset_id", null);
+          if (personaError) {
+            setNotice(`Could not save default reference: ${personaError.message}`);
+          }
         }
       })();
     }
@@ -212,7 +245,10 @@ export function StudioWorkspace({
     void supabaseClient()
       ?.from("assets")
       .update({ is_default_reference: nextValue })
-      .eq("id", assetId);
+      .eq("id", assetId)
+      .then(({ error }) => {
+        if (error) setNotice(`Could not save default reference: ${error.message}`);
+      });
   }
 
   function deleteAsset(assetId: string) {
@@ -239,7 +275,13 @@ export function StudioWorkspace({
     });
     const client = supabaseClient();
     if (client) {
-      void client.from("assets").delete().eq("id", assetId);
+      void client
+        .from("assets")
+        .delete()
+        .eq("id", assetId)
+        .then(({ error }) => {
+          if (error) setNotice(`Could not delete asset record: ${error.message}`);
+        });
       if (asset.storageBucket && asset.storagePath) {
         void client.storage.from(asset.storageBucket).remove([asset.storagePath]);
       }

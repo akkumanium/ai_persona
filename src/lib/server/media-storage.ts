@@ -1,3 +1,5 @@
+import { lookup } from "dns/promises";
+import { isIP } from "net";
 import { env, hasSupabaseEnv } from "@/lib/env";
 import { buildStorageObjectUrl } from "@/lib/media-urls";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
@@ -38,6 +40,7 @@ export async function materializeGeneratedAsset(
     bytes: content.bytes,
     mimeType: content.mimeType,
     originalName: asset.title,
+    userId,
   });
 
   return {
@@ -126,12 +129,13 @@ export async function resolveAssetContent(url: string, userId?: string) {
     if (!tempKey) {
       throw new Error("Media URL is missing the temp media key.");
     }
-    return readTempMedia(tempKey);
+    return readTempMedia(tempKey, userId);
   }
 
   if (!/^https?:$/.test(parsed.protocol)) {
     throw new Error("Unsupported media URL.");
   }
+  await assertSafeRemoteMediaUrl(parsed);
 
   const response = await fetch(parsed.toString());
   if (!response.ok) {
@@ -142,6 +146,71 @@ export async function resolveAssetContent(url: string, userId?: string) {
     mimeType: response.headers.get("content-type")?.split(";")[0] ?? "application/octet-stream",
     bytes: new Uint8Array(await response.arrayBuffer()),
   };
+}
+
+async function assertSafeRemoteMediaUrl(url: URL) {
+  if (url.username || url.password) {
+    throw new Error("Remote media URL credentials are not supported.");
+  }
+
+  if (url.port && !["80", "443"].includes(url.port)) {
+    throw new Error("Remote media URL ports are restricted.");
+  }
+
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    throw new Error("Local media URLs are not supported.");
+  }
+
+  const directIpVersion = isIP(hostname);
+  if (directIpVersion) {
+    if (!isPublicIpAddress(hostname, directIpVersion)) {
+      throw new Error("Private network media URLs are not supported.");
+    }
+    return;
+  }
+
+  const addresses = await lookup(hostname, { all: true });
+  if (!addresses.length) {
+    throw new Error("Remote media host could not be resolved.");
+  }
+
+  if (addresses.some((address) => !isPublicIpAddress(address.address, address.family))) {
+    throw new Error("Private network media URLs are not supported.");
+  }
+}
+
+function isPublicIpAddress(address: string, family: number) {
+  if (family === 4) {
+    const parts = address.split(".").map(Number);
+    if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
+      return false;
+    }
+    const [a, b] = parts;
+    return !(
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      (a >= 224)
+    );
+  }
+
+  const normalized = address.toLowerCase();
+  return !(
+    normalized === "::1" ||
+    normalized === "::" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe8") ||
+    normalized.startsWith("fe9") ||
+    normalized.startsWith("fea") ||
+    normalized.startsWith("feb")
+  );
 }
 
 function extensionFromMimeType(mimeType: string) {

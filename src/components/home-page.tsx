@@ -4,7 +4,6 @@ import {
   BriefcaseBusiness,
   CalendarCheck,
   CheckCircle2,
-  ChevronRight,
   Clapperboard,
   Eye,
   FileText,

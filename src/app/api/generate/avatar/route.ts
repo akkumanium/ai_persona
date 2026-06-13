@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
-import { avatarProvider } from "@/lib/providers";
+import { avatarProvider, imageProvider } from "@/lib/providers";
 import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
 import { mediaUrlToProviderInput } from "@/lib/providers/media-inputs";
-import type { AvatarGenerationRequest } from "@/lib/providers/types";
-import { estimateAvatarGenerationPricing } from "@/lib/pricing";
-import { talkingAvatarGenerationSchema } from "@/lib/schemas";
+import type { AvatarGenerationRequest, ImageGenerationRequest, ProviderImageInput } from "@/lib/providers/types";
+import { estimateAvatarGenerationPricing, estimateImageGenerationPricing } from "@/lib/pricing";
+import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
+import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
 import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
-import type { Asset, GenerationJob } from "@/lib/types";
+import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
@@ -17,16 +18,162 @@ export async function POST(request: Request) {
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
 
-    const input = talkingAvatarGenerationSchema.parse(await request.json());
-    if (!input.imageAssetUrl) {
-      return NextResponse.json({ error: "Choose an image asset for the avatar." }, { status: 400 });
-    }
-    if (!input.audioAssetUrl && !input.uploadedAudio?.data && !input.uploadedAudio?.url) {
-      return NextResponse.json({ error: "Choose or upload audio for the avatar." }, { status: 400 });
+    const body = await request.json();
+    if (body && typeof body === "object" && "mode" in body) {
+      return await generateAvatarReference(body, auth.user?.id);
     }
 
-    const [image, audio] = await Promise.all([
-      imageUrlToProviderInput(input.imageAssetUrl, `${input.personaName}-avatar-image`, auth.user?.id),
+    return await generateTalkingAvatar(body, auth.user?.id);
+  } catch (error) {
+    if (error instanceof InsufficientTokensError) {
+      return NextResponse.json({ error: error.message }, { status: 402 });
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Avatar generation failed." },
+      { status: 500 },
+    );
+  }
+}
+
+async function generateAvatarReference(body: unknown, userId?: string) {
+  const input = avatarGenerationSchema.parse(body);
+  if (!input.confirmsRights || !input.confirmsAdultPersona) {
+    return NextResponse.json({ error: "Identity rights and adult-persona confirmations are required." }, { status: 400 });
+  }
+
+  const urlReferences = await Promise.all(
+    input.sourceImageUrls.map((url, index) =>
+      imageUrlToProviderInput(url, `${input.personaName}-source-${index + 1}`, userId),
+    ),
+  );
+  const referenceImages: ProviderImageInput[] = [
+    ...input.sourceImages,
+    ...urlReferences.filter((image): image is ProviderImageInput => Boolean(image)),
+  ];
+
+  if (input.mode === "blend" && referenceImages.length < 2) {
+    return NextResponse.json({ error: "Blend mode requires two source face images." }, { status: 400 });
+  }
+  if (input.mode === "normalization" && referenceImages.length < 1) {
+    return NextResponse.json({ error: "Normalization requires a source image." }, { status: 400 });
+  }
+
+  const generationType: GenerationType =
+    input.mode === "blend"
+      ? "avatar_image_blend"
+      : input.mode === "normalization"
+        ? "avatar_normalization"
+        : "avatar_prompt";
+  const basePrompt =
+    input.mode === "blend"
+      ? DEFAULT_PROMPTS.hybrid
+      : input.prompt.trim() || promptForReferenceSlot(input.referenceSlot);
+  const finalPrompt = [
+    basePrompt,
+    input.additionalPrompt.trim(),
+    input.description ? `Persona description: ${input.description}.` : "",
+    input.styleNotes ? `Style notes: ${input.styleNotes}.` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  if (finalPrompt.trim().length < 10) {
+    return NextResponse.json({ error: "Prompt must be at least 10 characters." }, { status: 400 });
+  }
+
+  const providerRequest: ImageGenerationRequest = {
+    prompt: finalPrompt,
+    model: input.model,
+    aspectRatio: input.aspectRatio,
+    imageSize: input.imageSize,
+    imageQuality: input.imageQuality,
+    count: input.count,
+    referenceImages,
+    generationType,
+  };
+  const estimatedPricing = estimateImageGenerationPricing(providerRequest);
+  const jobId = crypto.randomUUID();
+  await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
+
+  try {
+    const result = await imageProvider.generate(providerRequest);
+    const createdAt = nowIso();
+    const visiblePrompt = input.prompt.trim() || input.additionalPrompt.trim();
+    const assets: Asset[] = await Promise.all(
+      result.assets.map(async (asset, index) =>
+        materializeGeneratedAsset(
+          {
+            id: crypto.randomUUID(),
+            kind: "avatar",
+            title: input.titlePrefix ?? `${input.personaName} reference ${index + 1}`,
+            prompt: visiblePrompt,
+            personaId: input.personaId,
+            referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
+            referenceSlot: input.referenceSlot,
+            isDefaultReference: input.isDefaultReference && index === 0,
+            generationType,
+            provider: result.provider,
+            model: result.model,
+            createdAt,
+            ...asset,
+          },
+          userId,
+        ),
+      ),
+    );
+    const job: GenerationJob = {
+      id: jobId,
+      status: "succeeded",
+      provider: result.provider,
+      model: result.model,
+      generationType,
+      prompt: visiblePrompt,
+      personaId: input.personaId,
+      costEstimateCents: estimatedPricing.tokens,
+      rawProviderResponse: sanitizeProviderPayload(result.raw),
+      createdAt,
+      updatedAt: createdAt,
+    };
+
+    await persistGenerationRecords({
+      userId,
+      assets,
+      job,
+      inputParams: {
+        mode: input.mode,
+        personaId: input.personaId,
+        personaName: input.personaName,
+        prompt: visiblePrompt,
+        additionalPrompt: input.additionalPrompt.trim(),
+        model: input.model,
+        aspectRatio: input.aspectRatio,
+        imageSize: input.imageSize,
+        imageQuality: input.imageQuality,
+        count: input.count,
+        referenceSlot: input.referenceSlot,
+        sourceImageCount: referenceImages.length,
+      },
+    });
+
+    return NextResponse.json({ assets, job });
+  } catch (error) {
+    await refundTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} refund`);
+    throw error;
+  }
+}
+
+async function generateTalkingAvatar(body: unknown, userId?: string) {
+  const input = talkingAvatarGenerationSchema.parse(body);
+  if (!input.imageAssetUrl) {
+    return NextResponse.json({ error: "Choose an image asset for the avatar." }, { status: 400 });
+  }
+  if (!input.audioAssetUrl && !input.uploadedAudio?.data && !input.uploadedAudio?.url) {
+    return NextResponse.json({ error: "Choose or upload audio for the avatar." }, { status: 400 });
+  }
+
+  const [image, audio] = await Promise.all([
+    imageUrlToProviderInput(input.imageAssetUrl, `${input.personaName}-avatar-image`, userId),
       input.uploadedAudio
         ? input.uploadedAudio.data
           ? Promise.resolve({
@@ -35,29 +182,30 @@ export async function POST(request: Request) {
               data: input.uploadedAudio.data,
             })
           : input.uploadedAudio.url
-            ? mediaUrlToProviderInput(input.uploadedAudio.url, input.uploadedAudio.name ?? `${input.personaName}-uploaded-audio`, auth.user?.id)
+            ? mediaUrlToProviderInput(input.uploadedAudio.url, input.uploadedAudio.name ?? `${input.personaName}-uploaded-audio`, userId)
             : Promise.resolve(undefined)
         : input.audioAssetUrl
-          ? mediaUrlToProviderInput(input.audioAssetUrl, `${input.personaName}-avatar-audio`, auth.user?.id)
+          ? mediaUrlToProviderInput(input.audioAssetUrl, `${input.personaName}-avatar-audio`, userId)
           : Promise.resolve(undefined),
-    ]);
-    const providerRequest: AvatarGenerationRequest = {
-      image,
-      audio,
-      prompt: input.prompt,
-      resolution: input.resolution,
-      durationSeconds: input.durationSeconds,
-      seed: input.seed,
-    };
-    const estimatedPricing = estimateAvatarGenerationPricing(providerRequest);
-    const jobId = crypto.randomUUID();
-    await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "avatar talking generation");
+  ]);
+  const providerRequest: AvatarGenerationRequest = {
+    image,
+    audio,
+    prompt: input.prompt,
+    resolution: input.resolution,
+    durationSeconds: input.durationSeconds,
+    seed: input.seed,
+  };
+  const estimatedPricing = estimateAvatarGenerationPricing(providerRequest);
+  const jobId = crypto.randomUUID();
+  await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
 
-    try {
-      const result = await avatarProvider.submit(providerRequest);
-      const createdAt = nowIso();
-      const asset: Asset | undefined = result.asset
-        ? await materializeGeneratedAsset({
+  try {
+    const result = await avatarProvider.submit(providerRequest);
+    const createdAt = nowIso();
+    const asset: Asset | undefined = result.asset
+      ? await materializeGeneratedAsset(
+          {
             id: crypto.randomUUID(),
             kind: "video",
             title: `${input.personaName} talking avatar`,
@@ -70,48 +218,40 @@ export async function POST(request: Request) {
             model: result.model,
             createdAt,
             ...result.asset,
-          }, auth.user?.id)
-        : undefined;
-      const job: GenerationJob = {
-        id: jobId,
-        status: result.status,
-        provider: result.provider,
-        providerJobId: result.providerJobId,
-        model: result.model,
-        generationType: "avatar_talking",
-        prompt: input.prompt,
-        personaId: input.personaId,
-        costEstimateCents: estimatedPricing.tokens,
-        rawProviderResponse: sanitizeProviderPayload(result.raw),
-        createdAt,
-        updatedAt: createdAt,
-      };
+          },
+          userId,
+        )
+      : undefined;
+    const job: GenerationJob = {
+      id: jobId,
+      status: result.status,
+      provider: result.provider,
+      providerJobId: result.providerJobId,
+      model: result.model,
+      generationType: "avatar_talking",
+      prompt: input.prompt,
+      personaId: input.personaId,
+      costEstimateCents: estimatedPricing.tokens,
+      rawProviderResponse: sanitizeProviderPayload(result.raw),
+      createdAt,
+      updatedAt: createdAt,
+    };
 
-      await persistGenerationRecords({
-        userId: auth.user?.id,
-        assets: asset ? [asset] : [],
-        job,
-        inputParams: {
-          ...input,
-          uploadedAudio: input.uploadedAudio
-            ? { name: input.uploadedAudio.name, mimeType: input.uploadedAudio.mimeType }
-            : undefined,
-        },
-      });
+    await persistGenerationRecords({
+      userId,
+      assets: asset ? [asset] : [],
+      job,
+      inputParams: {
+        ...input,
+        uploadedAudio: input.uploadedAudio
+          ? { name: input.uploadedAudio.name, mimeType: input.uploadedAudio.mimeType }
+          : undefined,
+      },
+    });
 
-      return NextResponse.json({ asset, job, providerJobId: result.providerJobId });
-    } catch (error) {
-      await refundTokens(auth.user?.id, estimatedPricing.tokens, jobId, "avatar talking refund");
-      throw error;
-    }
+    return NextResponse.json({ asset, job, providerJobId: result.providerJobId });
   } catch (error) {
-    if (error instanceof InsufficientTokensError) {
-      return NextResponse.json({ error: error.message }, { status: 402 });
-    }
-
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Avatar generation failed." },
-      { status: 500 },
-    );
+    await refundTokens(userId, estimatedPricing.tokens, jobId, "avatar talking refund");
+    throw error;
   }
 }
