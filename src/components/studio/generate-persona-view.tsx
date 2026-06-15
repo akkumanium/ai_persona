@@ -56,6 +56,7 @@ export function GeneratePersonaView({
   const [generationMode, setGenerationMode] = useState<FaceGenerationMode>("hybrid");
   const [scratchPrompt, setScratchPrompt] = useState("");
   const [additionalPrompt, setAdditionalPrompt] = useState("");
+  const [scratchSources, setScratchSources] = useState<SourceImageInput[]>([]);
   const [hybridSources, setHybridSources] = useState<SourceImageInput[]>([]);
   const [selectedModel, setSelectedModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [aspectRatio, setAspectRatio] = useState<string>(initialSlot.aspectRatio);
@@ -115,6 +116,8 @@ export function GeneratePersonaView({
   const imageModelSupportsQuality = supportsImageQuality(selectedModel);
   const referenceInputCount = isHybridFace
     ? hybridSources.length
+    : isScratchFace
+      ? scratchSources.length
     : selectedSlotId === "face"
       ? 0
       : selectedReferenceSelection.length;
@@ -145,6 +148,7 @@ export function GeneratePersonaView({
     setAspectRatio(nextSlot.aspectRatio);
     setGenerationMode(slotId === "face" ? "hybrid" : "scratch");
     setHybridSources([]);
+    setScratchSources([]);
     setScratchPrompt("");
     setAdditionalPrompt("");
     setGenerationError("");
@@ -181,8 +185,21 @@ export function GeneratePersonaView({
     setHybridSources((current) => [...current, ...newImages].slice(0, 2));
   }
 
+  async function captureScratchSources(files: FileList | null) {
+    const newImages = await encodeFiles(files, "image/png", {
+      enabled: supabaseReady,
+      bucket: "uploads",
+      folder: `scratch-sources/${selectedPersona?.id ?? "unassigned"}`,
+    });
+    setScratchSources((current) => [...current, ...newImages].slice(0, 4));
+  }
+
   function removeHybridSource(index: number) {
     setHybridSources((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function removeScratchSource(index: number) {
+    setScratchSources((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
   async function generateReference(event: FormEvent) {
@@ -223,10 +240,16 @@ export function GeneratePersonaView({
               ? hybridSources
                   .filter((image) => image.data)
                   .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }))
-              : [],
+              : isScratchFace
+                ? scratchSources
+                    .filter((image) => image.data)
+                    .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }))
+                : [],
             sourceImageUrls: isHybridFace
               ? hybridSources.map((image) => image.url).filter((url): url is string => Boolean(url))
-              : [],
+              : isScratchFace
+                ? scratchSources.map((image) => image.url).filter((url): url is string => Boolean(url))
+                : [],
             confirmsRights,
             confirmsAdultPersona,
           }),
@@ -263,6 +286,7 @@ export function GeneratePersonaView({
       }
 
       setHybridSources([]);
+      setScratchSources([]);
       setAdditionalPrompt("");
       setConfirmsRights(false);
       setConfirmsAdultPersona(false);
@@ -359,6 +383,7 @@ export function GeneratePersonaView({
               onChange={(value) => {
                 setGenerationMode(value as FaceGenerationMode);
                 setHybridSources([]);
+                setScratchSources([]);
                 setGenerationError("");
               }}
             />
@@ -418,7 +443,38 @@ export function GeneratePersonaView({
           ) : null}
 
           {isScratchFace ? (
-            <TextArea label="Prompt" value={scratchPrompt} onChange={setScratchPrompt} rows={6} />
+            <>
+              <UploadBox
+                accept="image/*"
+                multiple
+                icon={Upload}
+                label="Upload optional source images"
+                detail={
+                  scratchSources.length
+                    ? `${scratchSources.length} image${scratchSources.length === 1 ? "" : "s"} ready`
+                    : "Use your own PC images as optional identity or style inputs."
+                }
+                onChange={(files) => void captureScratchSources(files)}
+              />
+              {scratchSources.length ? (
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {scratchSources.map((image, index) => (
+                    <div key={`${image.name}-${index}`} className="relative overflow-hidden rounded-md border border-stone-200 bg-stone-100">
+                      <img src={sourceImageToDataUrl(image)} alt={image.name ?? `Source ${index + 1}`} className="aspect-square w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeScratchSource(index)}
+                        className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-md bg-white/90 text-stone-700 shadow-sm transition hover:text-red-700"
+                        aria-label="Remove source image"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <TextArea label="Prompt" value={scratchPrompt} onChange={setScratchPrompt} rows={6} />
+            </>
           ) : (
             <TextArea label="Additional prompt" value={additionalPrompt} onChange={setAdditionalPrompt} rows={4} />
           )}

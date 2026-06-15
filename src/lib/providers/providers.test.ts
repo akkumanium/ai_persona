@@ -16,17 +16,22 @@ describe("model registry", () => {
       expect.arrayContaining([
         "wan-2.2",
         "wan-2.7",
-        "wan-animate",
-        "kling-v2-6",
-        "kling-v3-0",
+        "kling-v2-6-std",
+        "kling-v2-6-pro",
+        "kling-v3-0-std",
+        "kling-v3-0-pro",
+        "kling-v3-0-4k",
         "dreamina-seedance-2-0-260128",
         "dreamina-seedance-2-0-fast-260128",
       ]),
     );
+    expect(modelsForCapability("video-normal").map((model) => model.id)).not.toContain("wan-animate");
   });
 
-  it("exposes Wan Animate for motion-control video", () => {
-    expect(modelsForCapability("video-motion").map((model) => model.id)).toContain("wan-animate");
+  it("exposes WaveSpeed motion-control video models", () => {
+    expect(modelsForCapability("video-motion").map((model) => model.id)).toEqual(
+      expect.arrayContaining(["wan-animate", "kling-v3-0-motion-std", "kling-v3-0-motion-pro"]),
+    );
   });
 });
 
@@ -72,11 +77,10 @@ describe("token pricing", () => {
     expect(
       estimateVideoGenerationPricing({
         prompt: "Create a premium clip.",
-        model: "kling-v3-0",
+        model: "kling-v3-0-pro",
         mode: "normal",
         durationSeconds: 10,
         aspectRatio: "9:16",
-        providerMode: "pro",
         generateAudio: true,
         resolution: "1080p",
       }).tokens,

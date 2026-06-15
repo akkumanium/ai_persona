@@ -18,6 +18,7 @@ type BillingEventDetails = {
   planId?: string;
   priceId?: string;
   amountCents: number;
+  isSubscriptionPayment: boolean;
   subscriptionId?: string;
   customerId?: string;
   subscriptionStatus: string;
@@ -73,6 +74,7 @@ export async function POST(request: Request) {
     p_price_id: details.priceId,
     p_amount_cents: details.amountCents,
     p_payload: event,
+    p_is_subscription_payment: details.isSubscriptionPayment,
   });
 
   if (error) {
@@ -121,6 +123,7 @@ function getBillingEventDetails(eventType: string, data: Record<string, unknown>
       planId: plan?.id,
       priceId: plan?.priceId,
       amountCents: plan?.creditCents ?? 0,
+      isSubscriptionPayment: plan?.kind === "subscription",
       subscriptionId: getString(data.subscription_id),
       customerId: getString(data.customer_id),
       subscriptionStatus: plan?.kind === "topup" ? "top_up" : "active",
@@ -136,6 +139,7 @@ function getBillingEventDetails(eventType: string, data: Record<string, unknown>
       planId: plan?.id,
       priceId: plan?.priceId,
       amountCents: 0,
+      isSubscriptionPayment: false,
       subscriptionId: getString(data.id),
       customerId: getString(data.customer_id),
       subscriptionStatus: getString(data.status) ?? statusFromSubscriptionEvent(eventType),
@@ -143,7 +147,7 @@ function getBillingEventDetails(eventType: string, data: Record<string, unknown>
     };
   }
 
-  return { amountCents: 0, subscriptionStatus: "unknown" };
+  return { amountCents: 0, isSubscriptionPayment: false, subscriptionStatus: "unknown" };
 }
 
 function statusFromSubscriptionEvent(eventType: string) {

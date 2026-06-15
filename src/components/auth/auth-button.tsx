@@ -24,12 +24,14 @@ export function AuthButton({
   variant = "light",
   defaultOpen = false,
   redirectPath = "/studio",
+  referralCode = "",
 }: {
   initialUserEmail?: string;
   supabaseReady: boolean;
   variant?: "light" | "dark";
   defaultOpen?: boolean;
   redirectPath?: string;
+  referralCode?: string;
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -73,10 +75,14 @@ export function AuthButton({
     setStatus("");
     setIsSubmitting(true);
 
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", redirectPath);
+    if (referralCode) callbackUrl.searchParams.set("ref", referralCode);
+
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+        redirectTo: callbackUrl.toString(),
       },
     });
 
@@ -108,7 +114,8 @@ export function AuthButton({
         : await supabase.auth.signUp({
             ...credentials,
             options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
+              emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}${referralCode ? `&ref=${encodeURIComponent(referralCode)}` : ""}`,
+              data: referralCode ? { referral_code: referralCode } : undefined,
             },
           });
 
@@ -122,6 +129,14 @@ export function AuthButton({
     if (mode === "signup" && !result.data.session) {
       setStatus("Check your email to confirm your account, then sign in.");
       return;
+    }
+
+    if (mode === "signup" && referralCode) {
+      await fetch("/api/referrals/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referralCode }),
+      }).catch(() => undefined);
     }
 
     setIsOpen(false);

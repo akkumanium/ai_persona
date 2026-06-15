@@ -15,10 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; ref?: string }>;
 }) {
   const supabaseReady = hasSupabaseEnv();
-  const next = normalizeNextPath((await searchParams).next);
+  const params = await searchParams;
+  const next = normalizeNextPath(params.next);
+  const referralCode = normalizeReferralCode(params.ref);
   if (supabaseReady) {
     const supabase = await createServerSupabaseClient();
     const {
@@ -26,6 +28,12 @@ export default async function SignInPage({
     } = await supabase.auth.getUser();
 
     if (user) {
+      if (referralCode) {
+        await supabase.rpc("claim_referral", {
+          p_referral_code: referralCode,
+          p_referred_user_id: user.id,
+        });
+      }
       redirect(next);
     }
   }
@@ -64,6 +72,7 @@ export default async function SignInPage({
             variant="dark"
             defaultOpen
             redirectPath={next}
+            referralCode={referralCode}
           />
         </div>
       </section>
@@ -74,4 +83,8 @@ export default async function SignInPage({
 function normalizeNextPath(value?: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/studio";
   return value;
+}
+
+function normalizeReferralCode(value?: string) {
+  return typeof value === "string" ? value.trim().slice(0, 64) : "";
 }

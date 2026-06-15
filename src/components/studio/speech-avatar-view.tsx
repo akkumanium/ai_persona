@@ -4,6 +4,7 @@ import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { SourceAudioInput, SourceImageInput } from "@/components/studio/types";
 import {
   ModelSelect,
+  ModeToggle,
   PanelTitle,
   PersonaSelect,
   RangeField,
@@ -13,6 +14,7 @@ import {
   TextField,
   UploadBox,
 } from "@/components/studio/ui";
+import { SPEECH_VOICE_PRESETS } from "@/data/speech-voices";
 import { estimateAvatarGenerationPricing, estimateSpeechGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { formatTokens } from "@/lib/utils";
@@ -40,6 +42,10 @@ export function SpeechView({
 }) {
   const [text, setText] = useState("A short reusable voice line for the next avatar clip.");
   const [voiceId, setVoiceId] = useState("");
+  const [voiceMode, setVoiceMode] = useState<"preset" | "custom">(
+    SPEECH_VOICE_PRESETS.length ? "preset" : "custom",
+  );
+  const [presetVoiceId, setPresetVoiceId] = useState(SPEECH_VOICE_PRESETS[0]?.id ?? "");
   const [model, setModel] = useState<"eleven_multilingual_v2">("eleven_multilingual_v2");
   const [outputFormat, setOutputFormat] = useState("mp3_44100_128");
   const [stability, setStability] = useState(0.5);
@@ -53,10 +59,11 @@ export function SpeechView({
     [assets, selectedPersona?.id],
   );
   const costLabel = formatTokens(estimateSpeechGenerationPricing({ text }).tokens);
+  const effectiveVoiceId = voiceMode === "preset" ? presetVoiceId : voiceId.trim();
 
   async function generateSpeech(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPersona || !voiceId.trim() || !text.trim()) return;
+    if (!selectedPersona || !effectiveVoiceId || !text.trim()) return;
     setIsGenerating(true);
     setError("");
     try {
@@ -67,7 +74,7 @@ export function SpeechView({
           personaId: selectedPersona.id,
           personaName: selectedPersona.name,
           text,
-          voiceId: voiceId.trim(),
+          voiceId: effectiveVoiceId,
           model,
           outputFormat,
           stability,
@@ -138,7 +145,49 @@ export function SpeechView({
         <form onSubmit={generateSpeech}>
           <PanelTitle icon={MessageSquareText} title="Speech Options" />
           <PersonaSelect personas={personas} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-          <TextField label="Voice ID" value={voiceId} onChange={setVoiceId} />
+          {SPEECH_VOICE_PRESETS.length ? (
+            <>
+              <ModeToggle
+                label="Voice source"
+                value={voiceMode}
+                options={[
+                  { value: "preset", label: "Preset voices" },
+                  { value: "custom", label: "Voice ID" },
+                ]}
+                onChange={(value) => setVoiceMode(value as "preset" | "custom")}
+              />
+              {voiceMode === "preset" ? (
+                <label className="mt-4 block">
+                  <span className="text-sm font-medium text-stone-700">Voice</span>
+                  <select
+                    value={presetVoiceId}
+                    onChange={(event) => setPresetVoiceId(event.target.value)}
+                    className="mt-2 h-11 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
+                  >
+                    {SPEECH_VOICE_PRESETS.map((voice) => (
+                      <option key={voice.id} value={voice.id}>
+                        {voice.label}
+                      </option>
+                    ))}
+                  </select>
+                  {SPEECH_VOICE_PRESETS.find((voice) => voice.id === presetVoiceId)?.description ? (
+                    <span className="mt-2 block text-xs leading-5 text-stone-500">
+                      {SPEECH_VOICE_PRESETS.find((voice) => voice.id === presetVoiceId)?.description}
+                    </span>
+                  ) : null}
+                </label>
+              ) : (
+                <TextField label="Voice ID" value={voiceId} onChange={setVoiceId} />
+              )}
+            </>
+          ) : (
+            <>
+              <div className="mt-4 rounded-lg bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600">
+                No preset voices have been added yet. Add them in src/data/speech-voices.ts.
+              </div>
+              <TextField label="Voice ID" value={voiceId} onChange={setVoiceId} />
+            </>
+          )}
           <ModelSelect label="Model" value={model} options={speechModels} onChange={(id) => setModel(id as typeof model)} />
           <SelectField label="Output" value={outputFormat} options={outputFormats} onChange={setOutputFormat} />
           <RangeField label="Stability" value={stability} min={0} max={1} step={0.05} onChange={setStability} />
@@ -152,7 +201,7 @@ export function SpeechView({
             icon={AudioLines}
             label="Generate speech"
             costLabel={costLabel}
-            disabled={!selectedPersona || !voiceId.trim() || !text.trim()}
+            disabled={!selectedPersona || !effectiveVoiceId || !text.trim()}
           />
         </form>
       </aside>
@@ -232,7 +281,11 @@ export function AvatarView({
         if (!cancelled) setAudioDurationSeconds(duration);
       })
       .catch(() => {
-        if (!cancelled) setAudioDurationSeconds(undefined);
+        const wavDuration =
+          uploadedAudio?.data && uploadedAudio.mimeType.toLowerCase().includes("wav")
+            ? getWavDurationFromBase64(uploadedAudio.data)
+            : undefined;
+        if (!cancelled) setAudioDurationSeconds(wavDuration);
       })
       .finally(() => {
         if (!cancelled) setIsReadingDuration(false);
@@ -241,7 +294,7 @@ export function AvatarView({
     return () => {
       cancelled = true;
     };
-  }, [selectedAudioSource]);
+  }, [selectedAudioSource, uploadedAudio]);
 
   async function captureImage(files: FileList | null) {
     const [image] = await encodeFiles(files, "image/png");
@@ -378,7 +431,7 @@ export function AvatarView({
                 ? "Reading audio length..."
                 : audioDurationSeconds
                   ? `Duration: ${formatDuration(audioDurationSeconds)}. The avatar video will match the audio length.`
-                  : "The selected audio length could not be read yet."
+                  : "The selected audio length could not be read. Re-export the WAV as PCM or upload MP3."
               : "Choose or upload audio before generating an avatar."}
           </div>
           <TextArea label="Prompt" value={prompt} onChange={setPrompt} rows={4} />
@@ -443,6 +496,46 @@ function getMediaDurationFromUrl(url: string) {
     audio.onerror = () => reject(new Error("Could not read audio duration"));
     audio.src = url;
   });
+}
+
+function getWavDurationFromBase64(base64: string) {
+  try {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    const view = new DataView(bytes.buffer);
+    if (readAscii(bytes, 0, 4) !== "RIFF" || readAscii(bytes, 8, 4) !== "WAVE") return undefined;
+
+    let offset = 12;
+    let byteRate = 0;
+    let dataSize = 0;
+    while (offset + 8 <= bytes.length) {
+      const chunkId = readAscii(bytes, offset, 4);
+      const chunkSize = view.getUint32(offset + 4, true);
+      const chunkDataOffset = offset + 8;
+      if (chunkId === "fmt " && chunkDataOffset + 16 <= bytes.length) {
+        byteRate = view.getUint32(chunkDataOffset + 8, true);
+      }
+      if (chunkId === "data") {
+        dataSize = chunkSize;
+        break;
+      }
+      offset = chunkDataOffset + chunkSize + (chunkSize % 2);
+    }
+
+    const duration = byteRate > 0 && dataSize > 0 ? dataSize / byteRate : 0;
+    return Number.isFinite(duration) && duration > 0 ? duration : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readAscii(bytes: Uint8Array, offset: number, length: number) {
+  return Array.from(bytes.slice(offset, offset + length))
+    .map((byte) => String.fromCharCode(byte))
+    .join("");
 }
 
 function formatDuration(durationSeconds: number) {

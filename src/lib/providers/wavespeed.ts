@@ -112,7 +112,10 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
       generate_audio: request.generateAudio,
       sound: request.generateAudio,
       return_last_frame: request.returnLastFrame,
-      mode: request.mode === "motion" ? "animate" : undefined,
+      mode: request.mode === "motion" ? request.motionMode ?? "animate" : undefined,
+      character_orientation: request.mode === "motion" ? request.characterOrientation ?? "video" : undefined,
+      keep_original_sound: request.mode === "motion" ? request.keepOriginalSound ?? true : undefined,
+      shot_type: request.model.startsWith("kling-v3-0") ? "customize" : undefined,
       seed: -1,
     }, {
       pollInterval: 5,
@@ -230,6 +233,8 @@ function wavespeedImageModel(model: string, hasReferences: boolean) {
 
 function wavespeedVideoModel(request: VideoGenerationRequest) {
   if (request.model.includes("/")) return request.model;
+  if (request.model === "kling-v3-0-motion-std") return "kwaivgi/kling-v3.0-std/motion-control";
+  if (request.model === "kling-v3-0-motion-pro") return "kwaivgi/kling-v3.0-pro/motion-control";
   if (request.model.includes("seedance")) {
     const base = request.model.includes("fast") ? "bytedance/seedance-2.0-fast" : "bytedance/seedance-2.0";
     if (request.endFrameImageUrl || request.endFrameImage) return `${base}/image-to-video`;
@@ -251,11 +256,11 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
   }
   if (request.model.startsWith("kling")) {
     const mode = request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl ? "image-to-video" : "text-to-video";
-    if (request.model === "kling-v3" || request.model === "kling-v3-0" || request.model === "kling-v3-0-4k") {
+    if (request.model === "kling-v3" || request.model === "kling-v3-0" || request.model.startsWith("kling-v3-0")) {
       if (request.resolution === "4K" || request.model === "kling-v3-0-4k") return `kwaivgi/kling-v3.0-4k/${mode}`;
-      return `kwaivgi/kling-v3.0-${request.providerMode === "pro" ? "pro" : "std"}/${mode}`;
+      return `kwaivgi/kling-v3.0-${request.model === "kling-v3-0-pro" || request.providerMode === "pro" ? "pro" : "std"}/${mode}`;
     }
-    return `kwaivgi/kling-v2.6-${request.providerMode === "pro" || request.endFrameImageUrl || request.endFrameImage ? "pro" : "std"}/${mode}`;
+    return `kwaivgi/kling-v2.6-${request.model === "kling-v2-6-pro" || request.providerMode === "pro" || request.endFrameImageUrl || request.endFrameImage ? "pro" : "std"}/${mode}`;
   }
   return request.model;
 }

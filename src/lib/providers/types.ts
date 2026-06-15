@@ -55,6 +55,9 @@ export type VideoGenerationRequest = {
   resolution?: "480p" | "720p" | "1080p" | "4K";
   returnLastFrame?: boolean;
   motionReference?: string;
+  motionMode?: "animate" | "replace";
+  characterOrientation?: "image" | "video";
+  keepOriginalSound?: boolean;
   motionReferenceVideo?: ProviderMediaInput;
   motionReferenceVideoUrl?: string;
 };

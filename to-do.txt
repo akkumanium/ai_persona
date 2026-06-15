@@ -16,6 +16,8 @@
 49. Probably change the prompt for body
 50. I uploaded a wav and it said "The selected audio length could not be read yet.", why?
 51. Check options for every video and clearly differentiate them.
+52. Change "generate from Scratch" to "generate" and change the options
+53. Add inviting people and getting money from that.
 
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com

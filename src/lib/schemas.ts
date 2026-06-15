@@ -48,6 +48,8 @@ export const imageGenerationSchema = z.object({
   model: z.string().min(1).default("gemini-3-pro-image"),
   referenceImageUrl: z.string().min(1).optional(),
   referenceImageUrls: z.array(z.string().min(1)).min(0).default([]),
+  sourceImages: z.array(providerImageInputSchema).min(0).default([]),
+  sourceImageUrls: z.array(z.string().min(1)).min(0).default([]),
   prompt: z.string().max(2000).optional().default(""),
   additionalPrompt: z.string().max(1000).optional().default(""),
   styleNotes: z.string().max(1000).optional().default(""),
@@ -82,6 +84,9 @@ export const videoGenerationSchema = z.object({
   resolution: z.enum(["480p", "720p", "1080p", "4K"]).optional().default("720p"),
   returnLastFrame: z.boolean().optional().default(false),
   motionReference: z.string().max(500).optional().default(""),
+  motionMode: z.enum(["animate", "replace"]).optional().default("animate"),
+  characterOrientation: z.enum(["image", "video"]).optional().default("video"),
+  keepOriginalSound: z.boolean().optional().default(true),
   motionReferenceVideo: providerMediaInputSchema.optional(),
   motionReferenceVideoUrl: z.string().min(1).optional(),
 });

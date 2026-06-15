@@ -18,12 +18,15 @@ export async function POST(request: Request) {
     if (auth.response) return auth.response;
 
     const input = imageGenerationSchema.parse(await request.json());
-    const referenceUrls = input.referenceImageUrls.length
-      ? input.referenceImageUrls
-      : input.referenceImageUrl
-        ? [input.referenceImageUrl]
-        : [];
-    const referenceImages = referenceUrls.length
+    const referenceUrls = [
+      ...(input.referenceImageUrls.length
+        ? input.referenceImageUrls
+        : input.referenceImageUrl
+          ? [input.referenceImageUrl]
+          : []),
+      ...input.sourceImageUrls,
+    ];
+    const urlReferenceImages = referenceUrls.length
       ? (
           await Promise.all(
             referenceUrls.map((url, index) =>
@@ -32,7 +35,8 @@ export async function POST(request: Request) {
           )
         ).filter((image): image is ProviderImageInput => Boolean(image))
       : [];
-    const generationType = referenceUrls.length ? "image_from_reference" : "image_from_prompt";
+    const referenceImages = [...input.sourceImages, ...urlReferenceImages];
+    const generationType = referenceImages.length ? "image_from_reference" : "image_from_prompt";
     const isReferenceAvatar = input.assetKind === "avatar" && Boolean(input.referenceSlot);
     const basePrompt = isReferenceAvatar && input.referenceSlot
       ? promptForReferenceSlot(input.referenceSlot)
@@ -47,7 +51,7 @@ export async function POST(request: Request) {
     const providerRequest: ImageGenerationRequest = {
       prompt: [
         finalPrompt,
-        referenceUrls.length ? `Keep facial identity consistent with reference persona ${input.personaName}.` : "",
+        referenceImages.length ? `Keep facial identity consistent with reference persona ${input.personaName}.` : "",
         input.styleNotes ? `Style notes: ${input.styleNotes}.` : "",
       ]
         .filter(Boolean)

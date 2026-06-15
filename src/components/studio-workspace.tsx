@@ -457,6 +457,7 @@ export function StudioWorkspace({
               assets={assets}
               selectedPersona={selectedPersona}
               selectedReference={selectedReference}
+              supabaseReady={supabaseReady}
               imagePromptSuggestions={imagePromptSuggestions}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);

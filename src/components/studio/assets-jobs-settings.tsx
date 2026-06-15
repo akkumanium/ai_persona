@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { Coins, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Coins, Copy, Gift, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { TokenTopUps } from "@/components/billing-plans";
 import type { AssetFilter } from "@/components/studio/types";
 import { ModeToggle, PanelTitle } from "@/components/studio/ui";
@@ -148,12 +148,81 @@ export function SettingsView({
   paddleConfig: PublicPaddleConfig;
   onBalanceRefresh?: (balanceCents: number) => void;
 }) {
+  const [referralCode, setReferralCode] = useState("");
+  const [pendingReferrals, setPendingReferrals] = useState(0);
+  const [rewardedReferrals, setRewardedReferrals] = useState(0);
+  const [rewardedCents, setRewardedCents] = useState(0);
+  const [referralMessage, setReferralMessage] = useState("");
+  const referralLink = useMemo(() => {
+    if (!referralCode || typeof window === "undefined") return "";
+    const url = new URL("/auth/signin", window.location.origin);
+    url.searchParams.set("ref", referralCode);
+    url.searchParams.set("next", "/pricing");
+    return url.toString();
+  }, [referralCode]);
+
+  useEffect(() => {
+    if (!supabaseReady || !userId) return;
+    let cancelled = false;
+    fetch("/api/referrals/me", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error ?? "Could not load referral link.");
+        if (cancelled) return;
+        setReferralCode(payload.referralCode ?? "");
+        setPendingReferrals(payload.pendingCount ?? 0);
+        setRewardedReferrals(payload.rewardedCount ?? 0);
+        setRewardedCents(payload.rewardedCents ?? 0);
+      })
+      .catch((error) => {
+        if (!cancelled) setReferralMessage(error instanceof Error ? error.message : "Could not load referral link.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseReady, userId]);
+
+  async function copyReferralLink() {
+    if (!referralLink) return;
+    await navigator.clipboard.writeText(referralLink);
+    setReferralMessage("Referral link copied.");
+  }
+
   return (
     <section className="grid gap-6">
       <div className="max-w-xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={Coins} title="Balance" />
         <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>
         <p className="mt-2 text-sm leading-6 text-stone-600">Available tokens for new generations.</p>
+      </div>
+
+      <div className="max-w-3xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <PanelTitle icon={Gift} title="Referrals" />
+        <p className="mt-4 text-sm leading-6 text-stone-600">
+          Invite someone and get {formatTokens(1000)} after they subscribe through your link.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+          <input
+            readOnly
+            value={referralLink || "Sign in with a saved account to get your referral link."}
+            className="h-11 min-w-0 rounded-md border border-stone-200 bg-stone-50 px-3 text-sm text-stone-700 outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => void copyReferralLink()}
+            disabled={!referralLink}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:bg-stone-300"
+          >
+            <Copy size={16} />
+            Copy link
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <ReferralStat label="Pending" value={String(pendingReferrals)} />
+          <ReferralStat label="Rewarded" value={String(rewardedReferrals)} />
+          <ReferralStat label="Earned" value={formatTokens(rewardedCents)} />
+        </div>
+        {referralMessage ? <p className="mt-3 text-sm text-stone-600">{referralMessage}</p> : null}
       </div>
 
       <div className="max-w-4xl">
@@ -170,5 +239,14 @@ export function SettingsView({
         />
       </div>
     </section>
+  );
+}
+
+function ReferralStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3">
+      <p className="text-xs font-semibold uppercase text-stone-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-stone-950">{value}</p>
+    </div>
   );
 }

@@ -43,7 +43,15 @@ export function estimateVideoGenerationPricing(request: VideoGenerationRequest):
   const model = request.model;
   const duration = Math.max(1, Math.round(request.durationSeconds));
 
-  if (model === "kling-v3" || model === "kling-v3-0" || model === "kling-v3-0-4k") {
+  if (model === "kling-v3" || model === "kling-v3-0" || model.startsWith("kling-v3-0-")) {
+    if (model.startsWith("kling-v3-0-motion")) {
+      const billedSeconds = Math.min(30, Math.max(3, duration));
+      const perSecondUsd = model.endsWith("pro") ? 0.168 : 0.126;
+      return {
+        rawUsd: perSecondUsd * billedSeconds,
+        tokens: usdToTokens(perSecondUsd * billedSeconds),
+      };
+    }
     const perSecondUsd = kling30PerSecondUsd(request);
     return {
       rawUsd: perSecondUsd * duration,
@@ -136,7 +144,10 @@ function gptImage2OutputUsd(quality: ImageGenerationRequest["imageQuality"], asp
 
 function kling26GenerationUsd(request: VideoGenerationRequest) {
   const durationMultiplier = request.durationSeconds >= 10 ? 2 : 1;
-  const isPro = request.providerMode === "pro" || Boolean(request.endFrameImageUrl || request.endFrameImage);
+  const isPro =
+    request.model === "kling-v2-6-pro" ||
+    request.providerMode === "pro" ||
+    Boolean(request.endFrameImageUrl || request.endFrameImage);
   const baseUsd = isPro ? 0.35 : 0.21;
   const soundMultiplier = isPro && request.generateAudio ? 2 : 1;
   return baseUsd * durationMultiplier * soundMultiplier;
@@ -144,7 +155,7 @@ function kling26GenerationUsd(request: VideoGenerationRequest) {
 
 function kling30PerSecondUsd(request: VideoGenerationRequest) {
   if (request.resolution === "4K" || request.model === "kling-v3-0-4k") return 0.42;
-  if (request.providerMode === "pro") {
+  if (request.providerMode === "pro" || request.model === "kling-v3-0-pro") {
     return request.generateAudio ? 0.168 : 0.112;
   }
 
