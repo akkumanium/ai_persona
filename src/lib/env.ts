@@ -25,6 +25,7 @@ export const env = {
   paddleFiftyDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_50,
   paddleHundredDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_100,
   paddleWebhookSecretKey: process.env.PADDLE_WEBHOOK_SECRET_KEY,
+  paddleApiKey: process.env.PADDLE_API_KEY,
 };
 
 export function hasSupabaseEnv() {

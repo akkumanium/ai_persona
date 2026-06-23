@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { AuthButton } from "@/components/auth/auth-button";
 import { BillingPlans } from "@/components/billing-plans";
+import { BillingManagement } from "@/components/billing-management";
 import { getPublicPaddleConfig } from "@/lib/billing";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -53,7 +54,7 @@ export default async function PricingPage() {
           Choose the monthly token balance that fits your production pace.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#aeb4c6]">
-          Plans unlock the studio and add generation tokens after each successful subscription payment.
+          Studio is free to explore after signing in. Plans add the tokens needed to generate.
         </p>
       </section>
 
@@ -72,6 +73,11 @@ export default async function PricingPage() {
           compact
           theme="dark"
         />
+        {initialUserId ? (
+          <div className="mx-auto max-w-5xl px-5 sm:px-8">
+            <BillingManagement dark />
+          </div>
+        ) : null}
       </div>
     </main>
   );

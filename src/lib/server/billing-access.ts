@@ -40,7 +40,8 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
   return {
     balanceCents,
     hasActiveSubscription,
-    hasStudioAccess: hasActiveSubscription,
+    // Authentication gates Studio. A subscription only controls generation credits.
+    hasStudioAccess: true,
   };
 }
 

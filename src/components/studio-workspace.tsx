@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, Play, Settings, Sparkles, UserRound, Video } from "lucide-react";
+import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, MessageCircle, Play, Settings, Sparkles, UserRound, Video, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AssetsView, JobsView, SettingsView } from "@/components/studio/assets-jobs-settings";
@@ -18,7 +18,7 @@ import { cn, formatTokens } from "@/lib/utils";
 
 type PromptSuggestion = { title: string; prompt: string };
 
-const navItems = [
+const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: boolean }> = [
   { id: "personas", label: "Personas", icon: UserRound },
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "videos", label: "Videos", icon: Clapperboard },
@@ -27,8 +27,9 @@ const navItems = [
   { id: "avatar", label: "Avatar", icon: Video },
   { id: "assets", label: "Assets", icon: ImageIcon },
   { id: "jobs", label: "Jobs", icon: Activity },
+  { id: "community", label: "Community-chat (COMING SOON)", icon: MessageCircle, disabled: true },
   { id: "settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 export function StudioWorkspace({
   initialData,
@@ -37,6 +38,7 @@ export function StudioWorkspace({
   initialUserEmail,
   paddleConfig,
   imagePromptSuggestions = [],
+  previewMode = false,
 }: {
   initialData?: StudioInitialData;
   supabaseReady?: boolean;
@@ -44,6 +46,7 @@ export function StudioWorkspace({
   initialUserEmail?: string;
   paddleConfig: PublicPaddleConfig;
   imagePromptSuggestions?: PromptSuggestion[];
+  previewMode?: boolean;
 }) {
   const [view, setView] = useState<View>("personas");
   const [personas, setPersonas] = useState<Persona[]>(initialData?.personas ?? demoPersonas);
@@ -325,9 +328,12 @@ export function StudioWorkspace({
               <button
                 key={item.id}
                 onClick={() => setView(item.id)}
+                disabled={item.disabled}
                 className={cn(
                   "flex h-10 items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-stone-600 transition",
-                  view === item.id
+                  item.disabled
+                    ? "cursor-not-allowed text-stone-400"
+                    : view === item.id
                     ? "tab-selected text-white"
                     : "hover:bg-stone-100 hover:text-stone-950",
                 )}
@@ -345,7 +351,7 @@ export function StudioWorkspace({
             <span className="font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</span>
           </div>
           <Link
-            href="/contact"
+            href="/contact?from=studio"
             className="flex h-10 items-center gap-3 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
           >
             <Mail size={18} />
@@ -373,16 +379,19 @@ export function StudioWorkspace({
                 <button
                   key={item.id}
                   onClick={() => setView(item.id)}
+                  disabled={item.disabled}
                   className={cn(
                     "h-10 rounded-md px-3 text-sm font-medium",
-                    view === item.id ? "bg-emerald-800 text-white" : "bg-white text-stone-700",
+                    item.disabled
+                      ? "cursor-not-allowed bg-stone-100 text-stone-400"
+                      : view === item.id ? "bg-emerald-800 text-white" : "bg-white text-stone-700",
                   )}
                 >
                   {item.label}
                 </button>
               ))}
               <Link
-                href="/contact"
+                href="/contact?from=studio"
                 className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700"
               >
                 <Mail size={16} />
@@ -513,6 +522,17 @@ export function StudioWorkspace({
           )}
         </div>
       </main>
+      {previewMode ? (
+        <aside className="fixed bottom-4 left-4 z-40 max-w-xs rounded-lg border border-amber-300 bg-amber-50 p-4 text-stone-900 shadow-xl">
+          <p className="text-sm font-semibold">Preview mode</p>
+          <p className="mt-1 text-xs leading-5 text-stone-600">
+            You can explore Studio, but using it is disabled until you subscribe.
+          </p>
+          <Link href="/pricing" className="mt-3 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">
+            Upgrade to use Studio
+          </Link>
+        </aside>
+      ) : null}
     </div>
   );
 }

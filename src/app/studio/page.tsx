@@ -42,10 +42,6 @@ export default async function StudioPage() {
 
   const access = await getBillingAccess(supabase, user.id);
 
-  if (!access.hasStudioAccess) {
-    redirect("/pricing");
-  }
-
   const [personas, assets, jobs, ledger, imagePromptSuggestions] = await Promise.all([
     supabase.from("personas").select("*").order("created_at", { ascending: false }),
     supabase.from("assets").select("*").order("created_at", { ascending: false }),
@@ -76,6 +72,7 @@ export default async function StudioPage() {
       initialUserEmail={user.email}
       paddleConfig={paddleConfig}
       imagePromptSuggestions={imagePromptSuggestions}
+      previewMode={!access.hasActiveSubscription}
     />
   );
 }

@@ -255,51 +255,6 @@
 ]
 },
 {
-"model_key": "wan_2_2",
-"display_name": "Wan 2.2",
-"category": "video",
-"pricing_type": "provider_specific",
-"providers": [
-{
-"provider": "Fal",
-"variant": "Wan 2.2 A14B",
-"billing_unit": "second",
-"settings": [
-{
-"resolution": "480p",
-"raw_price_usd_per_second": 0.04
-},
-{
-"resolution": "580p",
-"raw_price_usd_per_second": 0.06
-},
-{
-"resolution": "720p",
-"raw_price_usd_per_second": 0.08
-}
-],
-"notes": "Fal calculates video seconds at 16 fps."
-},
-{
-"provider": "PoYo",
-"variant": "Wan 2.2 Fast",
-"billing_unit": "generation",
-"settings": [
-{
-"resolution": "480p",
-"raw_price_credits": 6,
-"raw_price_usd": 0.03
-},
-{
-"resolution": "720p",
-"raw_price_credits": 12,
-"raw_price_usd": 0.06
-}
-]
-}
-]
-},
-{
 "model_key": "wan_2_7",
 "display_name": "Wan 2.7",
 "provider": "PoYo",

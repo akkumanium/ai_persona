@@ -3,6 +3,7 @@
 import { Coins, Copy, Gift, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TokenTopUps } from "@/components/billing-plans";
+import { BillingManagement } from "@/components/billing-management";
 import type { AssetFilter } from "@/components/studio/types";
 import { ModeToggle, PanelTitle } from "@/components/studio/ui";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -166,6 +167,8 @@ export function SettingsView({
     let cancelled = false;
     fetch("/api/referrals/me", { cache: "no-store" })
       .then(async (response) => {
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.includes("application/json")) throw new Error(`Could not load referral link (server returned ${response.status}).`);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error ?? "Could not load referral link.");
         if (cancelled) return;
@@ -223,6 +226,10 @@ export function SettingsView({
           <ReferralStat label="Earned" value={formatTokens(rewardedCents)} />
         </div>
         {referralMessage ? <p className="mt-3 text-sm text-stone-600">{referralMessage}</p> : null}
+      </div>
+
+      <div className="max-w-4xl">
+        <BillingManagement />
       </div>
 
       <div className="max-w-4xl">

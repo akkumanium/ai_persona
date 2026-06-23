@@ -69,7 +69,7 @@ export function GenerationView({
   const [imageSize, setImageSize] = useState("2K");
   const [imageQuality, setImageQuality] = useState("medium");
   const [uploadedImageReferences, setUploadedImageReferences] = useState<SourceImageInput[]>([]);
-  const [videoModel, setVideoModel] = useState("wan-2.2");
+  const [videoModel, setVideoModel] = useState("wan-2.7");
   const [motionVideoModel, setMotionVideoModel] = useState("wan-animate");
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
   const [videoStartFrameByPersona, setVideoStartFrameByPersona] = useState<Record<string, string>>({});
@@ -936,20 +936,20 @@ function isSeedanceVideoModel(modelId: string) {
 }
 
 function showsResolutionControl(modelId: string) {
-  return isSeedanceVideoModel(modelId) || modelId === "wan-2.2" || modelId === "wan-2.7" || (isKling30VideoModel(modelId) && !modelId.includes("motion"));
+  return isSeedanceVideoModel(modelId) || modelId === "wan-2.7" || (isKling30VideoModel(modelId) && !modelId.includes("motion"));
 }
 
 function resolutionsForVideoModel(modelId: string): Array<"480p" | "720p" | "1080p" | "4K"> {
   if (modelId.includes("seedance") && modelId.includes("fast")) return ["480p", "720p"];
   if (isSeedanceVideoModel(modelId)) return ["480p", "720p", "1080p"];
-  if (modelId === "wan-2.2" || modelId === "wan-animate") return ["480p", "720p"];
+  if (modelId === "wan-animate") return ["480p", "720p"];
   if (modelId === "wan-2.7") return ["720p", "1080p"];
   if (isKling30VideoModel(modelId)) return ["720p", "1080p", "4K"];
   return ["720p"];
 }
 
 function requiresStartFrame(modelId: string) {
-  return isKlingVideoModel(modelId) || modelId === "wan-2.2";
+  return isKlingVideoModel(modelId);
 }
 
 function supportsEndFrame(modelId: string) {

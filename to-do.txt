@@ -17,12 +17,43 @@
 50. I uploaded a wav and it said "The selected audio length could not be read yet.", why?
 51. Check options for every video and clearly differentiate them.
 52. Change "generate from Scratch" to "generate" and change the options
-53. Add inviting people and getting money from that.
+54. Add human-written guides
+55. Community-chat - COMING SOON
+56. Unexpected token '<', "<!DOCTYPE "... is not valid JSON at referal link and now permission denied for table referral_rewards
+57. Create terms of usage
+58. Figure out Seedance prompting
+59. Is there an easy, clear way to cancel the membership?
+60. Refund policy if the user hasn't used the credits
+61. Do access to studio for free, but without credits
+62. Make outputs (except references) being stored for 7 days
+63. Contact us page redirects to main page only
+
+What to include to main page:
+1. Stop wasting time - start building now
+2. No overpricing - pay for tokens and the product
+3. You pay for the knowledge we provide for you
+4. Step-by-step explanation of how it works and what you get
+
+Things to tell about in articles:
+1. SIM card, proxy, etc.
+2. Seedance, kling, etc. difference
+3. Chatbot - or chatting agency?
+4. Social media traffic, which one, reddit or telegram, etc.
+5. link.me or sm other shit
+
+Proxies: Dataimpulse, gridpanel, marsproxy, proxyline, bytepass, iproyal
+
+NSFW SITES:
+Paid nudes, high quality
+https://AliveAI.app/?affiliate_id=Z75pr
+Free nudes
+https://video.a2e.ai/?coupon=uXjP
+For good near nude 
+https://foxy.ai/
+
 
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com
-
-
 
 
 I want you to thoroughly analyze and describe the photo I send you. Based on that analysis, you need to create a prompt for Seedream 4.5 and/or Nano Banana Pro. Use the following format:

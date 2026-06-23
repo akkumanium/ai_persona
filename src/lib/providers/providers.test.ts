@@ -14,7 +14,6 @@ describe("model registry", () => {
   it("includes Wan and adapter video models for video generation", () => {
     expect(modelsForCapability("video-normal").map((model) => model.id)).toEqual(
       expect.arrayContaining([
-        "wan-2.2",
         "wan-2.7",
         "kling-v2-6-std",
         "kling-v2-6-pro",

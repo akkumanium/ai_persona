@@ -115,6 +115,12 @@ export function HomePage({
             <Link href="/pricing" className="transition hover:text-white">
               Pricing
             </Link>
+            <Link href="/guides" className="transition hover:text-white">
+              Guides
+            </Link>
+            <Link href="/faq" className="transition hover:text-white">
+              FAQ
+            </Link>
             <Link href="/contact" className="transition hover:text-white">
               Contact us
             </Link>
@@ -134,11 +140,11 @@ export function HomePage({
           </div>
 
           <h1 className="mx-auto mt-7 text-5xl font-semibold leading-[1.01] tracking-normal text-white sm:text-7xl">
-            Build AI personas that stay consistent under real production pressure.
+            Stop wasting your time. Start generating now.
           </h1>
 
           <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-[#b6bacb]">
-            Persona Studio gives teams one elegant place to define a reusable creator identity, manage reference assets, and produce image or video variations with the context intact.
+            Generate
           </p>
 
           <div className="mt-9 flex flex-wrap justify-center gap-3">

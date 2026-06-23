@@ -378,7 +378,7 @@ export function GeneratePersonaView({
               value={generationMode}
               options={[
                 { value: "hybrid", label: "Hybrid mode" },
-                { value: "scratch", label: "Generate from scratch" },
+                { value: "scratch", label: "Generate" },
               ]}
               onChange={(value) => {
                 setGenerationMode(value as FaceGenerationMode);

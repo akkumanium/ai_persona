@@ -81,15 +81,7 @@ export function estimateVideoGenerationPricing(request: VideoGenerationRequest):
     return {
       rawUsd: perSecondUsd * billedSeconds,
       tokens: usdToTokens(perSecondUsd * billedSeconds),
-      notes: "Wan 2.2 Animate is billed with a 5 second minimum and 120 second cap.",
-    };
-  }
-
-  if (model === "wan-2.2") {
-    const perSecondUsd = request.resolution === "480p" ? 0.03 : 0.06;
-    return {
-      rawUsd: perSecondUsd * duration,
-      tokens: usdToTokens(perSecondUsd * duration),
+      notes: "Wan Animate is billed with a 5 second minimum and 120 second cap.",
     };
   }
 

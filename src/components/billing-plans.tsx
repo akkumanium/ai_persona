@@ -36,7 +36,7 @@ declare global {
 
 export function BillingPlans({
   title = "Choose studio access",
-  copy = "Subscribe to unlock the studio. Each successful subscription payment adds the same amount back to your generation balance.",
+  copy = "Subscribe to generate in Studio. Each successful subscription payment adds the same amount back to your generation balance.",
   userId,
   userEmail,
   supabaseReady,
@@ -55,7 +55,7 @@ export function BillingPlans({
   compact?: boolean;
   theme?: "light" | "dark";
   actionLabel?: string;
-  onStatusResolved?: (status: { hasStudioAccess?: boolean; balanceCents?: number }) => void;
+  onStatusResolved?: (status: { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number }) => void;
 }) {
   const router = useRouter();
   const [scriptReady, setScriptReady] = useState(false);
@@ -88,9 +88,9 @@ export function BillingPlans({
         setMessage("Payment may be complete, but the billing status could not be refreshed yet.");
         return false;
       }
-      const data = (await response.json()) as { hasStudioAccess?: boolean; balanceCents?: number };
+      const data = (await response.json()) as { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number };
       onStatusResolved?.(data);
-      if (data.hasStudioAccess) {
+      if (data.hasActiveSubscription) {
         setCheckoutState("success");
         setMessage(`Studio access is active. Balance: ${formatTokens(data.balanceCents ?? 0)}.`);
         router.refresh();
@@ -269,7 +269,7 @@ export function BillingPlans({
                 </div>
                 <div className="flex items-center gap-2">
                   <Check size={16} className={styles.check} />
-                  Unlocks saved personas, assets, and generation tools
+                  Enables generation tools; Studio browsing stays free
                 </div>
               </div>
 
@@ -326,7 +326,7 @@ export function TokenTopUps({
   userEmail?: string;
   supabaseReady: boolean;
   config: PublicPaddleConfig;
-  onStatusResolved?: (status: { hasStudioAccess?: boolean; balanceCents?: number }) => void;
+  onStatusResolved?: (status: { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number }) => void;
 }) {
   const router = useRouter();
   const [scriptReady, setScriptReady] = useState(false);

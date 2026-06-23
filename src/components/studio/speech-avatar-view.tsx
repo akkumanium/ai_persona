@@ -431,7 +431,7 @@ export function AvatarView({
                 ? "Reading audio length..."
                 : audioDurationSeconds
                   ? `Duration: ${formatDuration(audioDurationSeconds)}. The avatar video will match the audio length.`
-                  : "The selected audio length could not be read. Re-export the WAV as PCM or upload MP3."
+                  : "The selected audio length could not be read. Try another WAV or MP3 file."
               : "Choose or upload audio before generating an avatar."}
           </div>
           <TextArea label="Prompt" value={prompt} onChange={setPrompt} rows={4} />

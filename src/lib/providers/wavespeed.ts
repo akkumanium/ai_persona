@@ -248,12 +248,6 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
   if (request.model === "wan-animate") {
     return "wavespeed-ai/wan-2.2/animate";
   }
-  if (request.model === "wan-2.2") {
-    const resolution = request.resolution === "480p" ? "480p" : "720p";
-    return request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl
-      ? `wavespeed-ai/wan-2.2/i2v-${resolution}`
-      : `wavespeed-ai/wan-2.2/t2v-${resolution}`;
-  }
   if (request.model.startsWith("kling")) {
     const mode = request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl ? "image-to-video" : "text-to-video";
     if (request.model === "kling-v3" || request.model === "kling-v3-0" || request.model.startsWith("kling-v3-0")) {

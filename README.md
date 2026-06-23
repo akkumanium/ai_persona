@@ -34,7 +34,7 @@ Image generation:
 
 Video generation:
 
-- Wan adapter, including `wan-2.2`, `wan-2.7`, and `wan-animate`
+- Wan adapter, including `wan-2.7` and `wan-animate`
 - Kling image-to-video, including `kling-v2-6` and `kling-v3-0`
 - Seedance 2.0, including standard and fast model options
 
@@ -77,6 +77,13 @@ Add provider keys before running real generations:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+
+NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=
+NEXT_PUBLIC_PADDLE_ENVIRONMENT=sandbox
+PADDLE_API_KEY=
+PADDLE_WEBHOOK_SECRET_KEY=
+NEXT_PUBLIC_PADDLE_PRICE_ID_5=
+NEXT_PUBLIC_PADDLE_PRICE_ID_10=
 
 GEMINI_API_KEY=
 NANO_BANANA_MODEL=gemini-3-pro-image-preview

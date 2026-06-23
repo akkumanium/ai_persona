@@ -31,7 +31,8 @@ export type View =
   | "avatar"
   | "assets"
   | "jobs"
-  | "settings";
+  | "settings"
+  | "community";
 export type GenerationMode = "images" | "videos" | "motion";
 export type AssetFilter = "all" | "avatar" | "upload" | "image" | "video" | "audio";
 export type ReferenceSlotId = "face" | "face-grid" | "body" | "more";

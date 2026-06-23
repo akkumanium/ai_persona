@@ -33,14 +33,6 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     notes: "OpenAI image model with generation, edit/reference inputs, quality, and fixed output size controls.",
   },
   {
-    id: "wan-2.2",
-    label: "Wan 2.2",
-    provider: "wavespeed",
-    capabilities: ["video-normal"],
-    enabled: true,
-    notes: "Configurable video adapter. Set WAN_API_BASE_URL and WAN_API_KEY for real calls.",
-  },
-  {
     id: "wan-2.7",
     label: "Wan 2.7",
     provider: "wavespeed",
@@ -54,7 +46,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: "wavespeed",
     capabilities: ["video-motion"],
     enabled: true,
-    notes: "Wan 2.2 Animate motion-transfer model with image, driving video, animate/replace mode, and 480p/720p output.",
+    notes: "Wan Animate motion-transfer model with image, driving video, animate/replace mode, and 480p/720p output.",
   },
   {
     id: "kling-v2-6-std",
