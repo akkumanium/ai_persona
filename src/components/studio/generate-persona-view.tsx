@@ -23,7 +23,7 @@ import {
   CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
   chatGptImageQualities,
-  nanoBananaProImageSizes,
+  imageSizesForModel,
   supportsImageQuality,
   supportsImageSize,
 } from "@/lib/image-model-options";
@@ -162,6 +162,10 @@ export function GeneratePersonaView({
     }
     if (modelId === CHATGPT_IMAGE_MODEL_ID && imageSize !== "2K") {
       setImageSize("2K");
+    }
+    const nextImageSizes = imageSizesForModel(modelId);
+    if (!nextImageSizes.includes(imageSize)) {
+      setImageSize(nextImageSizes[0]);
     }
   }
 
@@ -392,7 +396,7 @@ export function GeneratePersonaView({
           <ModelSelect label="Model" value={selectedModel} options={modelOptions} onChange={changeModel} />
           <SelectField label="Aspect ratio" value={safeAspectRatio} options={imageAspectRatios} onChange={setAspectRatio} />
           {imageModelSupportsSize ? (
-            <SelectField label="Image size" value={imageSize} options={nanoBananaProImageSizes} onChange={setImageSize} />
+            <SelectField label="Image size" value={imageSize} options={imageSizesForModel(selectedModel)} onChange={setImageSize} />
           ) : null}
           {imageModelSupportsQuality ? (
             <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />

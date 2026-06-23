@@ -60,6 +60,10 @@ export type VideoGenerationRequest = {
   keepOriginalSound?: boolean;
   motionReferenceVideo?: ProviderMediaInput;
   motionReferenceVideoUrl?: string;
+  referenceVideo?: ProviderMediaInput;
+  referenceVideoUrl?: string;
+  referenceAudio?: ProviderMediaInput;
+  referenceAudioUrl?: string;
 };
 
 export type VideoGenerationResult = {

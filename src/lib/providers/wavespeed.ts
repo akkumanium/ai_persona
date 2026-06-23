@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { Client } from "wavespeed";
 import { env } from "@/lib/env";
+import { SEEDREAM_4_5_MODEL_ID } from "@/lib/image-model-options";
 import {
   estimateAvatarGenerationPricing,
   estimateImageGenerationPricing,
@@ -44,19 +45,21 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     const client = wavespeedClient();
-    const referenceUrls = await uploadProviderImages(client, request.referenceImages ?? []);
+    const isSeedream45 = request.model === SEEDREAM_4_5_MODEL_ID;
+    const uploadedReferenceUrls = await uploadProviderImages(client, request.referenceImages ?? []);
+    const referenceUrls = isSeedream45 ? uploadedReferenceUrls.slice(0, 10) : uploadedReferenceUrls;
     const model = wavespeedImageModel(request.model, referenceUrls.length > 0);
     const result = await client.run(model, {
       prompt: request.prompt,
-      image: referenceUrls[0],
+      image: isSeedream45 ? undefined : referenceUrls[0],
       images: referenceUrls.length ? referenceUrls : undefined,
-      image_url: referenceUrls[0],
-      image_urls: referenceUrls.length ? referenceUrls : undefined,
-      aspect_ratio: request.aspectRatio,
-      size: request.imageSize,
-      image_size: request.imageSize,
-      quality: request.imageQuality,
-      num_outputs: request.count,
+      image_url: isSeedream45 ? undefined : referenceUrls[0],
+      image_urls: isSeedream45 ? undefined : referenceUrls.length ? referenceUrls : undefined,
+      aspect_ratio: isSeedream45 ? undefined : request.aspectRatio,
+      size: isSeedream45 ? seedream45Size(request.aspectRatio, request.imageSize) : request.imageSize,
+      image_size: isSeedream45 ? undefined : request.imageSize,
+      quality: isSeedream45 ? undefined : request.imageQuality,
+      num_outputs: isSeedream45 ? undefined : request.count,
     }, {
       pollInterval: 2,
       timeout: 36000,
@@ -93,31 +96,50 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
     const motionVideo = request.motionReferenceVideo
       ? await uploadProviderInput(client, request.motionReferenceVideo, "video")
       : request.motionReferenceVideoUrl;
+    const referenceVideo = request.referenceVideo
+      ? await uploadProviderInput(client, request.referenceVideo, "video")
+      : request.referenceVideoUrl;
+    const referenceAudio = request.referenceAudio
+      ? await uploadProviderInput(client, request.referenceAudio, "audio")
+      : request.referenceAudioUrl;
+    const usesSeedanceMultimodalReferences = isSeedanceModel(request.model) && Boolean(referenceVideo || referenceAudio);
     const model = wavespeedVideoModel(request);
-    const result = await client.run(model, {
-      prompt: request.prompt,
-      image: startFrame,
-      image_url: startFrame,
-      first_frame_image: startFrame,
-      end_image: endFrame,
-      end_image_url: endFrame,
-      last_frame_image: endFrame,
-      video: motionVideo,
-      video_url: motionVideo,
-      duration: request.durationSeconds,
-      aspect_ratio: request.aspectRatio === "auto" ? undefined : request.aspectRatio,
-      negative_prompt: request.negativePrompt || undefined,
-      cfg_scale: request.cfgScale,
-      resolution: request.resolution,
-      generate_audio: request.generateAudio,
-      sound: request.generateAudio,
-      return_last_frame: request.returnLastFrame,
-      mode: request.mode === "motion" ? request.motionMode ?? "animate" : undefined,
-      character_orientation: request.mode === "motion" ? request.characterOrientation ?? "video" : undefined,
-      keep_original_sound: request.mode === "motion" ? request.keepOriginalSound ?? true : undefined,
-      shot_type: request.model.startsWith("kling-v3-0") ? "customize" : undefined,
-      seed: -1,
-    }, {
+    const input = usesSeedanceMultimodalReferences
+      ? {
+          prompt: request.prompt,
+          reference_images: [startFrame, endFrame].filter((url): url is string => Boolean(url)),
+          reference_videos: referenceVideo ? [referenceVideo] : undefined,
+          reference_audios: referenceAudio ? [referenceAudio] : undefined,
+          duration: request.durationSeconds,
+          aspect_ratio: request.aspectRatio === "auto" ? undefined : request.aspectRatio,
+          resolution: request.resolution,
+          generate_audio: request.generateAudio,
+        }
+      : {
+          prompt: request.prompt,
+          image: startFrame,
+          image_url: startFrame,
+          first_frame_image: startFrame,
+          end_image: endFrame,
+          end_image_url: endFrame,
+          last_frame_image: endFrame,
+          video: motionVideo,
+          video_url: motionVideo,
+          duration: request.durationSeconds,
+          aspect_ratio: request.aspectRatio === "auto" ? undefined : request.aspectRatio,
+          negative_prompt: request.negativePrompt || undefined,
+          cfg_scale: request.cfgScale,
+          resolution: request.resolution,
+          generate_audio: request.generateAudio,
+          sound: request.generateAudio,
+          return_last_frame: request.returnLastFrame,
+          mode: request.mode === "motion" ? request.motionMode ?? "animate" : undefined,
+          character_orientation: request.mode === "motion" ? request.characterOrientation ?? "video" : undefined,
+          keep_original_sound: request.mode === "motion" ? request.keepOriginalSound ?? true : undefined,
+          shot_type: request.model.startsWith("kling-v3-0") ? "customize" : undefined,
+          seed: -1,
+        };
+    const result = await client.run(model, input, {
       pollInterval: 5,
       timeout: 36000,
     }) as WavespeedRunResult;
@@ -228,6 +250,7 @@ async function uploadProviderInput(client: Client, input: ProviderImageInput | P
 function wavespeedImageModel(model: string, hasReferences: boolean) {
   if (model.includes("/")) return model;
   if (model === "gpt-image-2") return hasReferences ? "openai/gpt-image-2/edit" : "openai/gpt-image-2/text-to-image";
+  if (model === SEEDREAM_4_5_MODEL_ID) return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
   return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
 }
 
@@ -235,8 +258,11 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
   if (request.model.includes("/")) return request.model;
   if (request.model === "kling-v3-0-motion-std") return "kwaivgi/kling-v3.0-std/motion-control";
   if (request.model === "kling-v3-0-motion-pro") return "kwaivgi/kling-v3.0-pro/motion-control";
-  if (request.model.includes("seedance")) {
+  if (isSeedanceModel(request.model)) {
     const base = request.model.includes("fast") ? "bytedance/seedance-2.0-fast" : "bytedance/seedance-2.0";
+    if (request.referenceVideoUrl || request.referenceVideo || request.referenceAudioUrl || request.referenceAudio) {
+      return `${base}/text-to-video`;
+    }
     if (request.endFrameImageUrl || request.endFrameImage) return `${base}/image-to-video`;
     return request.startFrameImageUrl || request.startFrameImage || request.referenceImageUrl ? `${base}/image-to-video` : `${base}/text-to-video`;
   }
@@ -257,6 +283,29 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
     return `kwaivgi/kling-v2.6-${request.model === "kling-v2-6-pro" || request.providerMode === "pro" || request.endFrameImageUrl || request.endFrameImage ? "pro" : "std"}/${mode}`;
   }
   return request.model;
+}
+
+function isSeedanceModel(model: string) {
+  return model.includes("seedance");
+}
+
+function seedream45Size(aspectRatio: string, imageSize: string) {
+  const recommendedDimensions: Record<string, [number, number]> = {
+    "1:1": [2048, 2048],
+    "16:9": [2560, 1440],
+    "9:16": [1440, 2560],
+    "4:3": [2688, 2016],
+    "3:4": [2016, 2688],
+    "3:2": [2688, 1792],
+    "2:3": [1792, 2688],
+  };
+  const [recommendedWidth, recommendedHeight] = recommendedDimensions[aspectRatio] ?? recommendedDimensions["1:1"];
+  if (imageSize !== "4K") return `${recommendedWidth}*${recommendedHeight}`;
+
+  const scale = 4096 / Math.max(recommendedWidth, recommendedHeight);
+  const width = Math.round(recommendedWidth * scale / 16) * 16;
+  const height = Math.round(recommendedHeight * scale / 16) * 16;
+  return `${width}*${height}`;
 }
 
 function outputsFromResult(result: WavespeedRunResult) {

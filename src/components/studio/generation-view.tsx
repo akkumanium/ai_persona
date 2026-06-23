@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, WandSparkles, X } from "lucide-react";
+import { AudioLines, Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, WandSparkles, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
-import type { GenerationMode, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
+import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
 import {
   CheckboxField,
   ModelSelect,
@@ -25,7 +25,7 @@ import {
   CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
   chatGptImageQualities,
-  nanoBananaProImageSizes,
+  imageSizesForModel,
   supportsImageQuality,
   supportsImageSize,
 } from "@/lib/image-model-options";
@@ -76,6 +76,8 @@ export function GenerationView({
   const [videoEndFrameByPersona, setVideoEndFrameByPersona] = useState<Record<string, string | undefined>>({});
   const [uploadedVideoStartFrame, setUploadedVideoStartFrame] = useState<SourceImageInput | undefined>();
   const [uploadedVideoEndFrame, setUploadedVideoEndFrame] = useState<SourceImageInput | undefined>();
+  const [seedanceReferenceVideo, setSeedanceReferenceVideo] = useState<SourceVideoInput | undefined>();
+  const [seedanceReferenceAudio, setSeedanceReferenceAudio] = useState<SourceAudioInput | undefined>();
   const [videoFrameSlot, setVideoFrameSlot] = useState<VideoFrameSlot>("start");
   const [videoImageSearch, setVideoImageSearch] = useState("");
   const [videoDurationSeconds, setVideoDurationSeconds] = useState(5);
@@ -233,6 +235,10 @@ export function GenerationView({
     }
     if (modelId === CHATGPT_IMAGE_MODEL_ID && imageAspectRatio === "21:9") {
       setImageAspectRatio("3:2");
+    }
+    const nextImageSizes = imageSizesForModel(modelId);
+    if (!nextImageSizes.includes(imageSize)) {
+      setImageSize(nextImageSizes[0]);
     }
   }
 
@@ -396,6 +402,18 @@ export function GenerationView({
         keepOriginalSound: mode === "motion" ? motionKeepOriginalSound : false,
         motionReferenceVideo: mode === "motion" && motionReferenceVideo?.data ? motionReferenceVideo : undefined,
         motionReferenceVideoUrl: mode === "motion" ? motionReferenceVideo?.url : undefined,
+        referenceVideo:
+          mode === "normal" && isSeedanceVideoModel(videoModel) && seedanceReferenceVideo?.data
+            ? seedanceReferenceVideo
+            : undefined,
+        referenceVideoUrl:
+          mode === "normal" && isSeedanceVideoModel(videoModel) ? seedanceReferenceVideo?.url : undefined,
+        referenceAudio:
+          mode === "normal" && isSeedanceVideoModel(videoModel) && seedanceReferenceAudio?.data
+            ? seedanceReferenceAudio
+            : undefined,
+        referenceAudioUrl:
+          mode === "normal" && isSeedanceVideoModel(videoModel) ? seedanceReferenceAudio?.url : undefined,
         ...(requestReferenceImageUrl ? { referenceImageUrl: requestReferenceImageUrl, startFrameImageUrl: requestReferenceImageUrl } : {}),
         ...(uploadedStartFrameInput ? { startFrameImage: uploadedStartFrameInput } : {}),
         ...(mode === "normal" && (uploadedEndFrameUrl || endFrameAsset?.url)
@@ -468,6 +486,20 @@ export function GenerationView({
     const [video] = await encodeFiles(files, "video/mp4");
     setMotionReferenceVideo(
       video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
+    );
+  }
+
+  async function captureSeedanceReferenceVideo(files: FileList | null) {
+    const [video] = await encodeFiles(files, "video/mp4");
+    setSeedanceReferenceVideo(
+      video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
+    );
+  }
+
+  async function captureSeedanceReferenceAudio(files: FileList | null) {
+    const [audio] = await encodeFiles(files, "audio/mpeg");
+    setSeedanceReferenceAudio(
+      audio ? { name: audio.name, mimeType: audio.mimeType, data: audio.data, url: audio.url } : undefined,
     );
   }
 
@@ -547,7 +579,7 @@ export function GenerationView({
               onChange={setImageAspectRatio}
             />
             {imageModelSupportsSize ? (
-              <SelectField label="Image size" value={imageSize} options={nanoBananaProImageSizes} onChange={setImageSize} />
+              <SelectField label="Image size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
             ) : null}
             {imageModelSupportsQuality ? (
               <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
@@ -678,6 +710,24 @@ export function GenerationView({
                 />
               ) : null}
             </div>
+            {isSeedanceVideoModel(videoModel) ? (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <UploadBox
+                  accept="video/*"
+                  icon={Clapperboard}
+                  label={seedanceReferenceVideo?.name ?? "Upload reference video"}
+                  detail={seedanceReferenceVideo ? "Reference video ready." : "Optional; up to 15 seconds total."}
+                  onChange={(files) => void captureSeedanceReferenceVideo(files)}
+                />
+                <UploadBox
+                  accept="audio/*"
+                  icon={AudioLines}
+                  label={seedanceReferenceAudio?.name ?? "Upload reference audio"}
+                  detail={seedanceReferenceAudio ? "Reference audio ready." : "Optional; up to 15 seconds total."}
+                  onChange={(files) => void captureSeedanceReferenceAudio(files)}
+                />
+              </div>
+            ) : null}
             <NumberField
               label="Duration"
               value={safeVideoDuration}

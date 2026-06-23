@@ -18,7 +18,7 @@ import { cn, formatTokens } from "@/lib/utils";
 
 type PromptSuggestion = { title: string; prompt: string };
 
-const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: boolean }> = [
+const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: boolean; badge?: string }> = [
   { id: "personas", label: "Personas", icon: UserRound },
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "videos", label: "Videos", icon: Clapperboard },
@@ -27,7 +27,7 @@ const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: bo
   { id: "avatar", label: "Avatar", icon: Video },
   { id: "assets", label: "Assets", icon: ImageIcon },
   { id: "jobs", label: "Jobs", icon: Activity },
-  { id: "community", label: "Community-chat (COMING SOON)", icon: MessageCircle, disabled: true },
+  { id: "community", label: "Community chat", icon: MessageCircle, disabled: true, badge: "Soon" },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -339,7 +339,12 @@ export function StudioWorkspace({
                 )}
               >
                 <Icon size={18} />
-                {item.label}
+                <span className="min-w-0 truncate">{item.label}</span>
+                {item.badge ? (
+                  <span className="ml-auto shrink-0 rounded-full border border-stone-300 bg-white/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                    {item.badge}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -381,13 +386,18 @@ export function StudioWorkspace({
                   onClick={() => setView(item.id)}
                   disabled={item.disabled}
                   className={cn(
-                    "h-10 rounded-md px-3 text-sm font-medium",
+                    "inline-flex h-10 items-center rounded-md px-3 text-sm font-medium",
                     item.disabled
                       ? "cursor-not-allowed bg-stone-100 text-stone-400"
                       : view === item.id ? "bg-emerald-800 text-white" : "bg-white text-stone-700",
                   )}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.badge ? (
+                    <span className="ml-2 rounded-full border border-stone-300 bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-stone-400">
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </button>
               ))}
               <Link

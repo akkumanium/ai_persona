@@ -89,6 +89,10 @@ export const videoGenerationSchema = z.object({
   keepOriginalSound: z.boolean().optional().default(true),
   motionReferenceVideo: providerMediaInputSchema.optional(),
   motionReferenceVideoUrl: z.string().min(1).optional(),
+  referenceVideo: providerMediaInputSchema.optional(),
+  referenceVideoUrl: z.string().min(1).optional(),
+  referenceAudio: providerMediaInputSchema.optional(),
+  referenceAudioUrl: z.string().min(1).optional(),
 });
 
 export const speechGenerationSchema = z.object({

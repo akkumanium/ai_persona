@@ -30,6 +30,14 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
     };
   }
 
+  if (request.model === "seedream-v4.5") {
+    const rawUsd = 0.04 * count;
+    return {
+      rawUsd,
+      tokens: usdToTokens(rawUsd),
+    };
+  }
+
   const outputUsd = nanoBananaOutputUsd(request.imageSize);
   const inputUsd = referenceCount * 0.0011;
   const rawUsd = outputUsd * count + inputUsd;

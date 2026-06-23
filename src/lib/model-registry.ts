@@ -13,7 +13,11 @@ export type ModelRegistryEntry = {
   notes: string;
 };
 
-import { CHATGPT_IMAGE_MODEL_ID, NANO_BANANA_PRO_MODEL_ID } from "@/lib/image-model-options";
+import {
+  CHATGPT_IMAGE_MODEL_ID,
+  NANO_BANANA_PRO_MODEL_ID,
+  SEEDREAM_4_5_MODEL_ID,
+} from "@/lib/image-model-options";
 
 export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   {
@@ -31,6 +35,14 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     capabilities: ["avatar", "image-reference"],
     enabled: true,
     notes: "OpenAI image model with generation, edit/reference inputs, quality, and fixed output size controls.",
+  },
+  {
+    id: SEEDREAM_4_5_MODEL_ID,
+    label: "Seedream 4.5",
+    provider: "wavespeed",
+    capabilities: ["avatar", "image-reference"],
+    enabled: true,
+    notes: "ByteDance Seedream 4.5 with text-to-image, up to 10 reference images, custom output dimensions, and strong typography.",
   },
   {
     id: "wan-2.7",
@@ -110,7 +122,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: "wavespeed",
     capabilities: ["video-normal"],
     enabled: true,
-    notes: "BytePlus ModelArk Seedance 2.0 with text, start/end frame image-to-video, 4-15s duration, resolution, audio, and last-frame return.",
+    notes: "WaveSpeed Seedance 2.0 with text, start/end frames, video and audio references, 4-15s duration, resolution, native audio, and last-frame return.",
   },
   {
     id: "dreamina-seedance-2-0-fast-260128",

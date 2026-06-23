@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, HelpCircle } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 
 export const metadata = { title: "FAQ | Persona Studio", description: "Answers to common Persona Studio questions." };
 
@@ -12,18 +12,38 @@ const questions = [
 
 export default function FaqPage() {
   return (
-    <main className="min-h-screen bg-[#070711] px-5 py-8 text-white sm:px-8">
-      <div className="mx-auto max-w-4xl">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#ffd0e7] hover:text-white"><ArrowLeft size={16} />Home</Link>
-        <div className="mt-12 flex size-12 items-center justify-center rounded-md bg-[#ff4fa3]/15 text-[#ff8fc7]"><HelpCircle /></div>
-        <h1 className="mt-5 text-4xl font-semibold sm:text-6xl">Frequently asked questions</h1>
-        <p className="mt-4 text-[#aeb4c6]">Starter copy for now—replace or expand these answers whenever you’re ready.</p>
-        <div className="mt-10 grid gap-4">
+    <main className="min-h-screen bg-[#070711] px-5 py-8 text-white sm:px-8 lg:py-12">
+      <div className="mx-auto w-full max-w-6xl">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#b6bacb] transition hover:text-white"
+        >
+          <ArrowLeft size={16} />
+          Home
+        </Link>
+
+        <header className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
+          <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+            Frequently Asked Questions
+          </h1>
+          <p className="mt-5 text-base leading-7 text-[#9095a7] sm:text-lg">
+            Everything you need to know about creating, generating, and managing your work in Persona Studio.
+          </p>
+        </header>
+
+        <div className="mt-14 w-full border-t border-white/15 sm:mt-16">
           {questions.map(([question, answer]) => (
-            <article key={question} className="rounded-lg border border-white/10 bg-white/[0.055] p-6">
-              <h2 className="text-lg font-semibold">{question}</h2>
-              <p className="mt-3 leading-7 text-[#b6bacb]">{answer}</p>
-            </article>
+            <details key={question} className="group border-b border-white/15">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-8 py-7 text-left marker:content-none sm:py-9 [&::-webkit-details-marker]:hidden">
+                <span className="text-base font-semibold text-white sm:text-lg">{question}</span>
+                <ChevronDown
+                  size={18}
+                  className="shrink-0 text-[#8f94a6] transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
+              <p className="max-w-4xl pb-8 pr-10 leading-7 text-[#aeb4c6] sm:pb-10">{answer}</p>
+            </details>
           ))}
         </div>
       </div>
