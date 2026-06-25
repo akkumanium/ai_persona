@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Persona Studio — One face. Every output.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: #0c0a0b;
+    color: #f1ebe3;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; background: none; border: none; color: inherit; cursor: pointer; }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+  }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+  @media (max-width: 640px) { .container { padding: 0 20px; } }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7a716a;
+    display: block;
+  }
+
+  section[id] { scroll-margin-top: 80px; }
+
+  /* Nav */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 50;
+    padding: 16px 0;
+    background: rgba(12, 10, 11, 0.7);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border-bottom: 1px solid rgba(241, 235, 227, 0.06);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: #f1ebe3;
+  }
+  .brand-mark {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, #ff4d6d, #d4a574, #ff4d6d);
+    position: relative;
+  }
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    background: #0c0a0b;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-size: 13px;
+    color: #b3a9a0;
+  }
+  .nav-links a { transition: color 0.3s; }
+  .nav-links a:hover { color: #f1ebe3; }
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: #f1ebe3;
+    color: #0c0a0b;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.3s, transform 0.3s;
+  }
+  .nav-cta:hover { background: #fff; }
+  @media (max-width: 900px) { .nav-links { display: none; } }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    padding: 140px 0 100px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 900px 700px at 78% 35%, rgba(255, 77, 109, 0.16), transparent 60%),
+      radial-gradient(ellipse 700px 600px at 12% 78%, rgba(212, 165, 116, 0.09), transparent 60%),
+      radial-gradient(ellipse 500px 400px at 50% 0%, rgba(255, 138, 155, 0.05), transparent 70%);
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 80px;
+    align-items: center;
+  }
+  @media (max-width: 960px) {
+    .hero-inner { grid-template-columns: 1fr; gap: 80px; }
+    .hero { padding: 120px 0 60px; }
+  }
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px 7px 10px;
+    border: 1px solid rgba(241, 235, 227, 0.12);
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: #b3a9a0;
+    background: rgba(241, 235, 227, 0.02);
+  }
+  .hero-eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #ff4d6d;
+    box-shadow: 0 0 10px #ff4d6d;
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  .hero h1 {
+    margin-top: 28px;
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(60px, 9vw, 124px);
+    line-height: 0.94;
+    letter-spacing: -0.025em;
+    color: #f1ebe3;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: #ff4d6d;
+    display: block;
+  }
+  .hero p.lead {
+    margin-top: 32px;
+    max-width: 480px;
+    font-size: 17px;
+    line-height: 1.62;
+    color: #b3a9a0;
+  }
+  .hero-cta-row {
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: #ff4d6d;
+    color: #0c0a0b;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: transform 0.4s cubic-bezier(.16,1,.3,1), box-shadow 0.4s;
+    box-shadow: 0 10px 36px rgba(255, 77, 109, 0.28);
+  }
+  .btn-primary span { transition: transform 0.4s; display: inline-block; }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 48px rgba(255, 77, 109, 0.42);
+  }
+  .btn-primary:hover span { transform: translateX(4px); }
+  .btn-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #b3a9a0;
+    padding: 12px 4px;
+    border-bottom: 1px solid rgba(241, 235, 227, 0.15);
+    transition: color 0.3s, border-color 0.3s;
+  }
+  .btn-text:hover { color: #f1ebe3; border-color: rgba(241, 235, 227, 0.4); }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(241, 235, 227, 0.06);
+    color: #f1ebe3;
+    border: 1px solid rgba(241, 235, 227, 0.14);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.3s;
+  }
+  .btn-secondary:hover { background: rgba(241, 235, 227, 0.1); }
+  .hero-foot {
+    margin-top: 48px;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #7a716a;
+    letter-spacing: 0.04em;
+  }
+  .hero-foot span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .check-mini {
+    width: 6px; height: 6px;
+    background: #ff4d6d;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* Hero card stack */
+  .hero-visual {
+    position: relative;
+    height: 620px;
+    perspective: 1400px;
+  }
+  @media (max-width: 960px) { .hero-visual { height: 500px; } }
+  .card-stack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+  .card {
+    position: absolute;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(241, 235, 227, 0.1);
+    background: #181416;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+    will-change: transform;
+  }
+  .card img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: saturate(0.92) contrast(1.04) brightness(0.95) sepia(0.06);
+  }
+  .card-front {
+    width: 290px; height: 390px;
+    top: 50%; left: 50%;
+    z-index: 4;
+  }
+  .card-back-1 {
+    width: 220px; height: 300px;
+    top: 52%; left: 70%;
+    z-index: 3;
+  }
+  .card-back-2 {
+    width: 180px; height: 240px;
+    top: 44%; left: 26%;
+    z-index: 2;
+  }
+  .card-back-3 {
+    width: 150px; height: 200px;
+    top: 76%; left: 80%;
+    z-index: 1;
+    opacity: 0.78;
+  }
+  @media (max-width: 960px) {
+    .card-front { width: 240px; height: 330px; }
+    .card-back-1 { width: 180px; height: 240px; }
+    .card-back-2 { width: 150px; height: 200px; }
+    .card-back-3 { width: 120px; height: 160px; }
+  }
+  .card-meta {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 18px;
+    background: linear-gradient(to top, rgba(12,10,11,0.95) 30%, transparent);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .card-name {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 24px;
+    color: #f1ebe3;
+    line-height: 1;
+  }
+  .card-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #ff8a9b;
+    text-transform: uppercase;
+    padding: 4px 7px;
+    border: 1px solid rgba(255, 138, 155, 0.3);
+    border-radius: 3px;
+  }
+  .card-label {
+    position: absolute;
+    top: 12px; left: 12px;
+    padding: 4px 8px;
+    background: rgba(12,10,11,0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #d4a574;
+    text-transform: uppercase;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 165, 116, 0.2);
+  }
+  .hero-glyph {
+    position: absolute;
+    top: -40px;
+    right: -20px;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 240px;
+    line-height: 1;
+    color: rgba(241, 235, 227, 0.035);
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
+  }
+
+  /* Marquee */
+  .marquee {
+    border-top: 1px solid rgba(241, 235, 227, 0.08);
+    border-bottom: 1px solid rgba(241, 235, 227, 0.08);
+    padding: 22px 0;
+    overflow: hidden;
+    background: #0e0c0d;
+  }
+  .marquee-track {
+    display: flex;
+    gap: 56px;
+    white-space: nowrap;
+    animation: scroll 50s linear infinite;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: #7a716a;
+    text-transform: uppercase;
+    width: max-content;
+  }
+  .marquee-track span {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .marquee-track span::before {
+    content: '';
+    width: 4px; height: 4px;
+    background: #ff4d6d;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  @keyframes scroll {
+    to { transform: translateX(-50%); }
+  }
+
+  /* Shift */
+  .shift {
+    padding: 160px 0;
+    position: relative;
+  }
+  .shift-inner {
+    display: grid;
+    grid-template-columns: 0.35fr 1fr;
+    gap: 80px;
+  }
+  @media (max-width: 900px) { .shift-inner { grid-template-columns: 1fr; gap: 40px; } }
+  .shift-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #7a716a;
+    letter-spacing: 0.1em;
+    position: sticky;
+    top: 120px;
+    align-self: start;
+  }
+  .shift-num span { color: #ff4d6d; }
+  .shift-body { max-width: 760px; }
+  .shift-body h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5.2vw, 68px);
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+  }
+  .shift-body h2 em { font-style: italic; color: #d4a574; }
+  .shift-body p {
+    margin-top: 32px;
+    font-size: 18px;
+    line-height: 1.65;
+    color: #b3a9a0;
+  }
+  .shift-body p + p { margin-top: 22px; }
+  .pullquote {
+    margin: 52px 0;
+    padding-left: 28px;
+    border-left: 2px solid #ff4d6d;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 32px;
+    line-height: 1.25;
+    color: #f1ebe3;
+    letter-spacing: -0.01em;
+  }
+
+  /* How */
+  .how {
+    padding: 140px 0;
+    border-top: 1px solid rgba(241, 235, 227, 0.08);
+    background: #0a0809;
+  }
+  .how-head {
+    margin-bottom: 80px;
+    max-width: 760px;
+  }
+  .how-head .eyebrow { margin-bottom: 20px; }
+  .how-head h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+  }
+  .how-head h2 em { font-style: italic; color: #ff4d6d; }
+  .how-grid {
+    display: grid;
+    grid-template-columns: 0.6fr 1fr;
+    gap: 100px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .how-grid { grid-template-columns: 1fr; gap: 60px; } }
+  .how-left {
+    position: sticky;
+    top: 120px;
+  }
+  .how-left p {
+    font-size: 16px;
+    line-height: 1.65;
+    color: #b3a9a0;
+  }
+  .how-steps { display: flex; flex-direction: column; }
+  .step {
+    padding: 48px 0;
+    border-bottom: 1px solid rgba(241, 235, 227, 0.08);
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .step:first-child { padding-top: 0; }
+  .step:last-child { border-bottom: none; padding-bottom: 0; }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #ff4d6d;
+    letter-spacing: 0.06em;
+    padding-top: 10px;
+  }
+  .step h3 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 34px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .step > div > p {
+    margin-top: 16px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #b3a9a0;
+  }
+  .step-visual {
+    margin-top: 28px;
+    padding: 18px;
+    border: 1px solid rgba(241, 235, 227, 0.08);
+    border-radius: 10px;
+    background: rgba(241, 235, 227, 0.02);
+  }
+  .mini-brief { display: grid; gap: 10px; }
+  .mini-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 13px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(241, 235, 227, 0.05);
+  }
+  .mini-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .mini-row span { color: #7a716a; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .mini-row strong { color: #f1ebe3; font-weight: 400; text-align: right; }
+  .mini-refs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .mini-ref { aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid rgba(241, 235, 227, 0.06); }
+  .mini-ref.primary { box-shadow: 0 0 0 2px #ff4d6d; }
+  .mini-ref img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.92) contrast(1.04) brightness(0.95) sepia(0.06); }
+  .mini-output { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .mini-out-tile { aspect-ratio: 3/4; border-radius: 6px; overflow: hidden; border: 1px solid rgba(241, 235, 227, 0.06); position: relative; }
+  .mini-out-tile.selected { box-shadow: 0 0 0 2px #ff4d6d; }
+  .mini-out-tile img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.92) contrast(1.04) brightness(0.95) sepia(0.06); }
+  .mini-cost { 
+    font-family: 'JetBrains Mono', monospace; 
+    font-size: 10px; 
+    color: #d4a574; 
+    margin-top: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Preview */
+  .preview {
+    padding: 140px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .preview-head {
+    margin-bottom: 60px;
+    max-width: 760px;
+  }
+  .preview-head .eyebrow { margin-bottom: 20px; }
+  .preview-head h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+  }
+  .preview-head h2 em { font-style: italic; color: #d4a574; }
+  .preview-head > p {
+    margin-top: 24px;
+    font-size: 17px;
+    line-height: 1.65;
+    color: #b3a9a0;
+    max-width: 580px;
+  }
+  .workspace {
+    border: 1px solid rgba(241, 235, 227, 0.1);
+    border-radius: 14px;
+    background: #151214;
+    overflow: hidden;
+    box-shadow: 0 60px 140px rgba(0,0,0,0.6);
+  }
+  .workspace-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(241, 235, 227, 0.06);
+    background: #181416;
+    gap: 16px;
+  }
+  .dots { display: flex; gap: 6px; flex-shrink: 0; }
+  .dots span { width: 9px; height: 9px; border-radius: 50%; background: rgba(241, 235, 227, 0.12); }
+  .url {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #7a716a;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .balance {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #d4a574;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .workspace-body {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    min-height: 600px;
+  }
+  @media (max-width: 800px) {
+    .workspace-body { grid-template-columns: 1fr; }
+    .workspace-side { display: none; }
+  }
+  .workspace-side {
+    border-right: 1px solid rgba(241, 235, 227, 0.06);
+    padding: 20px 14px;
+  }
+  .ws-section { margin-bottom: 24px; }
+  .ws-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: #7a716a;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 0 10px;
+  }
+  .ws-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #b3a9a0;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    position: relative;
+  }
+  .ws-item:hover { background: rgba(241, 235, 227, 0.03); color: #f1ebe3; }
+  .ws-item.active {
+    background: rgba(255, 77, 109, 0.08);
+    color: #f1ebe3;
+  }
+  .ws-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px; bottom: 8px;
+    width: 2px;
+    background: #ff4d6d;
+    border-radius: 2px;
+  }
+  .ws-main { padding: 24px; }
+  .ws-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .ws-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .ws-title em { font-style: italic; color: #ff8a9b; }
+  .ws-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #7a716a;
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+  }
+  .ws-generate {
+    padding: 10px 16px;
+    background: rgba(255, 77, 109, 0.1);
+    border: 1px solid rgba(255, 77, 109, 0.3);
+    color: #ff8a9b;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    transition: background 0.3s;
+  }
+  .ws-generate:hover { background: rgba(255, 77, 109, 0.18); }
+  .ws-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 700px) { .ws-grid { grid-template-columns: 1fr; } }
+  .ws-card {
+    padding: 18px;
+    border: 1px solid rgba(241, 235, 227, 0.08);
+    border-radius: 10px;
+    background: rgba(241, 235, 227, 0.015);
+  }
+  .ws-card h4 {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.1em;
+    color: #7a716a;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-weight: 400;
+  }
+  .brief-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(241, 235, 227, 0.05);
+    font-size: 13px;
+    gap: 16px;
+  }
+  .brief-row:last-child { border-bottom: none; }
+  .brief-row .k { color: #7a716a; flex-shrink: 0; }
+  .brief-row .v { color: #f1ebe3; text-align: right; }
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .ref-tile {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(241, 235, 227, 0.06);
+  }
+  .ref-tile img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.92) contrast(1.04) brightness(0.95) sepia(0.06); }
+  .ref-tile .tag {
+    position: absolute;
+    bottom: 6px; left: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: #f1ebe3;
+    background: rgba(12,10,11,0.85);
+    padding: 3px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .ref-tile.primary { box-shadow: 0 0 0 2px #ff4d6d; }
+  .output-section {
+    padding: 18px;
+    border: 1px solid rgba(241, 235, 227, 0.08);
+    border-radius: 10px;
+    background: rgba(241, 235, 227, 0.015);
+  }
+  .output-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .output-head h4 {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.1em;
+    color: #7a716a;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+  .cost-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #d4a574;
+    border: 1px solid rgba(212, 165, 116, 0.3);
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+  .output-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 700px) { .output-grid { grid-template-columns: repeat(2, 1fr); } }
+  .output-tile {
+    aspect-ratio: 3/4;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(241, 235, 227, 0.06);
+    cursor: pointer;
+  }
+  .output-tile img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.92) contrast(1.04) brightness(0.95) sepia(0.06); }
+  .output-tile.selected { box-shadow: 0 0 0 2px #ff4d6d; }
+  .output-tile .check {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 18px; height: 18px;
+    background: #ff4d6d;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #0c0a0b;
+    font-weight: 700;
+  }
+
+  /* Tokens */
+  .tokens {
+    padding: 160px 0;
+    border-top: 1px solid rgba(241, 235, 227, 0.08);
+    border-bottom: 1px solid rgba(241, 235, 227, 0.08);
+    background: #0a0809;
+    position: relative;
+    overflow: hidden;
+  }
+  .tokens-inner {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+  @media (max-width: 900px) { .tokens-inner { grid-template-columns: 1fr; gap: 60px; } }
+  .tokens .eyebrow { margin-bottom: 24px; }
+  .tokens h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+  }
+  .tokens h2 em { font-style: italic; color: #ff4d6d; }
+  .tokens p {
+    margin-top: 28px;
+    font-size: 17px;
+    line-height: 1.65;
+    color: #b3a9a0;
+    max-width: 500px;
+  }
+  .meter-card {
+    padding: 32px;
+    border: 1px solid rgba(241, 235, 227, 0.1);
+    border-radius: 14px;
+    background: #151214;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+  }
+  .meter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(241, 235, 227, 0.06);
+    gap: 20px;
+  }
+  .meter-row:last-of-type { border-bottom: none; }
+  .meter-row > div:first-child { flex: 1; }
+  .meter-label { font-size: 13px; color: #b3a9a0; margin-bottom: 8px; }
+  .meter-cost { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #f1ebe3; }
+  .meter-bar {
+    height: 3px;
+    background: rgba(241, 235, 227, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .meter-bar div {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4d6d, #d4a574);
+    border-radius: 2px;
+  }
+  .meter-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(241, 235, 227, 0.1);
+    gap: 16px;
+  }
+  .meter-total .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #7a716a;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .meter-total .value {
+    font-family: 'Instrument Serif', serif;
+    font-size: 40px;
+    line-height: 1;
+    color: #f1ebe3;
+  }
+  .meter-total .value em { font-style: italic; color: #d4a574; font-size: 22px; }
+
+  /* Audience */
+  .audience { padding: 140px 0; }
+  .audience-head {
+    margin-bottom: 80px;
+    max-width: 760px;
+  }
+  .audience-head .eyebrow { margin-bottom: 20px; }
+  .audience-head h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+  }
+  .audience-head h2 em { font-style: italic; color: #ff4d6d; }
+  .audience-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid rgba(241, 235, 227, 0.08);
+  }
+  @media (max-width: 800px) { .audience-list { grid-template-columns: 1fr; } }
+  .audience-item {
+    padding: 40px 32px 40px 0;
+    border-right: 1px solid rgba(241, 235, 227, 0.08);
+    border-bottom: 1px solid rgba(241, 235, 227, 0.08);
+  }
+  .audience-item:last-child { border-right: none; }
+  @media (max-width: 800px) {
+    .audience-item { border-right: none; padding-right: 0; }
+  }
+  .audience-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #ff4d6d;
+    letter-spacing: 0.1em;
+    margin-bottom: 24px;
+  }
+  .audience-item h3 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 28px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+  .audience-item h3 em { font-style: italic; color: #d4a574; }
+  .audience-item p {
+    margin-top: 20px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #b3a9a0;
+  }
+
+  /* Closing */
+  .closing {
+    padding: 180px 0 120px;
+    position: relative;
+  }
+  .closing-inner { max-width: 900px; }
+  .closing .eyebrow { margin-bottom: 32px; }
+  .closing blockquote {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: clamp(34px, 5vw, 60px);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: #f1ebe3;
+  }
+  .closing blockquote em { font-style: italic; color: #ff4d6d; }
+  .closing cite {
+    display: block;
+    margin-top: 40px;
+    font-style: normal;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: #7a716a;
+  }
+  .closing-cta {
+    margin-top: 56px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+
+  /* Footer */
+  .footer {
+    padding: 40px 0;
+    border-top: 1px solid rgba(241, 235, 227, 0.08);
+  }
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #7a716a;
+    letter-spacing: 0.04em;
+  }
+  .footer-links {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .footer-links a:hover { color: #f1ebe3; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .marquee-track { animation: none; }
+    .hero-eyebrow .dot { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container nav-inner">
+    <a href="#" class="brand">
+      <span class="brand-mark"></span>
+      <span>persona/studio</span>
+    </a>
+    <div class="nav-links">
+      <a href="#workflow">Workflow</a>
+      <a href="#studio">Studio</a>
+      <a href="#tokens">Pricing</a>
+      <a href="#closing">Guides</a>
+      <a href="#closing">FAQ</a>
+    </div>
+    <a href="#" class="nav-cta">Open studio</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="container hero-inner">
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <span class="dot"></span>
+        AI OFM studio · v1.0
+      </div>
+      <h1>One face.<br><em>Every output.</em></h1>
+      <p class="lead">Persona Studio is a working space for AI creator models. Save the face, the body, the style — then generate images, video, speech, and avatar clips that all look unmistakably like the same person.</p>
+      <div class="hero-cta-row">
+        <a href="#" class="btn-primary">Open the studio <span>→</span></a>
+        <a href="#workflow" class="btn-text">See the workflow</a>
+      </div>
+      <div class="hero-foot">
+        <span><span class="check-mini"></span> No hidden generation costs</span>
+        <span><span class="check-mini"></span> Cancel anytime</span>
+        <span><span class="check-mini"></span> Human-written guides</span>
+      </div>
+    </div>
+
+    <div class="hero-visual" id="heroVisual">
+      <div class="hero-glyph">01</div>
+      <div class="card-stack">
+        <div class="card card-back-3" data-depth="0.25" data-base="translate(-50%, -50%) rotate(14deg)">
+          <img src="https://picsum.photos/seed/mira-body-ref/300/400" alt="">
+          <div class="card-label">Body ref</div>
+        </div>
+        <div class="card card-back-2" data-depth="0.4" data-base="translate(-50%, -50%) rotate(-10deg)">
+          <img src="https://picsum.photos/seed/mira-wardrobe-still/300/400" alt="">
+          <div class="card-label">Wardrobe</div>
+        </div>
+        <div class="card card-back-1" data-depth="0.6" data-base="translate(-50%, -50%) rotate(8deg)">
+          <img src="https://picsum.photos/seed/mira-video-frame-04/300/400" alt="">
+          <div class="card-label">Video · 04s</div>
+        </div>
+        <div class="card card-front" data-depth="1.0" data-base="translate(-50%, -50%)">
+          <img src="https://picsum.photos/seed/mira-vale-portrait-primary/600/800" alt="">
+          <div class="card-meta">
+            <span class="card-name">Mira Vale</span>
+            <span class="card-tag">Primary</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="marquee">
+  <div class="marquee-track">
+    <span>4K stills</span>
+    <span>Talking avatar</span>
+    <span>Voice clone</span>
+    <span>Wardrobe ref</span>
+    <span>Body ref</span>
+    <span>Face ref</span>
+    <span>4-second video</span>
+    <span>Outfit variations</span>
+    <span>Lighting tests</span>
+    <span>Pose sheet</span>
+    <span>4K stills</span>
+    <span>Talking avatar</span>
+    <span>Voice clone</span>
+    <span>Wardrobe ref</span>
+    <span>Body ref</span>
+    <span>Face ref</span>
+    <span>4-second video</span>
+    <span>Outfit variations</span>
+    <span>Lighting tests</span>
+    <span>Pose sheet</span>
+  </div>
+</div>
+
+<section class="shift">
+  <div class="container shift-inner">
+    <div>
+      <div class="shift-num"><span>01</span> &nbsp;/&nbsp; The shift</div>
+    </div>
+    <div class="shift-body">
+      <h2>Most people don't need another <em>expensive course</em>. They need a workflow that actually runs.</h2>
+      <p>There's a folder of bookmarks. Three billing dashboards. A desktop covered in "final_v3.png". A notes app full of prompts that worked once and never again. And somewhere under all of it, the actual goal: a consistent AI creator model that produces content people pay for.</p>
+      <p>The courses teach the theory. The tools bill by the token. Nobody gives you the workspace where the model, the references, the prompts, and the outputs all live together — so you can stop researching and start shipping.</p>
+      <div class="pullquote">The model is the asset. Everything else is friction.</div>
+      <p>Persona Studio is that workspace. Built around one persona, not ten tools.</p>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="workflow">
+  <div class="container">
+    <div class="how-head">
+      <span class="eyebrow">02 / The workflow</span>
+      <h2>Three steps. <em>One persona.</em> Every output traces back to the same face.</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-left">
+        <p>You don't need to understand every AI model before you start. The studio gives you the steps, the right controls, and the saved history — so each result teaches the next one.</p>
+        <p style="margin-top: 20px;">By step three, you're not testing anymore. You're producing.</p>
+      </div>
+      <div class="how-steps">
+        <div class="step">
+          <div class="step-num">01</div>
+          <div>
+            <h3>Define the persona</h3>
+            <p>Name, description, style direction. This is the base every future generation inherits from — not a prompt you rewrite each time, but a saved identity.</p>
+            <div class="step-visual">
+              <div class="mini-brief">
+                <div class="mini-row"><span>Name</span><strong>Mira Vale</strong></div>
+                <div class="mini-row"><span>Style</span><strong>Warm editorial, late-afternoon light</strong></div>
+                <div class="mini-row"><span>Voice</span><strong>Calm, low register, slight rasp</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <div>
+            <h3>Lock the references</h3>
+            <p>Generate or upload the key shots — face, body, outfit, identity images. Save the keepers as the model's permanent reference set. Every future job pulls from these.</p>
+            <div class="step-visual">
+              <div class="mini-refs">
+                <div class="mini-ref primary"><img src="https://picsum.photos/seed/lock-ref-face/200/200" alt=""></div>
+                <div class="mini-ref"><img src="https://picsum.photos/seed/lock-ref-body/200/200" alt=""></div>
+                <div class="mini-ref"><img src="https://picsum.photos/seed/lock-ref-outfit/200/200" alt=""></div>
+                <div class="mini-ref"><img src="https://picsum.photos/seed/lock-ref-identity/200/200" alt=""></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <div>
+            <h3>Generate without drift</h3>
+            <p>Spin out images, video, speech, and avatar clips from the saved references. Cost is shown before every run. The strongest results get folded back into the reference set.</p>
+            <div class="step-visual">
+              <div class="mini-output">
+                <div class="mini-out-tile"><img src="https://picsum.photos/seed/gen-out-1/200/260" alt=""></div>
+                <div class="mini-out-tile selected"><img src="https://picsum.photos/seed/gen-out-2/200/260" alt=""></div>
+                <div class="mini-out-tile"><img src="https://picsum.photos/seed/gen-out-3/200/260" alt=""></div>
+                <div class="mini-out-tile"><img src="https://picsum.photos/seed/gen-out-4/200/260" alt=""></div>
+              </div>
+              <div class="mini-cost">◐ 120 tokens · shown before run</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="preview" id="studio">
+  <div class="container">
+    <div class="preview-head">
+      <span class="eyebrow">03 / Inside the studio</span>
+      <h2>A workspace built around <em>one model</em>, not ten tools.</h2>
+      <p>Save the model. Keep the references visible. Generate, review, and reuse — without jumping between prompt docs, file folders, and billing pages.</p>
+    </div>
+
+    <div class="workspace">
+      <div class="workspace-bar">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="url">studio.personastudio.app / mira-vale</div>
+        <div class="balance">◐ 12,840 tokens</div>
+      </div>
+      <div class="workspace-body">
+        <aside class="workspace-side">
+          <div class="ws-section">
+            <div class="ws-label">Workspace</div>
+            <div class="ws-item">Personas</div>
+            <div class="ws-item active">Images</div>
+            <div class="ws-item">Videos</div>
+            <div class="ws-item">Speech</div>
+            <div class="ws-item">Avatars</div>
+          </div>
+          <div class="ws-section">
+            <div class="ws-label">Library</div>
+            <div class="ws-item">Assets</div>
+            <div class="ws-item">Prompts</div>
+            <div class="ws-item">History</div>
+          </div>
+          <div class="ws-section">
+            <div class="ws-label">Learn</div>
+            <div class="ws-item">Guides</div>
+            <div class="ws-item">Playbooks</div>
+          </div>
+        </aside>
+        <main class="ws-main">
+          <div class="ws-header">
+            <div>
+              <div class="ws-title">Mira <em>Vale</em></div>
+              <div class="ws-meta">created 2024.11 · 47 assets · 8 saved references</div>
+            </div>
+            <button class="ws-generate">+ New generation</button>
+          </div>
+          <div class="ws-grid">
+            <div class="ws-card">
+              <h4>Persona brief</h4>
+              <div class="brief-row"><span class="k">Name</span><span class="v">Mira Vale</span></div>
+              <div class="brief-row"><span class="k">Goal</span><span class="v">Reusable refs, first content set</span></div>
+              <div class="brief-row"><span class="k">Style</span><span class="v">Warm editorial, realistic light</span></div>
+              <div class="brief-row"><span class="k">Voice</span><span class="v">Calm, low, slight rasp</span></div>
+              <div class="brief-row"><span class="k">Body</span><span class="v">5'6", athletic, dark hair</span></div>
+            </div>
+            <div class="ws-card">
+              <h4>Reference set</h4>
+              <div class="ref-grid">
+                <div class="ref-tile primary"><img src="https://picsum.photos/seed/ws-ref-face/200/200" alt=""><span class="tag">Face</span></div>
+                <div class="ref-tile"><img src="https://picsum.photos/seed/ws-ref-body/200/200" alt=""><span class="tag">Body</span></div>
+                <div class="ref-tile"><img src="https://picsum.photos/seed/ws-ref-outfit/200/200" alt=""><span class="tag">Outfit</span></div>
+                <div class="ref-tile"><img src="https://picsum.photos/seed/ws-ref-identity/200/200" alt=""><span class="tag">ID</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="output-section">
+            <div class="output-head">
+              <h4>Output review · batch 04</h4>
+              <div class="cost-pill">◐ 480 tokens · before run</div>
+            </div>
+            <div class="output-grid">
+              <div class="output-tile"><img src="https://picsum.photos/seed/ws-out-1/300/400" alt=""></div>
+              <div class="output-tile selected"><img src="https://picsum.photos/seed/ws-out-2/300/400" alt=""><span class="check">✓</span></div>
+              <div class="output-tile"><img src="https://picsum.photos/seed/ws-out-3/300/400" alt=""></div>
+              <div class="output-tile"><img src="https://picsum.photos/seed/ws-out-4/300/400" alt=""></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="tokens" id="tokens">
+  <div class="container tokens-inner">
+    <div>
+      <span class="eyebrow">04 / Token transparency</span>
+      <h2>You see the cost <em>before</em> you run the job. Never after.</h2>
+      <p>No hidden generation fees. No surprise billing at the end of the month. Studio access is one flat price. Generation tokens are pay-as-you-go — always visible, always shown before you commit to a run.</p>
+      <p style="margin-top:16px;">Run a test image for 120 tokens. A 4-second video for 880. Bail on a batch if the math stops working. The meter is yours.</p>
+    </div>
+    <div class="meter-card">
+      <div class="meter-row">
+        <div>
+          <div class="meter-label">4K still image</div>
+          <div class="meter-bar"><div style="width: 14%"></div></div>
+        </div>
+        <div class="meter-cost">120</div>
+      </div>
+      <div class="meter-row">
+        <div>
+          <div class="meter-label">4-second video clip</div>
+          <div class="meter-bar"><div style="width: 68%"></div></div>
+        </div>
+        <div class="meter-cost">880</div>
+      </div>
+      <div class="meter-row">
+        <div>
+          <div class="meter-label">Voice clone · 30s</div>
+          <div class="meter-bar"><div style="width: 22%"></div></div>
+        </div>
+        <div class="meter-cost">200</div>
+      </div>
+      <div class="meter-row">
+        <div>
+          <div class="meter-label">Talking avatar · 15s</div>
+          <div class="meter-bar"><div style="width: 52%"></div></div>
+        </div>
+        <div class="meter-cost">640</div>
+      </div>
+      <div class="meter-total">
+        <div>
+          <div class="label">Balance</div>
+          <div class="value">12,840 <em>tokens</em></div>
+        </div>
+        <a href="#" class="btn-secondary">Top up</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="audience">
+  <div class="container">
+    <div class="audience-head">
+      <span class="eyebrow">05 / Who it's for</span>
+      <h2>Three people who keep <em>losing weeks</em> to the wrong stage.</h2>
+    </div>
+    <div class="audience-list">
+      <div class="audience-item">
+        <div class="audience-num">A &nbsp;·&nbsp; For the new builder</div>
+        <h3>Start without the <em>$1,200 course</em>.</h3>
+        <p>Without a folder of bookmarks. Without guessing which reference matters first. The studio gives you the order, the tools, and the lessons — so the first week produces assets, not research.</p>
+      </div>
+      <div class="audience-item">
+        <div class="audience-num">B &nbsp;·&nbsp; For the small team</div>
+        <h3>One model, <em>shared context</em>.</h3>
+        <p>Keep the look, the prompts, the generated assets, and the testing history in one workspace. Everyone generates from the same reference set. No more "which Mira is this?"</p>
+      </div>
+      <div class="audience-item">
+        <div class="audience-num">C &nbsp;·&nbsp; For the tool-fatigued</div>
+        <h3>One workspace, <em>not fifteen tabs</em>.</h3>
+        <p>Three billing pages, two model docs, a Discord, a notes app, and a desktop full of "final_v3.png". Persona Studio replaces all of it with one guided surface.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="closing" id="closing">
+  <div class="container closing-inner">
+    <span class="eyebrow">06 / Why this exists</span>
+    <blockquote>
+      Save the hours you'd spend researching tools, testing random prompts, and buying overpriced lessons. <em>Build the model. Learn what works. Ship the content.</em>
+    </blockquote>
+    <cite>— Persona Studio · built for practical builders</cite>
+    <div class="closing-cta">
+      <a href="#" class="btn-primary">Open the studio <span>→</span></a>
+      <a href="#" class="btn-text">or read the guides first</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div>© Persona Studio · 2024</div>
+    <div class="footer-links">
+      <a href="#">Studio</a>
+      <a href="#">Pricing</a>
+      <a href="#">Guides</a>
+      <a href="#">FAQ</a>
+      <a href="#">Contact</a>
+    </div>
+    <div>v1.0 · all systems operational</div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    const heroVisual = document.getElementById('heroVisual');
+    const cards = heroVisual ? heroVisual.querySelectorAll('.card[data-depth]') : [];
+
+    if (!heroVisual || !cards.length || reduceMotion || isTouch) return;
+
+    let mx = 0, my = 0, tx = 0, ty = 0;
+    let running = true;
+
+    heroVisual.addEventListener('mousemove', (e) => {
+      const rect = heroVisual.getBoundingClientRect();
+      mx = (e.clientX - rect.left) / rect.width - 0.5;
+      my = (e.clientY - rect.top) / rect.height - 0.5;
+    });
+    heroVisual.addEventListener('mouseleave', () => { mx = 0; my = 0; });
+
+    // Pause when off-screen
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { running = entry.isIntersecting; });
+    }, { threshold: 0 });
+    io.observe(heroVisual);
+
+    function tick() {
+      if (running) {
+        tx += (mx - tx) * 0.08;
+        ty += (my - ty) * 0.08;
+        cards.forEach(card => {
+          const depth = parseFloat(card.dataset.depth);
+          const base = card.dataset.base;
+          const dx = tx * 30 * depth;
+          const dy = ty * 30 * depth;
+          const rx = -ty * 6 * depth;
+          const ry = tx * 10 * depth;
+          card.style.transform = `${base} translate3d(${dx}px, ${dy}px, 0) rotateX(${rx}deg) rotateY(${ry}deg)`;
+        });
+      }
+      requestAnimationFrame(tick);
+    }
+    tick();
+  })();
+</script>
+
+</body>
+</html>

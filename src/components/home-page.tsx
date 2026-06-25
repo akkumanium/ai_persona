@@ -22,65 +22,65 @@ import { AuthButton } from "@/components/auth/auth-button";
 
 const features = [
   {
-    title: "Stable character direction",
-    copy: "Store the persona's look, voice, references, and usage notes together so every new asset starts from the same creative brief.",
+    title: "A clear starting point",
+    copy: "Create a persona once, save the look and style, then build every new image or video from the same direction instead of starting over.",
     icon: Fingerprint,
   },
   {
-    title: "Reference-aware generation",
-    copy: "Choose the exact images that should guide a render. The workspace keeps those references visible instead of hiding them in a prompt history.",
+    title: "Consistent 4K references",
+    copy: "Make strong face, body, and style references that help your AI model stay recognizable across future content.",
     icon: Eye,
   },
   {
-    title: "Spend visibility before output",
-    copy: "See the balance impact of image and video jobs as you work, making it easier to plan tests without losing track of cost.",
+    title: "No hidden generation costs",
+    copy: "See the token cost before you run a job, so you know what you are spending on tests, images, videos, speech, and avatar clips.",
     icon: CalendarCheck,
   },
   {
-    title: "Reviewable production history",
-    copy: "Generated assets, prompts, providers, and job states stay attached to the persona so teams can compare what worked.",
+    title: "Guides that explain the business",
+    copy: "Read practical lessons about setup, persona choices, traffic quality, tools, and what actually matters when building an AI OFM workflow.",
     icon: FileText,
   },
 ];
 
 const steps = [
   {
-    title: "Define the identity",
-    copy: "Capture the persona's purpose, visual boundaries, styling notes, and reusable reference needs.",
+    title: "Choose the persona",
+    copy: "Give the model a name, a clear description, and a style direction. This becomes the base for every generation.",
   },
   {
-    title: "Generate with context",
-    copy: "Select references, choose image or video output, and keep every job tied to the right identity.",
+    title: "Build reusable references",
+    copy: "Generate or upload the key shots: face, body, outfit, and extra identity images. Save the best ones as your model's reference set.",
   },
   {
-    title: "Reuse the best results",
-    copy: "Promote strong outputs into your reference set and build the next batch from evidence, not guesswork.",
+    title: "Turn references into content",
+    copy: "Use the saved references to create images, videos, speech, and talking-avatar clips while keeping the cost visible.",
   },
 ];
 
 const useCases = [
   {
-    title: "Creator teams",
-    copy: "Keep recurring faces, outfits, campaign themes, and approved references organized across short-form content cycles.",
+    title: "New AI OFM builders",
+    copy: "Start without buying an expensive course, researching every model yourself, or guessing which references you need first.",
     icon: Clapperboard,
   },
   {
-    title: "Brand studios",
-    copy: "Prototype talent concepts, product scenes, and launch visuals while maintaining clear review notes for stakeholders.",
+    title: "Small creator teams",
+    copy: "Keep the model's look, prompt direction, generated assets, and testing history in one place as you produce content.",
     icon: BriefcaseBusiness,
   },
   {
-    title: "Small businesses",
-    copy: "Create consistent social assets for offers, seasonal campaigns, and audience tests without rebuilding style direction each week.",
+    title: "People tired of tool research",
+    copy: "Use one guided workspace instead of jumping between model docs, random prompts, billing pages, and scattered file folders.",
     icon: UsersRound,
   },
 ];
 
 const credibility = [
-  "Reference-first workflow",
-  "Secure account access",
-  "Clear token balance",
-  "Image and video jobs",
+  "Guided studio workflow",
+  "Human-written guides",
+  "Transparent token balance",
+  "Community chat coming soon",
 ];
 
 export function HomePage({
@@ -136,15 +136,15 @@ export function HomePage({
         <div className="mx-auto max-w-4xl">
           <div className="inline-flex items-center justify-center gap-2 rounded-full border border-[#ff4fa3]/28 bg-white/[0.07] px-3 py-2 text-sm font-semibold text-[#ffd0e7] shadow-[0_14px_45px_rgba(0,0,0,0.22)] backdrop-blur">
             <BadgeCheck size={16} className="text-[#ff65af]" />
-            Persona production for careful creative teams
+            AI OFM tools, guides, and workflow in one place
           </div>
 
           <h1 className="mx-auto mt-7 text-5xl font-semibold leading-[1.01] tracking-normal text-white sm:text-7xl">
-            Stop wasting your time. Start generating now.
+            Stop wasting time. Start building now.
           </h1>
 
           <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-[#b6bacb]">
-            Generate
+            Persona Studio helps you create a consistent AI model, generate reusable references, turn them into images and videos, and learn the workflow without paying for an overpriced course.
           </p>
 
           <div className="mt-9 flex flex-wrap justify-center gap-3">
@@ -152,7 +152,7 @@ export function HomePage({
               href="/studio"
               className="inline-flex h-12 items-center gap-2 rounded-md bg-[#ff4fa3] px-5 text-sm font-semibold text-[#120913] shadow-[0_18px_44px_rgba(255,79,163,0.26)] transition hover:bg-[#ff77b8]"
             >
-              Open studio
+              Open the studio
               <ArrowRight size={18} />
             </Link>
           </div>
@@ -172,13 +172,13 @@ export function HomePage({
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-7 lg:grid-cols-[0.72fr_1fr] lg:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Practical Benefits</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">What You Get</p>
               <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-normal text-white sm:text-5xl">
-                Less drift, clearer decisions, faster asset review.
+                The tools and guidance to move from idea to usable content faster.
               </h2>
             </div>
             <p className="max-w-2xl text-base leading-7 text-[#aeb4c6]">
-              The product is built around the parts of AI production that usually become messy: references, revisions, token spend, and shared memory.
+              Instead of selling theory only, Persona Studio gives you a working generation space plus clear lessons on setup, model choices, content strategy, and audience quality.
             </p>
           </div>
 
@@ -207,10 +207,10 @@ export function HomePage({
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">How It Works</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
-              A simple loop for keeping creative direction honest.
+              A simple path from blank idea to first production assets.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-[#aeb4c6]">
-              Persona Studio keeps planning, generation, and review close together so each pass improves the system instead of becoming another loose file.
+              You do not need to understand every AI model first. The studio gives you the steps, the right controls, and the saved history so each result teaches the next one.
             </p>
           </div>
 
@@ -235,15 +235,15 @@ export function HomePage({
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Product Preview</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
-              A workspace built for reference-led AI production.
+              A guided workspace for creating and reusing your AI model.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-[#aeb4c6]">
-              Compare persona notes, selected references, output state, and token cost without jumping between prompt documents, file folders, and billing pages.
+              Save the model, keep references visible, generate new content, and review costs without jumping between prompt documents, file folders, and billing pages.
             </p>
             <div className="mt-7 grid gap-3 text-sm text-[#d7dbea]">
-              <PreviewPoint icon={Layers3} text="Reference slots make intent visible before generation starts." />
-              <PreviewPoint icon={MessageSquareText} text="Prompts remain attached to the resulting asset for later review." />
-              <PreviewPoint icon={ShieldCheck} text="Account access and credits are handled before the studio opens." />
+              <PreviewPoint icon={Layers3} text="Save the face, body, and style references that define the persona." />
+              <PreviewPoint icon={MessageSquareText} text="Keep prompts and generated results attached to the right model." />
+              <PreviewPoint icon={ShieldCheck} text="Pay for studio access and generation tokens without inflated course pricing." />
             </div>
           </div>
 
@@ -254,9 +254,9 @@ export function HomePage({
       <section className="px-5 py-20 sm:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Use Cases</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Who It Helps</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
-              Useful when consistency is part of the brief.
+              Built for people who want to create, test, and learn without wasting weeks.
             </h2>
           </div>
 
@@ -278,23 +278,23 @@ export function HomePage({
       <section className="border-t border-white/10 bg-[#0d0d19] px-5 py-20 sm:px-8">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Credibility</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#ff77b8]">Why It Exists</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-normal text-white sm:text-5xl">
-              Calm enough for daily work. Precise enough for client review.
+              Most people do not need another expensive course. They need a clear workflow.
             </h2>
           </div>
           <div className="rounded-lg border border-white/10 bg-white/[0.055] p-6 shadow-[0_22px_80px_rgba(0,0,0,0.28)] backdrop-blur">
             <p className="text-xl leading-8 text-[#eef0f8]">
-              &quot;The value is not another prompt box. It is the shared record: who the persona is, which references are approved, what each job cost in tokens, and which outputs are worth repeating.&quot;
+              &quot;The goal is simple: save the hours you would spend researching tools, testing random prompts, and buying overpriced lessons. Focus on building the model, learning what works, and producing content.&quot;
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
               <div>
-                <p className="font-semibold text-white">Creative operations lead</p>
-                <p className="mt-1 text-sm text-[#aeb4c6]">Reviewing AI creator workflows for brand teams</p>
+                <p className="font-semibold text-white">Persona Studio</p>
+                <p className="mt-1 text-sm text-[#aeb4c6]">AI OFM education, generation tools, and practical workflow</p>
               </div>
               <div className="flex items-center gap-2 rounded-md border border-[#ff4fa3]/24 bg-[#ff4fa3]/10 px-3 py-2 text-sm font-semibold text-[#ffd0e7]">
                 <ShieldCheck size={16} />
-                Built for accountable production
+                Built for practical builders
               </div>
             </div>
           </div>
@@ -331,11 +331,11 @@ function WorkspacePreview() {
         <div className="grid gap-4">
           <div className="grid gap-3 md:grid-cols-[1fr_0.78fr]">
             <div className="rounded-lg border border-white/10 bg-white/[0.045] p-4">
-              <p className="text-sm font-semibold text-white">Generation brief</p>
+              <p className="text-sm font-semibold text-white">Persona brief</p>
               <div className="mt-4 grid gap-3">
-                <BriefRow label="Persona" value="Mira Vale, editorial founder" />
-                <BriefRow label="Output" value="Vertical product stills" />
-                <BriefRow label="Guardrail" value="Keep facial structure and soft studio lighting" />
+                <BriefRow label="Persona" value="Mira Vale, AI creator model" />
+                <BriefRow label="Goal" value="Reusable references and first content set" />
+                <BriefRow label="Style" value="Consistent face, outfit, and realistic lighting" />
               </div>
             </div>
             <div className="rounded-lg border border-white/10 bg-[#0b1020] p-4">
@@ -351,10 +351,10 @@ function WorkspacePreview() {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-white">Output review</p>
-                <p className="mt-1 text-xs text-[#9fa6b8]">Compare the newest set before saving references.</p>
+                <p className="mt-1 text-xs text-[#9fa6b8]">Choose the strongest result and reuse it next time.</p>
               </div>
               <span className="rounded-md border border-[#8db7ff]/25 bg-[#8db7ff]/10 px-3 py-1.5 text-xs font-semibold text-[#cfe0ff]">
-                2 min remaining
+                Cost shown first
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3">

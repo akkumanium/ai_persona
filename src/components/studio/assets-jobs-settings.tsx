@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { Coins, Copy, Gift, Trash2 } from "lucide-react";
+import { Coins, Copy, Gift, Trash2, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TokenTopUps } from "@/components/billing-plans";
 import { BillingManagement } from "@/components/billing-management";
@@ -154,6 +154,7 @@ export function SettingsView({
   const [rewardedReferrals, setRewardedReferrals] = useState(0);
   const [rewardedCents, setRewardedCents] = useState(0);
   const [referralMessage, setReferralMessage] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
   const referralLink = useMemo(() => {
     if (!referralCode || typeof window === "undefined") return "";
     const url = new URL("/auth/signin", window.location.origin);
@@ -191,8 +192,42 @@ export function SettingsView({
     setReferralMessage("Referral link copied.");
   }
 
+  async function copyAccountId() {
+    if (!userId) return;
+    await navigator.clipboard.writeText(userId);
+    setAccountMessage("Account ID copied.");
+  }
+
   return (
     <section className="grid gap-6">
+      <div className="max-w-3xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <PanelTitle icon={UserRound} title="Account" />
+        <div className="mt-5 grid gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Email</p>
+            <p className="mt-1 text-sm font-medium text-stone-900">{userEmail ?? "Not available"}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">Account ID</p>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <code className="min-w-0 flex-1 break-all rounded-md border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm text-stone-700">
+                {userId ?? "Not available in preview mode"}
+              </code>
+              <button
+                type="button"
+                onClick={() => void copyAccountId()}
+                disabled={!userId}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-700 hover:text-emerald-800 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400"
+              >
+                <Copy size={15} />
+                Copy ID
+              </button>
+            </div>
+            {accountMessage ? <p className="mt-2 text-sm text-emerald-800">{accountMessage}</p> : null}
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={Coins} title="Balance" />
         <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>

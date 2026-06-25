@@ -198,6 +198,16 @@ select option {
   background: #111827;
 }
 
+.guide-admin-field {
+  background-color: rgba(8, 13, 22, 0.62) !important;
+  color: #eef6ff !important;
+  box-shadow: none !important;
+}
+
+.guide-admin-field::placeholder {
+  color: rgba(191, 208, 230, 0.48) !important;
+}
+
 input[type="checkbox"] {
   accent-color: var(--accent);
   box-shadow: none;

@@ -28,6 +28,9 @@
 62. Make outputs (except references) being stored for 7 days
 63. Contact us page redirects to main page only
 64. Change references design
+65. Preview must be in bottom right corner, not in bottom left one. Also "preview mode" is white and the background is also white so the text isn't even visible.
+66. No need for the left block (with tabs) being so big
+67. Add bust
 
 What to include to main page:
 1. Stop wasting time - start building now
