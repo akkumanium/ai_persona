@@ -31,6 +31,8 @@
 65. Preview must be in bottom right corner, not in bottom left one. Also "preview mode" is white and the background is also white so the text isn't even visible.
 66. No need for the left block (with tabs) being so big
 67. Add bust
+68. Optimize for phone users
+69. Free telegram icon
 
 What to include to main page:
 1. Stop wasting time - start building now

@@ -189,19 +189,19 @@ export function BillingPlans({
   const styles =
     theme === "dark"
       ? {
-          eyebrow: "text-[#ff77b8]",
-          title: "text-white",
-          copy: "text-[#aeb4c6]",
-          card: "rounded-lg border border-white/10 bg-white/[0.055] p-5 text-white shadow-[0_20px_70px_rgba(0,0,0,0.24)] backdrop-blur",
-          description: "text-[#aeb4c6]",
-          price: "text-[#ff77b8]",
-          meta: "text-[#9fa6b8]",
-          benefit: "text-[#d9dce8]",
-          check: "text-[#8db7ff]",
-          button: "mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#ff4fa3] px-4 text-sm font-semibold text-[#120913] shadow-[0_14px_34px_rgba(255,79,163,0.22)] transition hover:bg-[#ff77b8] disabled:cursor-not-allowed disabled:opacity-65",
-          warning: "mt-5 rounded-lg border border-[#ff4fa3]/25 bg-[#ff4fa3]/10 p-4 text-sm leading-6 text-[#ffd0e7]",
-          message: "mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.055] p-4 text-sm leading-6 text-[#d9dce8] backdrop-blur",
-          refresh: "inline-flex h-10 items-center gap-2 rounded-md border border-white/[0.14] px-3 font-semibold text-white transition hover:border-[#ff4fa3]/70",
+          eyebrow: "text-[#d4a574]",
+          title: "text-[#f1ebe3]",
+          copy: "text-[#b3a9a0]",
+          card: "rounded-[14px] border border-[#f1ebe3]/10 bg-[#151214] p-5 text-[#f1ebe3] shadow-[0_28px_90px_rgba(0,0,0,0.34)] transition hover:-translate-y-0.5 hover:border-[#ff4d6d]/35",
+          description: "text-[#b3a9a0]",
+          price: "text-[#ff8a9b]",
+          meta: "text-[#7a716a]",
+          benefit: "text-[#d8cec3]",
+          check: "text-[#d4a574]",
+          button: "mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#ff4d6d] px-4 text-sm font-semibold text-[#0c0a0b] shadow-[0_14px_34px_rgba(255,77,109,0.24)] transition hover:-translate-y-0.5 hover:bg-[#ff6a82] disabled:cursor-not-allowed disabled:opacity-65",
+          warning: "mt-5 rounded-[14px] border border-[#ff4d6d]/25 bg-[#ff4d6d]/10 p-4 text-sm leading-6 text-[#ffd0e7]",
+          message: "mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#f1ebe3]/10 bg-[#151214] p-4 text-sm leading-6 text-[#d8cec3]",
+          refresh: "inline-flex h-10 items-center gap-2 rounded-full border border-[#f1ebe3]/15 px-4 font-semibold text-[#f1ebe3] transition hover:border-[#ff4d6d]/70",
         }
       : {
           eyebrow: "text-[#a83a6d]",

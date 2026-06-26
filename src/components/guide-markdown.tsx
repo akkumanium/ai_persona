@@ -14,8 +14,8 @@ export function GuideMarkdown({ body }: { body: string }) {
         if (block.type === "heading") {
           const className =
             block.level === 2
-              ? "mt-6 scroll-mt-24 border-t border-white/10 pt-8 text-2xl font-semibold leading-tight text-white first:mt-0 first:border-t-0 first:pt-0 sm:text-3xl"
-              : "mt-3 text-xl font-semibold leading-tight text-white";
+              ? "mt-6 scroll-mt-24 border-t border-[#f1ebe3]/10 pt-8 text-2xl font-semibold leading-tight text-[#f1ebe3] first:mt-0 first:border-t-0 first:pt-0 sm:text-3xl"
+              : "mt-3 text-xl font-semibold leading-tight text-[#f1ebe3]";
           const HeadingTag = block.level === 2 ? "h2" : "h3";
           return (
             <HeadingTag key={`${block.type}-${index}`} className={className}>
@@ -29,7 +29,7 @@ export function GuideMarkdown({ body }: { body: string }) {
           return (
             <ListTag
               key={`${block.type}-${index}`}
-              className={`grid gap-3 pl-6 text-base leading-8 text-[#c9cedc] marker:text-[#ff77b8] ${
+              className={`grid gap-3 pl-6 text-base leading-8 text-[#d8cec3] marker:text-[#ff8a9b] ${
                 block.ordered ? "list-decimal" : "list-disc"
               }`}
             >
@@ -41,7 +41,7 @@ export function GuideMarkdown({ body }: { body: string }) {
         }
 
         return (
-          <p key={`${block.type}-${index}`} className="text-base leading-8 text-[#c9cedc]">
+          <p key={`${block.type}-${index}`} className="text-base leading-8 text-[#d8cec3]">
             {renderInline(block.text)}
           </p>
         );
@@ -129,7 +129,7 @@ function renderInline(text: string) {
   while ((match = regex.exec(text))) {
     if (match.index > lastIndex) pieces.push(text.slice(lastIndex, match.index));
     pieces.push(
-      <strong key={`${match.index}-${match[1]}`} className="font-semibold text-white">
+      <strong key={`${match.index}-${match[1]}`} className="font-semibold text-[#f1ebe3]">
         {match[1]}
       </strong>,
     );
