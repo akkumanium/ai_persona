@@ -106,11 +106,10 @@ export default async function GuidesPage() {
               className="mt-6 max-w-3xl text-5xl font-normal leading-[0.98] tracking-normal sm:text-7xl"
               style={{ fontFamily: "var(--font-page-serif), Georgia, serif" }}
             >
-              Practical notes, <em className="text-[#ff4d6d]">one topic</em> at a time.
+              Guides
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-8 text-[#b3a9a0] sm:text-lg">
-              Short, editable articles for account setup, persona choices, and traffic quality.
-              Browse the library here; active members can open the full articles.
+              Short, editable guides for account setup, persona choices, and traffic quality.
             </p>
           </div>
 
@@ -128,20 +127,6 @@ export default async function GuidesPage() {
                   />
                 </div>
               ))}
-            </div>
-            <div className="p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#f1ebe3]">
-                {hasGuideAccess ? (
-                  <ShieldCheck size={17} className="text-[#d4a574]" />
-                ) : (
-                  <LockKeyhole size={17} className="text-[#ff8a9b]" />
-                )}
-                {hasGuideAccess ? "Member access active" : "Members-only reading"}
-              </div>
-              <p className="mt-2 text-sm leading-6 text-[#b3a9a0]">
-                {articles.length} {articles.length === 1 ? "article is" : "articles are"} available in the library.
-                {hasGuideAccess ? " Open any guide below." : " Subscribe to read the full playbooks."}
-              </p>
             </div>
           </div>
         </section>

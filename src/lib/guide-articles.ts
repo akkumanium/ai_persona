@@ -52,7 +52,7 @@ export const fallbackGuideArticles: GuideArticle[] = guides.map((guide) => ({
 
 export async function getGuideArticles({ includeDrafts = false } = {}) {
   const dbArticles = await getGuideArticlesFromDatabase(includeDrafts);
-  return dbArticles ?? fallbackGuideArticles;
+  return dbArticles?.length ? dbArticles : fallbackGuideArticles;
 }
 
 export async function getGuideArticleBySlug(slug: string, { includeDrafts = false } = {}) {
@@ -76,7 +76,10 @@ async function getGuideArticlesFromDatabase(includeDrafts: boolean) {
 
     const { data, error } = await query;
     if (error) return null;
-    return (data as GuideArticleRow[]).map(mapGuideArticleRow);
+    const articles = (data as GuideArticleRow[]).map(mapGuideArticleRow);
+
+    // If the database is reachable but hasn't been seeded yet, keep the app usable.
+    return articles.length ? articles : null;
   } catch {
     return null;
   }

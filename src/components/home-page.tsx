@@ -27,7 +27,7 @@ const marqueeItems = [
   "Seedance 2.0",
   "Voice clone",
   "Talking avatar",
-  "Style lock",
+  "OFM guides",
   "Same body",
   "Same voice",
   "Every platform",
@@ -332,7 +332,7 @@ export function HomePage({
             <a href="#problem">Why</a>
             <a href="#engine">Engine</a>
             <a href="#why-us">Why us</a>
-            <a href="#guides">Guides</a>
+            <a href="/guides">Guides</a>
             <Link href="/pricing">Pricing</Link>
             <Link href="/faq">FAQ</Link>
           </div>

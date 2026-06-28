@@ -271,6 +271,10 @@ export function BillingPlans({
                   <Check size={16} className={styles.check} />
                   Enables generation tools; Studio browsing stays free
                 </div>
+                <div className="flex items-center gap-2">
+                  <Check size={16} className={styles.check} />
+                  Cancel anytime
+                </div>
               </div>
 
               <button
