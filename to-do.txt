@@ -2,37 +2,29 @@
 7. Google oauth settings fix 
 8. Fix invisibility issue
 12. Email fix
-17. Check supabase again - does the sync really work correctly all the time?
-19. Edit text at the main page
-23. Make sure Wan Animate model used is correct
-24. Add infinitetalk
 32. Change tokens buy up design
 36. Check data usage
-40. Make favicon
 41. Add carousel
 42. Add runninghub
 46. Maybe change "tokens" to tokens icon
 48. Look into chatbot.
 49. Probably change the prompt for body
-50. I uploaded a wav and it said "The selected audio length could not be read yet.", why?
 51. Check options for every video and clearly differentiate them.
 52. Change "generate from Scratch" to "generate" and change the options
 54. Add human-written guides
-55. Community-chat - COMING SOON
-56. Unexpected token '<', "<!DOCTYPE "... is not valid JSON at referal link and now permission denied for table referral_rewards
-57. Create terms of usage
+55. Open community chat
 58. Figure out Seedance prompting
 59. Is there an easy, clear way to cancel the membership?
 60. Refund policy if the user hasn't used the credits
-61. Do access to studio for free, but without credits
-62. Make outputs (except references) being stored for 7 days
-63. Contact us page redirects to main page only
 64. Change references design
-65. Preview must be in bottom right corner, not in bottom left one. Also "preview mode" is white and the background is also white so the text isn't even visible.
+65. Preview message must be in top center as a bar. Also "preview mode" is white and the background is also white so the text isn't even visible.
 66. No need for the left block (with tabs) being so big
 67. Add bust
 68. Optimize for phone users
 69. Free telegram icon
+70. Check how subcription renewal works
+71. Add wan 2.7 as image generator
+72. Change referral link
 
 What to include to main page:
 1. Stop wasting time - start building now
@@ -60,6 +52,7 @@ https://foxy.ai/
 
 Client secret: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
 Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com
+Elevenlabs:sk_84b6297aec782c86eb03363a44c44f0018eaae12c734a148
 
 
 I want you to thoroughly analyze and describe the photo I send you. Based on that analysis, you need to create a prompt for Seedream 4.5 and/or Nano Banana Pro. Use the following format:
@@ -77,3 +70,22 @@ I want a very detailed and precise analysis of the photo and a prompt that as fa
 Single shot. In a parked car. The woman raises her hands and puts them behind her head, exposing armpits. Playful look. She says with playful voice: "My friends said older men are better, but I never tried it before".
 
 An authentic, high-resolution lifestyle selfie of a woman sitting inside a modern car, chest-up framing, eye-level perspective. She is wearing a casual white ribbed camisole with a delicate white lace trim along the V-neckline. She is leaning back against a black leather car seat that features clean white contrast stitching. The car interior is bright and airy, flooded with soft, natural diffused daylight. Visible through the car side windows and rear windshield is a blurry background of a tropical beachside street lined with tall palm trees under a sunny blue sky. Casual Instagram selfie aesthetic, soft depth of field, sun-kissed mood, cinematic yet realistic smartphone photo quality
+
+----
+Jimmy's promot
+----
+Create a Character reference sheet - four views on a neutral grey background:
+
+[VIEW 1 - FULL BODY, FRONT] Full-body front-facing three-quarter view of this character, full body visible head to feet.
+
+[VIEW 2 - FULL BODY, REAR] Full-body rear view of the same character, directly from behind. Full body visible head to feet.
+
+[VIEW 3 - FRONT CLOSE-UP] Head and shoulders close-up, straight-on front view. Sharp detail on skin texture, accessories, and costume
+
+surface detail. Chest and shoulder clothing visible at the bottom of frame.
+
+[VIEW 4 - PROFILE CLOSE-UP] Head and shoulders close-up, 90-degree left profile view. Neck and upper shoulder visible.
+
+Lighting & presentation: Clean studio lighting - soft key light upper left, gentle fill from the right. Consistent character identity, proportions,
+
+and costume details across all four views. No text, no watermarks, no extra figures, no background environment. [insert outfit or clothing and basic features here]

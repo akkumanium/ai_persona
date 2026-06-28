@@ -1,5 +1,6 @@
 export type ModelCapability =
   | "avatar"
+  | "image-prompt"
   | "image-reference"
   | "video-normal"
   | "video-motion";
@@ -17,6 +18,7 @@ import {
   CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
   SEEDREAM_4_5_MODEL_ID,
+  WAN_2_7_IMAGE_MODEL_ID,
 } from "@/lib/image-model-options";
 
 export const MODEL_REGISTRY: ModelRegistryEntry[] = [
@@ -24,7 +26,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     id: NANO_BANANA_PRO_MODEL_ID,
     label: "Nano Banana Pro",
     provider: "wavespeed",
-    capabilities: ["avatar", "image-reference"],
+    capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
     notes: "Google Gemini 3 Pro Image model with reference-image generation, aspect ratio, and 1K/2K/4K size controls.",
   },
@@ -32,7 +34,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     id: CHATGPT_IMAGE_MODEL_ID,
     label: "ChatGPT Image 2",
     provider: "wavespeed",
-    capabilities: ["avatar", "image-reference"],
+    capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
     notes: "OpenAI image model with generation, edit/reference inputs, quality, and fixed output size controls.",
   },
@@ -40,9 +42,17 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     id: SEEDREAM_4_5_MODEL_ID,
     label: "Seedream 4.5",
     provider: "wavespeed",
-    capabilities: ["avatar", "image-reference"],
+    capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
     notes: "ByteDance Seedream 4.5 with text-to-image, up to 10 reference images, custom output dimensions, and strong typography.",
+  },
+  {
+    id: WAN_2_7_IMAGE_MODEL_ID,
+    label: "Wan 2.7 Image",
+    provider: "wavespeed",
+    capabilities: ["image-prompt"],
+    enabled: true,
+    notes: "WaveSpeed Wan 2.7 text-to-image at common social aspect ratios. Prompt-only; reference images are not sent to this endpoint.",
   },
   {
     id: "wan-2.7",

@@ -191,6 +191,7 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
   const providerRequest: AvatarGenerationRequest = {
     image,
     audio,
+    model: input.model,
     prompt: input.prompt,
     resolution: input.resolution,
     durationSeconds: input.durationSeconds,

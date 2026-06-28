@@ -5,11 +5,14 @@ import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
 
 describe("model registry", () => {
   it("includes ChatGPT for image generation", () => {
+    expect(modelsForCapability("image-prompt").map((model) => model.id)).toEqual(
+      expect.arrayContaining(["gpt-image-2", "seedream-v4.5", "wan-2.7-image"]),
+    );
     expect(modelsForCapability("image-reference").map((model) => model.id)).toEqual(
       expect.arrayContaining(["gpt-image-2", "seedream-v4.5"]),
     );
     expect(modelsForCapability("image-reference").map((model) => model.id)).not.toEqual(
-      expect.arrayContaining(["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini"]),
+      expect.arrayContaining(["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini", "wan-2.7-image"]),
     );
   });
 
@@ -74,6 +77,19 @@ describe("token pricing", () => {
         generationType: "image_from_prompt",
       }).tokens,
     ).toBe(40);
+  });
+
+  it("prices Wan 2.7 image generation per output", () => {
+    expect(
+      estimateImageGenerationPricing({
+        prompt: "Generate a clean creator portrait.",
+        model: "wan-2.7-image",
+        aspectRatio: "9:16",
+        imageSize: "1K",
+        count: 2,
+        generationType: "image_from_prompt",
+      }).tokens,
+    ).toBe(60);
   });
 
   it("prices Wan 2.7 and Kling 3.0 per second without Fal pricing", () => {

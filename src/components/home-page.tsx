@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
-import { useEffect } from "react";
+import { Send } from "lucide-react";
+import { Inter, Space_Grotesk } from "next/font/google";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { AuthButton } from "@/components/auth/auth-button";
 
 const homeSans = Inter({
@@ -12,49 +14,27 @@ const homeSans = Inter({
   display: "swap",
 });
 
-const homeSerif = Instrument_Serif({
+const homeDisplay = Space_Grotesk({
   subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
+  weight: ["300", "400", "500", "600", "700"],
   variable: "--font-home-serif",
   display: "swap",
 });
 
-const homeMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-home-mono",
-  display: "swap",
-});
-
 const marqueeItems = [
-  "4K stills",
-  "Talking avatar",
+  "Nano Banana Pro",
+  "Kling 3.0",
+  "Seedance 2.0",
   "Voice clone",
-  "Wardrobe ref",
-  "Body ref",
-  "Face ref",
-  "4-second video",
-  "Outfit variations",
-  "Lighting tests",
-  "Pose sheet",
+  "Talking avatar",
+  "Style lock",
+  "Same body",
+  "Same voice",
+  "Every platform",
+  "Zero drift",
 ];
 
-const referenceImages = [
-  ["lock-ref-face", "Primary face reference"],
-  ["lock-ref-body", "Body reference"],
-  ["lock-ref-outfit", "Outfit reference"],
-  ["lock-ref-identity", "Identity reference"],
-];
-
-const outputImages = ["gen-out-1", "gen-out-2", "gen-out-3", "gen-out-4"];
-const workspaceReferences = [
-  ["ws-ref-face", "Face"],
-  ["ws-ref-body", "Body"],
-  ["ws-ref-outfit", "Outfit"],
-  ["ws-ref-identity", "ID"],
-];
-const workspaceOutputs = ["ws-out-1", "ws-out-2", "ws-out-3", "ws-out-4"];
+const telegramCommunityUrl = process.env.NEXT_PUBLIC_TELEGRAM_URL ?? "https://t.me/persona_studio";
 
 export function HomePage({
   initialUserEmail,
@@ -129,65 +109,294 @@ export function HomePage({
   }, []);
 
   return (
-    <main className={`${homeSans.variable} ${homeSerif.variable} ${homeMono.variable} new-home`}>
+    <main className={`${homeSans.variable} ${homeDisplay.variable} new-home`}>
+      <style>{`
+        /* ── Scroll reveal ── */
+        .reveal {
+          opacity: 0;
+          transform: translateY(32px);
+          transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                      transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.reveal-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .reveal {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+          }
+        }
+
+        /* ── Heading font override (Space Grotesk) ── */
+        .new-home h1,
+        .new-home h2,
+        .new-home h3,
+        .new-home h4 {
+          font-family: var(--font-home-sans), system-ui, sans-serif !important;
+          letter-spacing: -0.05em;
+        }
+
+        .new-home h1 em,
+        .new-home h2 em,
+        .new-home h3 em {
+          font-style: normal;
+          font-weight: inherit;
+        }
+
+        .new-home h1 {
+          font-weight: 800;
+          line-height: 0.95;
+          font-size: clamp(3rem, 7vw, 6rem) !important;   /* ← add this */
+        }
+
+        .new-home h2 {
+          font-weight: 800;
+          line-height: 1;
+          font-size: clamp(2rem, 4vw, 3.5rem); /* ← add this */
+        }
+
+        .new-home h3,
+        .new-home h4 {
+          font-weight: 700;
+        }
+
+        /* ── Hero card entrance ── */
+        .card-stack .card {
+          animation: heroFadeIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        .card-stack .card-back-3 { animation-delay: 0.15s; }
+        .card-stack .card-back-2 { animation-delay: 0.30s; }
+        .card-stack .card-back-1 { animation-delay: 0.45s; }
+        .card-stack .card-front  { animation-delay: 0.60s; }
+        @keyframes heroFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+
+        /* ── Engine steps ── */
+        .engine-steps {
+          display: flex;
+          flex-direction: column;
+          gap: 1.75rem;
+          margin-top: 2rem;
+        }
+        .engine-step {
+          display: flex;
+          gap: 1.25rem;
+          align-items: flex-start;
+        }
+        .engine-step-num {
+          font-family: var(--font-home-serif), system-ui, sans-serif;
+          font-size: 0.875rem;
+          font-weight: 600;
+          opacity: 0.35;
+          min-width: 2.25rem;
+          padding-top: 0.1rem;
+        }
+        .engine-step-body h4 {
+          font-size: 1.05rem;
+          margin: 0 0 0.4rem;
+        }
+        .engine-step-body p {
+          font-size: 0.9rem;
+          line-height: 1.6;
+          opacity: 0.65;
+          margin: 0;
+        }
+
+        /* ── Why-us section ── */
+        .why-us {
+          padding: 7rem 0;
+        }
+        .why-grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1.5rem;
+          margin-top: 3.5rem;
+        }
+        @media (max-width: 768px) {
+          .why-grid-3 { grid-template-columns: 1fr; }
+        }
+        .why-box {
+          padding: 2.25rem 1.75rem;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 16px;
+          background: rgba(255,255,255,0.02);
+          transition: border-color 0.35s ease, background 0.35s ease, transform 0.35s ease;
+        }
+        .why-box:hover {
+          border-color: rgba(255,255,255,0.16);
+          background: rgba(255,255,255,0.04);
+          transform: translateY(-3px);
+        }
+        .why-box-num {
+          font-family: var(--font-home-serif), system-ui, sans-serif;
+          font-size: 0.7rem;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          opacity: 0.4;
+          margin-bottom: 1rem;
+        }
+        .why-box h3 {
+          font-size: 1.2rem;
+          margin: 0 0 0.65rem;
+        }
+        .why-box p {
+          font-size: 0.875rem;
+          line-height: 1.65;
+          opacity: 0.6;
+          margin: 0;
+        }
+
+        /* ── Guides section ── */
+        .guides-section {
+          padding: 7rem 0;
+        }
+        .guide-list {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.875rem;
+          margin-top: 2.75rem;
+          max-width: 720px;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        @media (max-width: 640px) {
+          .guide-list { grid-template-columns: 1fr; }
+        }
+        .guide-item {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 1.15rem 1.4rem;
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 12px;
+          font-size: 0.9rem;
+          transition: border-color 0.3s ease, transform 0.3s ease;
+        }
+        .guide-item:hover {
+          border-color: rgba(255,255,255,0.16);
+          transform: translateX(5px);
+        }
+        .guide-item-arrow {
+          opacity: 0.4;
+          font-family: var(--font-home-sans), system-ui, sans-serif;
+        }
+
+        /* ── Section head ── */
+        .section-head {
+          text-align: center;
+        }
+        .section-head h2 {
+          margin: 1.1rem 0 0;
+        }
+        .section-head > p {
+          margin: 1.15rem auto 0;
+          font-size: 1rem;
+          opacity: 0.55;
+          max-width: 560px;
+          line-height: 1.6;
+        }
+
+        /* ── Closing ── */
+        .closing-body {
+          font-size: 1.05rem;
+          line-height: 1.65;
+          opacity: 0.6;
+          max-width: 580px;
+          margin: 1.5rem auto 0;
+        }
+
+        /* ── Paragraph em in body copy stays italic ── */
+        .how-left p em,
+        .shift-body p em {
+          font-style: italic;
+          font-weight: inherit;
+        }
+      `}</style>
+
       <div className="home-noise" />
 
+      {/* ── Nav ── */}
       <nav className="nav" aria-label="Primary navigation">
         <div className="container nav-inner">
           <Link href="/" className="brand">
-            <span className="brand-mark" />
+            <Image src="/favicon.svg" alt="" width={22} height={22} className="brand-mark" />
             <span>persona/studio</span>
           </Link>
           <div className="nav-links">
-            <a href="#workflow">Workflow</a>
-            <a href="#studio">Studio</a>
+            <a href="#problem">Why</a>
+            <a href="#engine">Engine</a>
+            <a href="#why-us">Why us</a>
+            <a href="#guides">Guides</a>
             <Link href="/pricing">Pricing</Link>
-            <Link href="/guides">Guides</Link>
             <Link href="/faq">FAQ</Link>
-            <Link href="/contact">Contact</Link>
           </div>
           <div className="nav-actions">
+            <a
+              href={telegramCommunityUrl}
+              className="telegram-link"
+              aria-label="Open Telegram community"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Send size={16} />
+            </a>
             <AuthButton initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} variant="dark" />
           </div>
         </div>
       </nav>
 
+      {/* ── Hero ── */}
       <section className="hero">
         <div className="hero-bg" />
         <div className="container hero-inner">
           <div className="hero-text">
-            <div className="hero-eyebrow">
-              <span className="dot" />
-              AI OFM studio / v1.0
-            </div>
-            <h1>
-              One face.
-              <br />
-              <em>Every output.</em>
-            </h1>
-            <p className="lead">
-              Persona Studio is a working space for AI creator models. Save the face, the body, the style, then generate
-              images, video, speech, and avatar clips that all look unmistakably like the same person.
-            </p>
-            <div className="hero-cta-row">
-              <Link href="/studio" className="btn-primary">
-                Open the studio <span>-&gt;</span>
-              </Link>
-              <a href="#workflow" className="btn-text">
-                See the workflow
-              </a>
-            </div>
-            <div className="hero-foot">
-              <span>
-                <span className="check-mini" /> No hidden generation costs
-              </span>
-              <span>
-                <span className="check-mini" /> Cancel anytime
-              </span>
-              <span>
-                <span className="check-mini" /> Human-written guides
-              </span>
-            </div>
+            <Reveal>
+              <div className="hero-eyebrow">
+                <span className="dot" />
+                AI persona studio
+              </div>
+            </Reveal>
+            <Reveal delay={80}>
+              <h1>
+                Launch your AI influencer
+                <em>today.</em>
+              </h1>
+            </Reveal>
+            <Reveal delay={160}>
+              <p className="lead">
+                Persona Studio is the only workspace you need to build a consistent
+                AI persona and ship images, video, and voice that all look like the same person — every time. Stop wasting your time and start generating now.
+              </p>
+            </Reveal>
+            <Reveal delay={240}>
+              <div className="hero-cta-row">
+                <Link href="/studio" className="btn-primary">
+                  Start generating <span>&rarr;</span>
+                </Link>
+                <a href="#engine" className="btn-text">
+                  See how it works
+                </a>
+              </div>
+            </Reveal>
+            <Reveal delay={320}>
+              <div className="hero-foot">
+                <span>
+                  <span className="check-mini" /> Top AI models
+                </span>
+                <span>
+                  <span className="check-mini" /> Cancel anytime
+                </span>
+                <span>
+                  <span className="check-mini" /> No 6-hour tutorial required
+                </span>
+              </div>
+            </Reveal>
           </div>
 
           <div className="hero-visual" id="homeHeroVisual">
@@ -236,6 +445,7 @@ export function HomePage({
         </div>
       </section>
 
+      {/* ── Marquee ── */}
       <div className="marquee" aria-hidden="true">
         <div className="marquee-track">
           {[...marqueeItems, ...marqueeItems].map((item, index) => (
@@ -244,272 +454,214 @@ export function HomePage({
         </div>
       </div>
 
-      <section className="shift">
+      {/* ── 01 — The Problem ── */}
+      <section className="shift" id="problem">
         <div className="container shift-inner">
-          <div>
-            <div className="shift-num">
-              <span>01</span> / The shift
+          <Reveal>
+            <div>
+              <div className="shift-num">
+                <span>01</span> / Why this exists
+              </div>
             </div>
-          </div>
+          </Reveal>
           <div className="shift-body">
-            <h2>
-              Most people do not need another <em>expensive course</em>. They need a workflow that actually runs.
-            </h2>
-            <p>
-              There is a folder of bookmarks. Three billing dashboards. A desktop covered in final_v3.png. A notes app
-              full of prompts that worked once and never again. And somewhere under all of it, the actual goal: a
-              consistent AI creator model that produces content people pay for.
-            </p>
-            <p>
-              The courses teach the theory. The tools bill by the token. Nobody gives you the workspace where the model,
-              the references, the prompts, and the outputs all live together, so you can stop researching and start
-              shipping.
-            </p>
-            <div className="pullquote">The model is the asset. Everything else is friction.</div>
-            <p>Persona Studio is that workspace. Built around one persona, not ten tools.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="how" id="workflow">
-        <div className="container">
-          <div className="how-head">
-            <span className="eyebrow">02 / The workflow</span>
-            <h2>
-              Three steps. <em>One persona.</em> Every output traces back to the same face.
-            </h2>
-          </div>
-          <div className="how-grid">
-            <div className="how-left">
+            <Reveal delay={100}>
+              <h2>
+                You don&apos;t need another <em>$1,200 course</em>. You need to stop Googling and start shipping.
+              </h2>
+            </Reveal>
+            <Reveal delay={200}>
               <p>
-                You do not need to understand every AI model before you start. The studio gives you the steps, the right
-                controls, and the saved history, so each result teaches the next one.
+                You buy a course, watch 6 hours of theory, open four different tools,
+                fight with three different billing dashboards, and three weeks later you&apos;re
+                left confused and still haven&apos;t created a single video. We solved this problem.
               </p>
-              <p className="mt-20">By step three, you are not testing anymore. You are producing.</p>
-            </div>
-            <div className="how-steps">
-              <WorkflowStep
-                number="01"
-                title="Define the persona"
-                copy="Name, description, style direction. This is the base every future generation inherits from, not a prompt you rewrite each time, but a saved identity."
-              >
-                <div className="mini-brief">
-                  <MiniRow label="Name" value="Mira Vale" />
-                  <MiniRow label="Style" value="Warm editorial, late-afternoon light" />
-                  <MiniRow label="Voice" value="Calm, low register, slight rasp" />
-                </div>
-              </WorkflowStep>
-
-              <WorkflowStep
-                number="02"
-                title="Lock the references"
-                copy="Generate or upload the key shots: face, body, outfit, identity images. Save the keepers as the model's permanent reference set. Every future job pulls from these."
-              >
-                <div className="mini-refs">
-                  {referenceImages.map(([seed, alt], index) => (
-                    <div key={seed} className={`mini-ref ${index === 0 ? "primary" : ""}`}>
-                      <PicsumImage seed={seed} width={200} height={200} alt={alt} sizes="(max-width: 640px) 45vw, 120px" />
-                    </div>
-                  ))}
-                </div>
-              </WorkflowStep>
-
-              <WorkflowStep
-                number="03"
-                title="Generate without drift"
-                copy="Spin out images, video, speech, and avatar clips from the saved references. Cost is shown before every run. The strongest results get folded back into the reference set."
-              >
-                <div className="mini-output">
-                  {outputImages.map((seed, index) => (
-                    <div key={seed} className={`mini-out-tile ${index === 1 ? "selected" : ""}`}>
-                      <PicsumImage seed={seed} width={200} height={260} sizes="(max-width: 640px) 45vw, 120px" />
-                    </div>
-                  ))}
-                </div>
-                <div className="mini-cost">120 tokens / shown before run</div>
-              </WorkflowStep>
-            </div>
+            </Reveal>
+            <Reveal delay={300}>
+              <div className="pullquote">
+                Time is your most valuable currency. We took care of tools and research, so you can focus on making money.
+              </div>
+            </Reveal>
+            <Reveal delay={400}>
+              <p>
+                Persona Studio replaces the course, the bookmarks, and the five tabs with one workspace. Define your
+                persona once. Generate from it forever.
+              </p>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <section className="preview" id="studio">
+      {/* ── 02 — The Persona Engine ── */}
+      <section className="how" id="engine">
         <div className="container">
-          <div className="preview-head">
-            <span className="eyebrow">03 / Inside the studio</span>
-            <h2>
-              A workspace built around <em>one model</em>, not ten tools.
-            </h2>
-            <p>
-              Save the model. Keep the references visible. Generate, review, and reuse without jumping between prompt
-              docs, file folders, and billing pages.
-            </p>
-          </div>
-
-          <div className="workspace">
-            <div className="workspace-bar">
-              <div className="dots">
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="url">studio.personastudio.app / mira-vale</div>
-              <div className="balance">12,840 tokens</div>
+          <Reveal>
+            <div className="how-head">
+              <span className="eyebrow">02 / The persona engine</span>
+              <h2>
+                The same face. 
+                <br></br>
+                <em>Every time.</em>
+              </h2>
             </div>
-            <div className="workspace-body">
-              <aside className="workspace-side">
-                <WorkspaceSection title="Workspace" items={["Personas", "Images", "Videos", "Speech", "Avatars"]} />
-                <WorkspaceSection title="Library" items={["Assets", "Prompts", "History"]} />
-                <WorkspaceSection title="Learn" items={["Guides", "Playbooks"]} />
-              </aside>
-              <div className="ws-main">
-                <div className="ws-header">
-                  <div>
-                    <div className="ws-title">
-                      Mira <em>Vale</em>
-                    </div>
-                    <div className="ws-meta">created 2024.11 / 47 assets / 8 saved references</div>
-                  </div>
-                  <button className="ws-generate" type="button">
-                    + New generation
-                  </button>
-                </div>
-                <div className="ws-grid">
-                  <div className="ws-card">
-                    <h4>Persona brief</h4>
-                    <BriefRow label="Name" value="Mira Vale" />
-                    <BriefRow label="Goal" value="Reusable refs, first content set" />
-                    <BriefRow label="Style" value="Warm editorial, realistic light" />
-                    <BriefRow label="Voice" value="Calm, low, slight rasp" />
-                    <BriefRow label="Body" value={`5'6", athletic, dark hair`} />
-                  </div>
-                  <div className="ws-card">
-                    <h4>Reference set</h4>
-                    <div className="ref-grid">
-                      {workspaceReferences.map(([seed, label], index) => (
-                        <div key={seed} className={`ref-tile ${index === 0 ? "primary" : ""}`}>
-                          <PicsumImage seed={seed} width={200} height={200} sizes="(max-width: 700px) 42vw, 180px" />
-                          <span className="tag">{label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="output-section">
-                  <div className="output-head">
-                    <h4>Output review / batch 04</h4>
-                    <div className="cost-pill">480 tokens / before run</div>
-                  </div>
-                  <div className="output-grid">
-                    {workspaceOutputs.map((seed, index) => (
-                      <div key={seed} className={`output-tile ${index === 1 ? "selected" : ""}`}>
-                        <PicsumImage seed={seed} width={300} height={400} sizes="(max-width: 700px) 42vw, 220px" />
-                        {index === 1 ? <span className="check">OK</span> : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          </Reveal>
+          <div className="how-grid">
+            <Reveal delay={120}>
+              <div className="how-left">
+                <p>
+                  Most AI tools don&apos;t teach you how to keep face consistent every generation. That&apos;s fine for a one-time usage, useless for social media business.
+                  Persona Studio locks your face, body, and style into a saved reference set — every image,
+                  video, and voice clip generates <em>from</em> that set, not from scratch.
+                </p>
+                <p className="mt-20">No LoRA or ComfyUI needed.</p>
               </div>
-            </div>
+            </Reveal>
+            <Reveal delay={240}>
+              <div className="engine-steps">
+                <EngineStep
+                  num="01"
+                  title="Define it once"
+                  copy="Name, look, voice, style direction — set once, saved forever."
+                />
+                <EngineStep
+                  num="02"
+                  title="Lock the references"
+                  copy="Face, body, outfit, identity shots become the permanent source of truth."
+                />
+                <EngineStep
+                  num="03"
+                  title="Generate from it"
+                  copy="Every new asset inherits the same identity instead of reinventing it."
+                />
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      <section className="tokens" id="tokens">
-        <div className="container tokens-inner">
-          <div>
-            <span className="eyebrow">04 / Token transparency</span>
-            <h2>
-              You see the cost <em>before</em> you run the job. Never after.
-            </h2>
-            <p>
-              No hidden generation fees. No surprise billing at the end of the month. Studio access is one flat price.
-              Generation tokens are pay-as-you-go, always visible, always shown before you commit to a run.
-            </p>
-            <p className="mt-16">
-              Run a test image for 120 tokens. A 4-second video for 880. Bail on a batch if the math stops working. The
-              meter is yours.
-            </p>
-          </div>
-          <div className="meter-card">
-            <MeterRow label="4K still image" cost="120" width="14%" />
-            <MeterRow label="4-second video clip" cost="880" width="68%" />
-            <MeterRow label="Voice clone / 30s" cost="200" width="22%" />
-            <MeterRow label="Talking avatar / 15s" cost="640" width="52%" />
-            <div className="meter-total">
-              <div>
-                <div className="label">Balance</div>
-                <div className="value">
-                  12,840 <em>tokens</em>
-                </div>
-              </div>
-              <Link href="/pricing" className="btn-secondary">
-                Top up
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="audience">
+      {/* ── 03 — Why Persona Studio ── */}
+      <section className="why-us" id="why-us">
         <div className="container">
-          <div className="audience-head">
-            <span className="eyebrow">05 / Who it is for</span>
-            <h2>
-              Three people who keep <em>losing weeks</em> to the wrong stage.
-            </h2>
-          </div>
-          <div className="audience-list">
-            <AudienceItem
-              number="A / For the new builder"
-              title={
-                <>
-                  Start without the <em>$1,200 course</em>.
-                </>
-              }
-              copy="Without a folder of bookmarks. Without guessing which reference matters first. The studio gives you the order, the tools, and the lessons, so the first week produces assets, not research."
-            />
-            <AudienceItem
-              number="B / For the small team"
-              title={
-                <>
-                  One model, <em>shared context</em>.
-                </>
-              }
-              copy='Keep the look, the prompts, the generated assets, and the testing history in one workspace. Everyone generates from the same reference set. No more "which Mira is this?"'
-            />
-            <AudienceItem
-              number="C / For the tool-fatigued"
-              title={
-                <>
-                  One workspace, <em>not fifteen tabs</em>.
-                </>
-              }
-              copy='Three billing pages, two model docs, a Discord, a notes app, and a desktop full of "final_v3.png". Persona Studio replaces all of it with one guided surface.'
-            />
-          </div>
+          <Reveal>
+            <div className="section-head">
+              <span className="eyebrow">03 / Why Persona Studio?</span>
+              <h2>
+                Why <em>Persona Studio?</em>
+              </h2>
+              <p>Three things most tools get wrong. We didn&apos;t.</p>
+            </div>
+          </Reveal>
+          <Reveal delay={150}>
+            <div className="why-grid-3">
+              <div className="why-box">
+                <div className="why-box-num">01</div>
+                <h3>Top-tier models</h3>
+                <p>
+                  We route every generation through top-tier image, video, and voice models — not a cheap backend
+                  swapped in to pad margins. Better model ships, we plug it in. Your persona only gets better tools
+                  pointed at it.
+                </p>
+              </div>
+              <div className="why-box">
+                <div className="why-box-num">02</div>
+                <h3>Community</h3>
+                <p>
+                  Compare what&apos;s converting, what stopped working last week,
+                  and which platform just changed its rules — with people actually doing this.
+                </p>
+              </div>
+              <div className="why-box">
+                <div className="why-box-num">03</div>
+                <h3>Stay up to date</h3>
+                <p>
+                  AI models change monthly. Platform rules change weekly. Guides get
+                  rewritten the moment a platform changes detection. You&apos;re not buying a snapshot of last year&apos;s best
+                  practices.
+                </p>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
+      {/* ── 04 — Guides ── */}
+      <section className="guides-section" id="guides">
+        <div className="container">
+          <Reveal>
+            <div className="section-head">
+              <span className="eyebrow">04 / Guides</span>
+              <h2>
+                Nobody tells you the part that <em>actually gets you banned</em>.
+              </h2>
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <p
+              style={{
+                textAlign: "center",
+                maxWidth: 620,
+                margin: "1.25rem auto 0",
+                opacity: 0.6,
+                lineHeight: 1.6,
+              }}
+            >
+              Anyone can teach you to write a prompt. Almost nobody tells you how to set up accounts that survive, how
+              to warm up a new profile without tripping every spam filter, or how platforms actually detect AI content
+              creators. We do — written guides, no fluff, updated as platforms change their rules.
+            </p>
+          </Reveal>
+          <Reveal delay={240}>
+            <div className="guide-list">
+              <div className="guide-item">
+                <span className="guide-item-arrow">&rarr;</span>
+                Account setup &amp; platform compliance
+              </div>
+              <div className="guide-item">
+                <span className="guide-item-arrow">&rarr;</span>
+                Warm-up sequencing for new profiles
+              </div>
+              <div className="guide-item">
+                <span className="guide-item-arrow">&rarr;</span>
+                Avoiding common shadowban triggers
+              </div>
+              <div className="guide-item">
+                <span className="guide-item-arrow">&rarr;</span>
+                Platform-by-platform content policies
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── Closing CTA ── */}
       <section className="closing" id="closing">
         <div className="container closing-inner">
-          <span className="eyebrow">06 / Why this exists</span>
-          <blockquote>
-            Save the hours you would spend researching tools, testing random prompts, and buying overpriced lessons.{" "}
-            <em>Build the model. Learn what works. Ship the content.</em>
-          </blockquote>
-          <cite>- Persona Studio / built for practical builders</cite>
-          <div className="closing-cta">
-            <Link href="/studio" className="btn-primary">
-              Open the studio <span>-&gt;</span>
-            </Link>
-            <Link href="/guides" className="btn-text">
-              or read the guides first
-            </Link>
-          </div>
+          <Reveal>
+            <h2 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", lineHeight: 1.1 }}>
+              Stop researching. <em>Start generating.</em>
+            </h2>
+          </Reveal>
+          <br></br>
+          <Reveal delay={120}>
+            <p className="closing-body">
+              You already lost time researching tools, watching tutorials, and comparing Discords. That part&apos;s over.
+              Define your persona, lock the references, and ship your first asset in the next ten minutes.
+            </p>
+          </Reveal>
+          <Reveal delay={240}>
+            <div className="closing-cta">
+              <Link href="/studio" className="btn-primary">
+                Start generating <span>&rarr;</span>
+              </Link>
+              <Link href="/demo" className="btn-text">
+                or see the demo first
+              </Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 
+      {/* ── Footer ── */}
       <footer className="footer">
         <div className="container footer-inner">
           <div>(c) Persona Studio / 2026</div>
@@ -527,6 +679,57 @@ export function HomePage({
   );
 }
 
+/* ──────────────────────────── Helpers ──────────────────────────── */
+
+/* Scroll-triggered reveal wrapper */
+function Reveal({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      const animationFrame = window.requestAnimationFrame(() => setVisible(true));
+      return () => window.cancelAnimationFrame(animationFrame);
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -60px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`reveal ${visible ? "reveal-visible" : ""} ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* Hero parallax card */
 function HeroCard({
   className,
   depth,
@@ -556,104 +759,15 @@ function HeroCard({
   );
 }
 
-function PicsumImage({
-  seed,
-  width,
-  height,
-  alt = "",
-  sizes,
-}: {
-  seed: string;
-  width: number;
-  height: number;
-  alt?: string;
-  sizes: string;
-}) {
+/* Engine step row */
+function EngineStep({ num, title, copy }: { num: string; title: string; copy: string }) {
   return (
-    <Image
-      src={`https://picsum.photos/seed/${seed}/${width}/${height}`}
-      alt={alt}
-      fill
-      unoptimized
-      sizes={sizes}
-    />
-  );
-}
-
-function WorkflowStep({
-  number,
-  title,
-  copy,
-  children,
-}: {
-  number: string;
-  title: string;
-  copy: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="step">
-      <div className="step-num">{number}</div>
-      <div>
-        <h3>{title}</h3>
+    <div className="engine-step">
+      <div className="engine-step-num">{num}</div>
+      <div className="engine-step-body">
+        <h4>{title}</h4>
         <p>{copy}</p>
-        <div className="step-visual">{children}</div>
       </div>
-    </div>
-  );
-}
-
-function MiniRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mini-row">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function WorkspaceSection({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className="ws-section">
-      <div className="ws-label">{title}</div>
-      {items.map((item) => (
-        <div key={item} className={`ws-item ${item === "Images" ? "active" : ""}`}>
-          {item}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function BriefRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="brief-row">
-      <span className="k">{label}</span>
-      <span className="v">{value}</span>
-    </div>
-  );
-}
-
-function MeterRow({ label, cost, width }: { label: string; cost: string; width: string }) {
-  return (
-    <div className="meter-row">
-      <div>
-        <div className="meter-label">{label}</div>
-        <div className="meter-bar">
-          <div style={{ width }} />
-        </div>
-      </div>
-      <div className="meter-cost">{cost}</div>
-    </div>
-  );
-}
-
-function AudienceItem({ number, title, copy }: { number: string; title: React.ReactNode; copy: string }) {
-  return (
-    <div className="audience-item">
-      <div className="audience-num">{number}</div>
-      <h3>{title}</h3>
-      <p>{copy}</p>
     </div>
   );
 }

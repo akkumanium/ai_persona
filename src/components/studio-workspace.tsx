@@ -1,6 +1,7 @@
 "use client";
 
-import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, MessageCircle, Play, Settings, Sparkles, UserRound, Video, type LucideIcon } from "lucide-react";
+import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, MessageCircle, Play, Settings, UserRound, Video, type LucideIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { AssetsView, JobsView, SettingsView } from "@/components/studio/assets-jobs-settings";
@@ -313,8 +314,8 @@ export function StudioWorkspace({
     <div className="min-h-screen">
       <aside className="fixed inset-y-0 left-0 hidden w-68 flex-col border-r border-stone-200 bg-white/82 px-4 py-4 backdrop-blur lg:flex">
         <div className="flex items-center gap-3 px-2">
-          <div className="flex size-10 items-center justify-center rounded-md bg-emerald-800 text-white">
-            <Sparkles size={20} />
+          <div className="flex size-10 items-center justify-center rounded-md">
+            <Image src="/favicon.svg" alt="" width={40} height={40} className="rounded-md" />
           </div>
           <div>
             <p className="text-base font-semibold tracking-normal">Persona Studio</p>
@@ -374,6 +375,24 @@ export function StudioWorkspace({
 
       <main className="lg:pl-68">
         <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/84 backdrop-blur">
+          {previewMode ? (
+            <div className="border-b border-amber-500/30 bg-amber-950 px-4 py-3 text-amber-50 lg:px-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">Preview mode</p>
+                  <p className="mt-0.5 text-xs leading-5 text-amber-100">
+                    You can explore Studio, but using it is disabled until you subscribe.
+                  </p>
+                </div>
+                <Link
+                  href="/pricing"
+                  className="inline-flex h-9 items-center rounded-md bg-amber-300 px-3 text-sm font-semibold text-amber-950 transition hover:bg-amber-200"
+                >
+                  Upgrade to use Studio
+                </Link>
+              </div>
+            </div>
+          ) : null}
           <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
             <div>
               <h1 className="text-xl font-semibold text-stone-950">{navItems.find((item) => item.id === view)?.label}</h1>
@@ -532,17 +551,6 @@ export function StudioWorkspace({
           )}
         </div>
       </main>
-      {previewMode ? (
-        <aside className="fixed bottom-4 left-4 z-40 max-w-xs rounded-lg border border-amber-300 bg-amber-50 p-4 text-stone-900 shadow-xl">
-          <p className="text-sm font-semibold">Preview mode</p>
-          <p className="mt-1 text-xs leading-5 text-stone-600">
-            You can explore Studio, but using it is disabled until you subscribe.
-          </p>
-          <Link href="/pricing" className="mt-3 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">
-            Upgrade to use Studio
-          </Link>
-        </aside>
-      ) : null}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { Client } from "wavespeed";
 import { env } from "@/lib/env";
-import { SEEDREAM_4_5_MODEL_ID } from "@/lib/image-model-options";
+import { SEEDREAM_4_5_MODEL_ID, WAN_2_7_IMAGE_MODEL_ID } from "@/lib/image-model-options";
 import {
   estimateAvatarGenerationPricing,
   estimateImageGenerationPricing,
@@ -46,7 +46,11 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     const client = wavespeedClient();
     const isSeedream45 = request.model === SEEDREAM_4_5_MODEL_ID;
+    const isWan27Image = request.model === WAN_2_7_IMAGE_MODEL_ID;
     const uploadedReferenceUrls = await uploadProviderImages(client, request.referenceImages ?? []);
+    if (isWan27Image && uploadedReferenceUrls.length) {
+      throw new Error("Wan 2.7 image generation is prompt-only. Turn off reference mode before generating.");
+    }
     const referenceUrls = isSeedream45 ? uploadedReferenceUrls.slice(0, 10) : uploadedReferenceUrls;
     const model = wavespeedImageModel(request.model, referenceUrls.length > 0);
     const result = await client.run(model, {
@@ -55,11 +59,16 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
       images: referenceUrls.length ? referenceUrls : undefined,
       image_url: isSeedream45 ? undefined : referenceUrls[0],
       image_urls: isSeedream45 ? undefined : referenceUrls.length ? referenceUrls : undefined,
-      aspect_ratio: isSeedream45 ? undefined : request.aspectRatio,
-      size: isSeedream45 ? seedream45Size(request.aspectRatio, request.imageSize) : request.imageSize,
-      image_size: isSeedream45 ? undefined : request.imageSize,
+      aspect_ratio: isSeedream45 || isWan27Image ? undefined : request.aspectRatio,
+      size: isSeedream45
+        ? seedream45Size(request.aspectRatio, request.imageSize)
+        : isWan27Image
+          ? wan27ImageSize(request.aspectRatio, request.imageSize)
+          : request.imageSize,
+      image_size: isSeedream45 || isWan27Image ? undefined : request.imageSize,
       quality: isSeedream45 ? undefined : request.imageQuality,
-      num_outputs: isSeedream45 ? undefined : request.count,
+      num_outputs: isSeedream45 || isWan27Image ? undefined : request.count,
+      seed: isWan27Image ? -1 : undefined,
     }, {
       pollInterval: 2,
       timeout: 36000,
@@ -185,7 +194,7 @@ export class WavespeedAvatarProvider {
       throw new Error("InfiniteTalk requires both an image and audio input.");
     }
 
-    const model = request.model ?? "wavespeed-ai/infinitetalk";
+    const model = request.model ?? "wavespeed-ai/longcat-avatar";
     const result = await client.run(model, {
       image,
       audio,
@@ -249,9 +258,23 @@ async function uploadProviderInput(client: Client, input: ProviderImageInput | P
 
 function wavespeedImageModel(model: string, hasReferences: boolean) {
   if (model.includes("/")) return model;
+  if (model === WAN_2_7_IMAGE_MODEL_ID) return "alibaba/wan-2.7/text-to-image";
   if (model === "gpt-image-2") return hasReferences ? "openai/gpt-image-2/edit" : "openai/gpt-image-2/text-to-image";
   if (model === SEEDREAM_4_5_MODEL_ID) return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
   return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
+}
+
+function wan27ImageSize(aspectRatio: string, imageSize: string) {
+  const dimensions: Record<string, Record<string, string>> = {
+    "1:1": { "1K": "1024*1024", "2K": "2048*2048" },
+    "16:9": { "1K": "1344*768", "2K": "2048*1152" },
+    "9:16": { "1K": "768*1344", "2K": "1152*2048" },
+    "4:3": { "1K": "1152*864", "2K": "2048*1536" },
+    "3:4": { "1K": "864*1152", "2K": "1536*2048" },
+    "3:2": { "1K": "1248*832", "2K": "2016*1344" },
+    "2:3": { "1K": "832*1248", "2K": "1344*2016" },
+  };
+  return dimensions[aspectRatio]?.[imageSize] ?? dimensions["1:1"]["1K"];
 }
 
 function wavespeedVideoModel(request: VideoGenerationRequest) {

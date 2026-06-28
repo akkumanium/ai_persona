@@ -22,6 +22,10 @@ import { formatTokens } from "@/lib/utils";
 const speechModels = [
   { id: "eleven_multilingual_v2", label: "Multilingual v2" },
 ];
+const talkingAvatarModels = [
+  { id: "wavespeed-ai/longcat-avatar", label: "Longcat Avatar" },
+  { id: "wavespeed-ai/infinitetalk", label: "InfiniteTalk" },
+];
 const outputFormats = ["mp3_44100_128", "mp3_44100_192", "wav_44100"];
 const avatarResolutions = ["480p", "720p"];
 
@@ -245,6 +249,7 @@ export function AvatarView({
   const [uploadedImage, setUploadedImage] = useState<SourceImageInput | undefined>();
   const [audioAssetId, setAudioAssetId] = useState("");
   const [uploadedAudio, setUploadedAudio] = useState<SourceAudioInput | undefined>();
+  const [model, setModel] = useState("wavespeed-ai/longcat-avatar");
   const [resolution, setResolution] = useState<"480p" | "720p">("480p");
   const [audioDurationSeconds, setAudioDurationSeconds] = useState<number | undefined>();
   const [isReadingDuration, setIsReadingDuration] = useState(false);
@@ -257,7 +262,7 @@ export function AvatarView({
   const selectedAudioSource = uploadedAudio?.url ?? (uploadedAudio?.data ? `data:${uploadedAudio.mimeType};base64,${uploadedAudio.data}` : selectedAudio?.url);
   const effectiveDurationSeconds = audioDurationSeconds ? Math.max(1, Math.ceil(audioDurationSeconds)) : 0;
   const costLabel = audioDurationSeconds
-    ? formatTokens(estimateAvatarGenerationPricing({ resolution, durationSeconds: effectiveDurationSeconds }).tokens)
+    ? formatTokens(estimateAvatarGenerationPricing({ model, resolution, durationSeconds: effectiveDurationSeconds }).tokens)
     : undefined;
 
   useEffect(() => {
@@ -324,6 +329,7 @@ export function AvatarView({
           audioAssetUrl: uploadedAudio ? undefined : selectedAudio?.url,
           audioAssetId: uploadedAudio ? undefined : selectedAudio?.id,
           uploadedAudio,
+          model,
           prompt,
           resolution,
           durationSeconds: effectiveDurationSeconds,
@@ -350,7 +356,7 @@ export function AvatarView({
           {isGenerating ? (
             <div className="flex min-h-[24rem] flex-col items-center justify-center text-center text-sm text-stone-600">
               <Loader2 className="mb-3 animate-spin text-emerald-800" size={28} />
-              Waiting for InfiniteTalk video.
+              Waiting for {model === "wavespeed-ai/longcat-avatar" ? "Longcat Avatar" : "InfiniteTalk"} video.
             </div>
           ) : avatarAssets.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -381,7 +387,7 @@ export function AvatarView({
               <Video className="text-emerald-800" size={34} />
               <p className="mt-3 text-base font-semibold text-stone-950">Ready for a talking avatar</p>
               <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">
-                InfiniteTalk outputs will appear here as reusable video assets.
+                Talking avatar outputs will appear here as reusable video assets.
               </p>
             </div>
           )}
@@ -424,6 +430,7 @@ export function AvatarView({
             detail={uploadedAudio ? "Uploaded audio will be used instead of saved audio." : ""}
             onChange={(files) => void captureAudio(files)}
           />
+          <ModelSelect label="Model" value={model} options={talkingAvatarModels} onChange={setModel} />
           <SelectField label="Resolution" value={resolution} options={avatarResolutions} onChange={(value) => setResolution(value as typeof resolution)} />
           <div className="mt-4 rounded-lg bg-stone-50 px-4 py-3 text-sm text-stone-600">
             {selectedAudioSource

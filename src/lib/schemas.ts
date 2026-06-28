@@ -124,6 +124,7 @@ export const talkingAvatarGenerationSchema = z.object({
     data: z.string().min(1).optional(),
     url: z.string().min(1).optional(),
   }).optional(),
+  model: z.string().min(1).default("wavespeed-ai/longcat-avatar"),
   prompt: z.string().max(1000).optional().default(""),
   resolution: z.enum(["480p", "720p"]).default("480p"),
   durationSeconds: z.number().int().min(1).max(600).default(5),

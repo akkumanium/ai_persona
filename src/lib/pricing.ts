@@ -4,6 +4,7 @@ import type {
   SpeechGenerationRequest,
   VideoGenerationRequest,
 } from "@/lib/providers/types";
+import { WAN_2_7_IMAGE_MODEL_ID } from "@/lib/image-model-options";
 
 export const TOKENS_PER_USD = 1000;
 
@@ -32,6 +33,14 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
 
   if (request.model === "seedream-v4.5") {
     const rawUsd = 0.04 * count;
+    return {
+      rawUsd,
+      tokens: usdToTokens(rawUsd),
+    };
+  }
+
+  if (request.model === WAN_2_7_IMAGE_MODEL_ID) {
+    const rawUsd = 0.03 * count;
     return {
       rawUsd,
       tokens: usdToTokens(rawUsd),
@@ -116,15 +125,18 @@ export function estimateSpeechGenerationPricing(request: Pick<SpeechGenerationRe
 }
 
 export function estimateAvatarGenerationPricing(
-  request: Pick<AvatarGenerationRequest, "durationSeconds" | "resolution">,
+  request: Pick<AvatarGenerationRequest, "durationSeconds" | "resolution" | "model">,
 ): PricingBreakdown {
   const billedSeconds = Math.min(600, Math.max(5, Math.ceil(request.durationSeconds)));
-  const perSecondUsd = request.resolution === "720p" ? 0.06 : 0.03;
+  const isLongcat = request.model === "wavespeed-ai/longcat-avatar";
+  const perSecondUsd = request.resolution === "720p"
+    ? isLongcat ? 0.08 : 0.06
+    : isLongcat ? 0.04 : 0.03;
   const rawUsd = perSecondUsd * billedSeconds;
   return {
     rawUsd,
     tokens: usdToTokens(rawUsd),
-    notes: "InfiniteTalk is billed with a 5 second minimum and 10 minute cap.",
+    notes: `${isLongcat ? "Longcat Avatar" : "InfiniteTalk"} is billed with a 5 second minimum and 10 minute cap.`,
   };
 }
 

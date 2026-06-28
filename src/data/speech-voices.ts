@@ -5,6 +5,5 @@ export type SpeechVoicePreset = {
 };
 
 export const SPEECH_VOICE_PRESETS: SpeechVoicePreset[] = [
-  // Add developer-approved ElevenLabs voice IDs here, for example:
-  // { id: "EXAMPLE_VOICE_ID", label: "Warm editorial narrator", description: "Soft, polished, commercial." },
+  { id: "6u6JbqKdaQy89ENzLSju", label: "Brielle", description: "Gen Z podcast girl"},
 ];

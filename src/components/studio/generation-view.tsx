@@ -27,6 +27,7 @@ import {
   chatGptImageQualities,
   imageSizesForModel,
   supportsImageQuality,
+  supportsImageReferences,
   supportsImageSize,
 } from "@/lib/image-model-options";
 import { modelsForCapability } from "@/lib/model-registry";
@@ -98,7 +99,7 @@ export function GenerationView({
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const personaOptions = useMemo(() => personas, [personas]);
-  const imageModelOptions = modelsForCapability("image-reference");
+  const imageModelOptions = modelsForCapability("image-prompt");
   const videoModelOptions = modelsForCapability("video-normal");
   const motionModelOptions = modelsForCapability("video-motion");
   const selectedReferenceAssets = useMemo(
@@ -167,6 +168,7 @@ export function GenerationView({
   const isGenerating = mode === "images" ? isGeneratingImage : isGeneratingVideo;
   const imageModelSupportsSize = supportsImageSize(imageModel);
   const imageModelSupportsQuality = supportsImageQuality(imageModel);
+  const imageModelSupportsReferences = supportsImageReferences(imageModel);
   const imageCostLabel = formatTokens(
     estimateImageGenerationPricing({
       prompt: imagePrompt,
@@ -175,7 +177,7 @@ export function GenerationView({
       imageSize: imageModelSupportsSize ? imageSize : "2K",
       imageQuality: imageModelSupportsQuality ? (imageQuality as "low" | "medium" | "high") : undefined,
       count: 1,
-      referenceImages: useImageReferences
+      referenceImages: useImageReferences && imageModelSupportsReferences
         ? [
             ...selectedReferenceSelection.map((asset) => ({
               name: asset.title,
@@ -189,7 +191,7 @@ export function GenerationView({
             })),
           ]
         : [],
-      generationType: useImageReferences ? "image_from_reference" : "image_from_prompt",
+      generationType: useImageReferences && imageModelSupportsReferences ? "image_from_reference" : "image_from_prompt",
     }).tokens,
   );
   const normalVideoCostLabel = formatTokens(
@@ -229,6 +231,10 @@ export function GenerationView({
 
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
+    if (!supportsImageReferences(modelId)) {
+      setUseImageReferences(false);
+      setUploadedImageReferences([]);
+    }
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(imageAspectRatio)) {
       setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
@@ -302,9 +308,10 @@ export function GenerationView({
   async function generateImage(event: FormEvent) {
     event.preventDefault();
     if (!selectedPersona) return;
-    const referenceAssets = useImageReferences ? selectedReferenceSelection : [];
-    const uploadedReferences = useImageReferences ? uploadedImageReferences : [];
-    if (useImageReferences && !referenceAssets.length && !uploadedReferences.length) return;
+    const canUseReferences = useImageReferences && imageModelSupportsReferences;
+    const referenceAssets = canUseReferences ? selectedReferenceSelection : [];
+    const uploadedReferences = canUseReferences ? uploadedImageReferences : [];
+    if (canUseReferences && !referenceAssets.length && !uploadedReferences.length) return;
     if (imagePrompt.trim().length < 10) return;
     const uploadedReferenceUrls = uploadedReferences.map((image) => image.url).filter((url): url is string => Boolean(url));
     const uploadedReferenceInputs = uploadedReferences
@@ -584,21 +591,27 @@ export function GenerationView({
             {imageModelSupportsQuality ? (
               <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
             ) : null}
-            <ModeToggle
-              label="Reference mode"
-              value={useImageReferences ? "references" : "prompt"}
-              options={[
-                { value: "references", label: "Use references" },
-                { value: "prompt", label: "Prompt only" },
-              ]}
-              onChange={(value) => setUseImageReferences(value === "references")}
-            />
+            {imageModelSupportsReferences ? (
+              <ModeToggle
+                label="Reference mode"
+                value={useImageReferences ? "references" : "prompt"}
+                options={[
+                  { value: "references", label: "Use references" },
+                  { value: "prompt", label: "Prompt only" },
+                ]}
+                onChange={(value) => setUseImageReferences(value === "references")}
+              />
+            ) : (
+              <p className="mt-3 rounded-lg bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600">
+                This model is prompt-only, so reference images are not used.
+              </p>
+            )}
             <ReferenceSummary
-              useReferences={useImageReferences}
-              selectedCount={selectedReferenceSelection.length + uploadedImageReferences.length}
-              totalCount={selectedReferenceAssets.length + uploadedImageReferences.length}
+              useReferences={useImageReferences && imageModelSupportsReferences}
+              selectedCount={imageModelSupportsReferences ? selectedReferenceSelection.length + uploadedImageReferences.length : 0}
+              totalCount={imageModelSupportsReferences ? selectedReferenceAssets.length + uploadedImageReferences.length : 0}
             />
-            {useImageReferences ? (
+            {useImageReferences && imageModelSupportsReferences ? (
               <>
                 <UploadBox
                   accept="image/*"
@@ -666,7 +679,10 @@ export function GenerationView({
               disabled={
                 !selectedPersona ||
                 imagePrompt.trim().length < 10 ||
-                (useImageReferences && !selectedReferenceSelection.length && !uploadedImageReferences.length)
+                (useImageReferences &&
+                  imageModelSupportsReferences &&
+                  !selectedReferenceSelection.length &&
+                  !uploadedImageReferences.length)
               }
             />
           </form>

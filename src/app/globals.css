@@ -325,20 +325,10 @@ label {
 }
 
 .new-home .brand-mark {
-  position: relative;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
-  border-radius: 50%;
-  background: conic-gradient(from 180deg, #ff4d6d, #d4a574, #ff4d6d);
-}
-
-.new-home .brand-mark::after {
-  position: absolute;
-  inset: 5px;
-  border-radius: 50%;
-  background: #0c0a0b;
-  content: "";
+  border-radius: 6px;
 }
 
 .new-home .nav-links {
@@ -359,8 +349,30 @@ label {
 
 .new-home .nav-actions {
   display: flex;
+  align-items: center;
+  gap: 12px;
   justify-content: flex-end;
   min-width: 104px;
+}
+
+.new-home .telegram-link {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(241, 235, 227, 0.1);
+  border-radius: 999px;
+  background: rgba(241, 235, 227, 0.04);
+  color: #f1ebe3;
+  transition: border-color 0.25s ease, background 0.25s ease, color 0.25s ease;
+}
+
+.new-home .telegram-link:hover {
+  border-color: rgba(255, 77, 109, 0.4);
+  background: rgba(255, 77, 109, 0.12);
+  color: #ff8a9b;
 }
 
 .new-home .hero {
