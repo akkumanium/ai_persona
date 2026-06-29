@@ -341,7 +341,7 @@ export function HomePage({
             <Reveal delay={160}>
               <p className="lead">
                 Persona Studio is the only workspace you need to build a consistent
-                AI persona and ship images, video, and voice that all look like the same person — every time. 
+                AI model and ship images, video, and voice that all look like the same person — every time. 
               </p>
             </Reveal>
             <Reveal delay={240}>
@@ -376,33 +376,29 @@ export function HomePage({
                 className="card-back-3"
                 depth="0.25"
                 base="translate(-50%, -50%) rotate(14deg)"
-                image="mira-body-ref"
-                size="300/400"
+                image="/home/persona-body-ref.png"
                 label="Body ref"
               />
               <HeroCard
                 className="card-back-2"
                 depth="0.4"
                 base="translate(-50%, -50%) rotate(-10deg)"
-                image="mira-wardrobe-still"
-                size="300/400"
+                image="/home/persona-wardrobe.png"
                 label="Wardrobe"
               />
               <HeroCard
                 className="card-back-1"
                 depth="0.6"
                 base="translate(-50%, -50%) rotate(8deg)"
-                image="mira-video-frame-04"
-                size="300/400"
+                image="/home/persona-video-frame.jpg"
                 label="Video / 04s"
               />
               <div className="card card-front" data-depth="1.0" data-base="translate(-50%, -50%)">
                 <Image
-                  src="https://picsum.photos/seed/mira-vale-portrait-primary/600/800"
+                  src="/home/persona-primary.jpg"
                   alt=""
                   fill
                   priority
-                  unoptimized
                   sizes="(max-width: 960px) 240px, 290px"
                 />
                 <div className="card-meta">
@@ -455,7 +451,7 @@ export function HomePage({
             <Reveal delay={400}>
               <p>
                 Persona Studio replaces the course, the bookmarks, and the five tabs with one workspace. Define your
-                persona once. Generate from it forever.
+                model once. Generate from it forever.
               </p>
             </Reveal>
           </div>
@@ -467,7 +463,7 @@ export function HomePage({
         <div className="container">
           <Reveal>
             <div className="how-head">
-              <span className="eyebrow">02 / The persona engine</span>
+              <span className="eyebrow">02 / Face consistency</span>
               <h2>
                 The same face. 
                 <br></br>
@@ -528,7 +524,7 @@ export function HomePage({
                 <h3>Top-tier models</h3>
                 <p>
                   We route every generation through top-tier image, video, and voice models — not a cheap backend
-                  swapped in to pad margins. Better model ships, we plug it in. Your persona only gets better tools
+                  swapped in to pad margins. Better model ships, we plug it in. Your model only gets better tools
                   pointed at it.
                 </p>
               </div>
@@ -615,7 +611,7 @@ export function HomePage({
           <Reveal delay={120}>
             <p className="closing-body">
               You already lost time researching tools, watching tutorials, and trying unknown workflows. That part&apos;s over.
-              Define your persona, lock the references, and ship your first video in the next ten minutes.
+              Define your model, lock the references, and ship your first video in the next ten minutes.
             </p>
           </Reveal>
           <Reveal delay={240}>
@@ -704,23 +700,20 @@ function HeroCard({
   depth,
   base,
   image,
-  size,
   label,
 }: {
   className: string;
   depth: string;
   base: string;
   image: string;
-  size: string;
   label: string;
 }) {
   return (
     <div className={`card ${className}`} data-depth={depth} data-base={base}>
       <Image
-        src={`https://picsum.photos/seed/${image}/${size}`}
+        src={image}
         alt=""
         fill
-        unoptimized
         sizes="(max-width: 960px) 180px, 220px"
       />
       <div className="card-label">{label}</div>

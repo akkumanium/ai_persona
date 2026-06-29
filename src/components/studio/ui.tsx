@@ -336,27 +336,25 @@ export function SelectField({
 }) {
   if (label.toLowerCase().includes("aspect ratio")) {
     return (
-      <div className="mt-4">
-        <p className="text-sm font-medium text-stone-700">{label}</p>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {options.map((option) => (
-            <button
-              type="button"
-              key={option}
-              onClick={() => onChange(option)}
-              className={cn(
-                "flex h-11 items-center justify-center gap-2 rounded-md border px-2 text-sm font-medium transition",
-                value === option
-                  ? "border-emerald-800 bg-emerald-50 text-stone-950"
-                  : "border-stone-200 bg-white text-stone-600 hover:border-emerald-800 hover:text-stone-950",
-              )}
-            >
-              <AspectRatioGlyph ratio={option} />
-              <span>{option}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      <label className="mt-4 block">
+        <span className="text-sm font-medium text-stone-700">{label}</span>
+        <span className="relative mt-2 flex h-11 items-center rounded-md border border-stone-200 bg-white focus-within:border-emerald-800">
+          <span className="pointer-events-none absolute left-3 z-10 text-stone-500">
+            <AspectRatioGlyph ratio={value} />
+          </span>
+          <select
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className="h-full w-full rounded-md border-0 bg-transparent px-10 text-sm outline-none"
+          >
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </span>
+      </label>
     );
   }
 

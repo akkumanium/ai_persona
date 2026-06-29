@@ -314,6 +314,31 @@ label {
   min-width: 104px;
   align-items: center;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.site-telegram-link {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(241, 235, 227, 0.12);
+  border-radius: 999px;
+  color: #b3a9a0;
+  transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
+}
+
+.site-telegram-link:hover {
+  border-color: rgba(241, 235, 227, 0.28);
+  background: rgba(241, 235, 227, 0.05);
+  color: #f1ebe3;
+}
+
+.site-telegram-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .public-content {
