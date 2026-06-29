@@ -25,6 +25,7 @@ import {
   chatGptImageQualities,
   imageSizesForModel,
   supportsImageQuality,
+  supportsImageReferences,
   supportsImageSize,
 } from "@/lib/image-model-options";
 import { modelsForCapability } from "@/lib/model-registry";
@@ -69,10 +70,19 @@ export function GeneratePersonaView({
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
 
   const activeSlot = referenceSlots.find((slot) => slot.id === selectedSlotId) ?? referenceSlots[0];
-  const avatarModelOptions = modelsForCapability("avatar");
-  const imageModelOptions = modelsForCapability("image-reference");
-  const modelOptions = selectedSlotId === "face" ? avatarModelOptions : imageModelOptions;
-  const imageAspectRatios = aspectRatiosForImageModel(selectedModel);
+  const allImageModelOptions = modelsForCapability("image-prompt");
+  const referenceCapableImageModelOptions = useMemo(
+    () => allImageModelOptions.filter((model) => supportsImageReferences(model.id)),
+    [allImageModelOptions],
+  );
+  const modelOptions =
+    selectedSlotId === "face" && generationMode === "scratch"
+      ? allImageModelOptions
+      : referenceCapableImageModelOptions;
+  const safeSelectedModel = modelOptions.some((model) => model.id === selectedModel)
+    ? selectedModel
+    : modelOptions[0]?.id ?? selectedModel;
+  const imageAspectRatios = aspectRatiosForImageModel(safeSelectedModel);
   const safeAspectRatio = imageAspectRatios.includes(aspectRatio) ? aspectRatio : imageAspectRatios[0];
   const selectedReferenceAssets = useMemo(
     () =>
@@ -112,19 +122,22 @@ export function GeneratePersonaView({
   );
   const isScratchFace = selectedSlotId === "face" && generationMode === "scratch";
   const isHybridFace = selectedSlotId === "face" && generationMode === "hybrid";
-  const imageModelSupportsSize = supportsImageSize(selectedModel);
-  const imageModelSupportsQuality = supportsImageQuality(selectedModel);
+  const imageModelSupportsSize = supportsImageSize(safeSelectedModel);
+  const imageModelSupportsQuality = supportsImageQuality(safeSelectedModel);
+  const imageModelSupportsReferences = supportsImageReferences(safeSelectedModel);
   const referenceInputCount = isHybridFace
     ? hybridSources.length
     : isScratchFace
-      ? scratchSources.length
+      ? imageModelSupportsReferences
+        ? scratchSources.length
+        : 0
     : selectedSlotId === "face"
       ? 0
       : selectedReferenceSelection.length;
   const referenceCostLabel = formatTokens(
     estimateImageGenerationPricing({
       prompt: isScratchFace ? scratchPrompt : additionalPrompt || activeSlot.prompt,
-      model: selectedModel,
+      model: safeSelectedModel,
       aspectRatio: safeAspectRatio,
       imageSize: imageModelSupportsSize ? imageSize : "2K",
       imageQuality: imageModelSupportsQuality ? (imageQuality as "low" | "medium" | "high") : undefined,
@@ -230,7 +243,7 @@ export function GeneratePersonaView({
             personaName: selectedPersona.name,
             description: selectedPersona.description,
             styleNotes: selectedPersona.styleNotes,
-            model: selectedModel,
+            model: safeSelectedModel,
             prompt: isScratchFace ? scratchPrompt.trim() : undefined,
             additionalPrompt: isScratchFace ? "" : additionalPrompt.trim(),
             aspectRatio: safeAspectRatio,
@@ -244,14 +257,14 @@ export function GeneratePersonaView({
               ? hybridSources
                   .filter((image) => image.data)
                   .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }))
-              : isScratchFace
+              : isScratchFace && imageModelSupportsReferences
                 ? scratchSources
                     .filter((image) => image.data)
                     .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }))
                 : [],
             sourceImageUrls: isHybridFace
               ? hybridSources.map((image) => image.url).filter((url): url is string => Boolean(url))
-              : isScratchFace
+              : isScratchFace && imageModelSupportsReferences
                 ? scratchSources.map((image) => image.url).filter((url): url is string => Boolean(url))
                 : [],
             confirmsRights,
@@ -269,7 +282,7 @@ export function GeneratePersonaView({
           body: JSON.stringify({
             personaId: selectedPersona.id,
             personaName: selectedPersona.name,
-            model: selectedModel,
+            model: safeSelectedModel,
             additionalPrompt: additionalPrompt.trim(),
             styleNotes: selectedPersona.styleNotes,
             aspectRatio: safeAspectRatio,
@@ -393,10 +406,10 @@ export function GeneratePersonaView({
             />
           ) : null}
 
-          <ModelSelect label="Model" value={selectedModel} options={modelOptions} onChange={changeModel} />
+          <ModelSelect label="Model" value={safeSelectedModel} options={modelOptions} onChange={changeModel} />
           <SelectField label="Aspect ratio" value={safeAspectRatio} options={imageAspectRatios} onChange={setAspectRatio} />
           {imageModelSupportsSize ? (
-            <SelectField label="Image size" value={imageSize} options={imageSizesForModel(selectedModel)} onChange={setImageSize} />
+            <SelectField label="Image size" value={imageSize} options={imageSizesForModel(safeSelectedModel)} onChange={setImageSize} />
           ) : null}
           {imageModelSupportsQuality ? (
             <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
@@ -448,19 +461,21 @@ export function GeneratePersonaView({
 
           {isScratchFace ? (
             <>
-              <UploadBox
-                accept="image/*"
-                multiple
-                icon={Upload}
-                label="Upload optional source images"
-                detail={
-                  scratchSources.length
-                    ? `${scratchSources.length} image${scratchSources.length === 1 ? "" : "s"} ready`
-                    : "Use your own PC images as optional identity or style inputs."
-                }
-                onChange={(files) => void captureScratchSources(files)}
-              />
-              {scratchSources.length ? (
+              {imageModelSupportsReferences ? (
+                <UploadBox
+                  accept="image/*"
+                  multiple
+                  icon={Upload}
+                  label="Upload optional source images"
+                  detail={
+                    scratchSources.length
+                      ? `${scratchSources.length} image${scratchSources.length === 1 ? "" : "s"} ready`
+                      : "Use your own PC images as optional identity or style inputs."
+                  }
+                  onChange={(files) => void captureScratchSources(files)}
+                />
+              ) : null}
+              {imageModelSupportsReferences && scratchSources.length ? (
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   {scratchSources.map((image, index) => (
                     <div key={`${image.name}-${index}`} className="relative overflow-hidden rounded-md border border-stone-200 bg-stone-100">

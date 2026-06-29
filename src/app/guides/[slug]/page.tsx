@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { ArrowLeft, CreditCard, LockKeyhole, PenLine, ShieldCheck } from "lucide-react";
 
-import { AuthButton } from "@/components/auth/auth-button";
+import { PublicHeader } from "@/components/public-header";
 import { GuideMarkdown } from "@/components/guide-markdown";
 import { getGuideArticleBySlug, getGuideArticles } from "@/lib/guide-articles";
 import { getGuideViewerAccess, type GuideViewerAccess } from "@/lib/server/guide-access";
@@ -11,14 +11,6 @@ import { getGuideViewerAccess, type GuideViewerAccess } from "@/lib/server/guide
 const pageSans = Inter({
   subsets: ["latin"],
   variable: "--font-page-sans",
-  display: "swap",
-});
-
-const pageSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-page-serif",
   display: "swap",
 });
 
@@ -62,12 +54,16 @@ export default async function GuideArticlePage({ params }: { params: Promise<{ s
 
   return (
     <main
-      className={`${pageSans.variable} ${pageSerif.variable} ${pageMono.variable} min-h-screen overflow-hidden bg-[#0c0a0b] px-5 py-5 text-[#f1ebe3] sm:px-8`}
+      className={`${pageSans.variable} ${pageMono.variable} public-page px-5 py-5 text-[#f1ebe3] sm:px-8`}
       style={{ fontFamily: "var(--font-page-sans), Arial, Helvetica, sans-serif" }}
     >
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_900px_650px_at_18%_8%,rgba(255,77,109,0.14),transparent_58%),radial-gradient(ellipse_760px_600px_at_82%_14%,rgba(212,165,116,0.10),transparent_60%),linear-gradient(135deg,#0c0a0b_0%,#100d0f_48%,#171215_100%)]" />
-      <div className="mx-auto w-full max-w-5xl">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f1ebe3]/10 pb-5">
+      <PublicHeader
+        initialUserEmail={access.userEmail}
+        supabaseReady={access.supabaseReady}
+        redirectPath={`/guides/${article.slug}`}
+      />
+      <div className="public-content mx-auto w-full max-w-5xl">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
           <Link
             href="/guides"
             className="inline-flex h-10 items-center gap-2 rounded-full border border-[#f1ebe3]/10 bg-[#f1ebe3]/[0.04] px-4 text-sm font-semibold text-[#b3a9a0] transition hover:border-[#f1ebe3]/25 hover:text-[#f1ebe3]"
@@ -86,14 +82,8 @@ export default async function GuideArticlePage({ params }: { params: Promise<{ s
                 Edit
               </Link>
             ) : null}
-            <AuthButton
-              initialUserEmail={access.userEmail}
-              supabaseReady={access.supabaseReady}
-              variant="dark"
-              redirectPath={`/guides/${article.slug}`}
-            />
           </div>
-        </header>
+        </div>
 
         <article className="py-12 sm:py-16">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-end">
@@ -105,10 +95,7 @@ export default async function GuideArticlePage({ params }: { params: Promise<{ s
                 <span className="size-1.5 rounded-full bg-[#ff4d6d] shadow-[0_0_12px_rgba(255,77,109,0.8)]" />
                 {article.eyebrow}
               </p>
-              <h1
-                className="mt-6 text-5xl font-normal leading-[0.98] tracking-normal sm:text-7xl"
-                style={{ fontFamily: "var(--font-page-serif), Georgia, serif" }}
-              >
+              <h1 className="mt-6 text-5xl font-semibold leading-[0.98] tracking-normal sm:text-7xl">
                 {article.title}
               </h1>
               <p className="mt-6 text-lg leading-8 text-[#b3a9a0]">
@@ -162,7 +149,7 @@ function GuideArticlePaywall({ access, slug }: { access: GuideViewerAccess; slug
               >
                 Member guide
               </p>
-              <h2 className="mt-2 text-3xl font-normal leading-tight tracking-normal text-[#f1ebe3]" style={{ fontFamily: "var(--font-page-serif), Georgia, serif" }}>
+              <h2 className="mt-2 text-3xl font-semibold leading-tight tracking-normal text-[#f1ebe3]">
                 Subscribe to read the full article.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[#d8cec3]">

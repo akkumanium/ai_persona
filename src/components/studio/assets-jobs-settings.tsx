@@ -199,8 +199,27 @@ export function SettingsView({
   }
 
   return (
-    <section className="grid gap-6">
-      <div className="max-w-3xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+    <section className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.7fr)] xl:items-start">
+      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <PanelTitle icon={Coins} title="Balance" />
+        <p className="mt-5 text-4xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>
+      </div>
+
+      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm xl:row-span-2">
+        <TokenTopUps
+          userId={userId}
+          userEmail={userEmail}
+          supabaseReady={supabaseReady}
+          config={paddleConfig}
+          onStatusResolved={(status) => {
+            if (typeof status.balanceCents === "number") {
+              onBalanceRefresh?.(status.balanceCents);
+            }
+          }}
+        />
+      </div>
+
+      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={UserRound} title="Account" />
         <div className="mt-5 grid gap-4">
           <div>
@@ -228,13 +247,7 @@ export function SettingsView({
         </div>
       </div>
 
-      <div className="max-w-xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <PanelTitle icon={Coins} title="Balance" />
-        <p className="mt-5 text-3xl font-semibold text-emerald-900">{formatTokens(balanceCents)}</p>
-        <p className="mt-2 text-sm leading-6 text-stone-600">Available tokens for new generations.</p>
-      </div>
-
-      <div className="max-w-3xl rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={Gift} title="Referrals" />
         <p className="mt-4 text-sm leading-6 text-stone-600">
           Invite someone and get {formatTokens(1000)} after they subscribe through your link.
@@ -263,22 +276,8 @@ export function SettingsView({
         {referralMessage ? <p className="mt-3 text-sm text-stone-600">{referralMessage}</p> : null}
       </div>
 
-      <div className="max-w-4xl">
+      <div className="xl:col-span-2">
         <BillingManagement />
-      </div>
-
-      <div className="max-w-4xl">
-        <TokenTopUps
-          userId={userId}
-          userEmail={userEmail}
-          supabaseReady={supabaseReady}
-          config={paddleConfig}
-          onStatusResolved={(status) => {
-            if (typeof status.balanceCents === "number") {
-              onBalanceRefresh?.(status.balanceCents);
-            }
-          }}
-        />
       </div>
     </section>
   );

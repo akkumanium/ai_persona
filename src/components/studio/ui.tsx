@@ -334,6 +334,32 @@ export function SelectField({
   options: string[];
   onChange: (value: string) => void;
 }) {
+  if (label.toLowerCase().includes("aspect ratio")) {
+    return (
+      <div className="mt-4">
+        <p className="text-sm font-medium text-stone-700">{label}</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {options.map((option) => (
+            <button
+              type="button"
+              key={option}
+              onClick={() => onChange(option)}
+              className={cn(
+                "flex h-11 items-center justify-center gap-2 rounded-md border px-2 text-sm font-medium transition",
+                value === option
+                  ? "border-emerald-800 bg-emerald-50 text-stone-950"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-emerald-800 hover:text-stone-950",
+              )}
+            >
+              <AspectRatioGlyph ratio={option} />
+              <span>{option}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <label className="mt-4 block">
       <span className="text-sm font-medium text-stone-700">{label}</span>
@@ -350,6 +376,25 @@ export function SelectField({
       </select>
     </label>
   );
+}
+
+function AspectRatioGlyph({ ratio }: { ratio: string }) {
+  const [width, height] = ratio.split(":").map(Number);
+  const isAuto = ratio === "auto" || !width || !height;
+  const isSquare = width === height;
+  const isHorizontal = width > height;
+  const className = cn(
+    "shrink-0 rounded-[3px] border border-current bg-current/10",
+    isAuto
+      ? "h-4 w-5 border-dashed opacity-70"
+      : isSquare
+        ? "size-4"
+        : isHorizontal
+          ? "h-3.5 w-6"
+          : "h-5 w-3.5",
+  );
+
+  return <span className={className} aria-hidden="true" />;
 }
 
 export function RangeField({

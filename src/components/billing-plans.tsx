@@ -458,7 +458,7 @@ export function TokenTopUps({
   const isBusy = checkoutState === "loading" || checkoutState === "waiting";
 
   return (
-    <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+    <section>
       <Script
         id="paddle-js-topups"
         src="https://cdn.paddle.com/paddle/v2/paddle.js"
@@ -475,20 +475,9 @@ export function TokenTopUps({
         }}
       />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-lg font-semibold text-stone-950">Buy additional tokens</p>
-          <p className="mt-1 text-sm leading-6 text-stone-600">Top up your balance without changing your plan.</p>
-        </div>
-        {selectedTopUp ? (
-          <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-right">
-            <p className="text-xl font-semibold text-stone-950">{selectedTopUp.priceLabel}</p>
-            <p className="text-xs font-medium text-stone-500">{selectedTopUp.tokenLabel}</p>
-          </div>
-        ) : null}
-      </div>
+      <p className="text-lg font-semibold text-stone-950">Buy tokens</p>
 
-      <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid grid-cols-3 gap-2">
         {config.topUps.map((topUp) => {
           const isSelected = topUp.id === selectedTopUp?.id;
           return (
@@ -497,20 +486,13 @@ export function TokenTopUps({
               type="button"
               onClick={() => setSelectedTopUpId(topUp.id)}
               className={cn(
-                "min-h-24 rounded-lg border p-4 text-left transition",
+                "flex h-14 items-center justify-center rounded-md border px-3 text-lg font-semibold transition",
                 isSelected
                   ? "border-emerald-800 bg-emerald-50"
                   : "border-stone-200 bg-stone-50 hover:border-emerald-800",
               )}
             >
-              <span className="flex items-start justify-between gap-3">
-                <span>
-                  <span className="block text-sm font-semibold text-stone-950">{topUp.name}</span>
-                  <span className="mt-1 block text-xs leading-5 text-stone-500">{topUp.description}</span>
-                </span>
-                <span className="text-lg font-semibold text-emerald-900">{topUp.priceLabel}</span>
-              </span>
-              <span className="mt-3 block text-xs font-semibold text-stone-600">{topUp.tokenLabel}</span>
+              {topUp.priceLabel}
             </button>
           );
         })}

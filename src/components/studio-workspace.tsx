@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, MessageCircle, Play, Settings, UserRound, Video, type LucideIcon } from "lucide-react";
+import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, Play, Settings, UserRound, Video, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -28,7 +28,6 @@ const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: bo
   { id: "avatar", label: "Avatar", icon: Video },
   { id: "assets", label: "Assets", icon: ImageIcon },
   { id: "jobs", label: "Jobs", icon: Activity },
-  { id: "community", label: "Community chat", icon: MessageCircle, disabled: true, badge: "Soon" },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 

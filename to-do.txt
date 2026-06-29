@@ -7,17 +7,12 @@
 41. Add carousel
 42. Add runninghub
 46. Maybe change "tokens" to tokens icon
-48. Look into chatbot.
 49. Probably change the prompt for body
 51. Check options for every video and clearly differentiate them.
-52. Change "generate from Scratch" to "generate" and change the options
 55. Open community chat
 58. Figure out Seedance prompting
-59. Is there an easy, clear way to cancel the membership?
-60. Refund policy if the user hasn't used the credits
 64. Change references design
-65. Preview message must be in top center as a bar. Also "preview mode" is white and the background is also white so the text isn't even visible.
-66. No need for the left block (with tabs) being so big
+66. Perhaps change studio
 67. Add bust
 68. Optimize for phone users
 69. Free telegram icon
@@ -25,6 +20,8 @@
 71. Add wan 2.7 as image generator
 72. Change referral link
 73. Why is topper different everywhere
+80. Metadata cleaning
+81. Verify whether cancelling and refunding work
 
 What to include to main page:
 1. Stop wasting time - start building now

@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, ChevronDown } from "lucide-react";
+import { PublicHeader } from "@/components/public-header";
+import { hasSupabaseEnv } from "@/lib/env";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "FAQ | Persona Studio", description: "Answers to common Persona Studio questions." };
 
@@ -10,10 +13,22 @@ const questions = [
   ["Can I cancel or request a refund?", "You can cancel from Studio settings or the pricing page. Your latest subscription payment is eligible for an automatic full refund only when none of its credits have been used."],
 ];
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const supabaseReady = hasSupabaseEnv();
+  let initialUserEmail: string | undefined;
+
+  if (supabaseReady) {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    initialUserEmail = user?.email;
+  }
+
   return (
-    <main className="min-h-screen bg-[#070711] px-5 py-8 text-white sm:px-8 lg:py-12">
-      <div className="mx-auto w-full max-w-6xl">
+    <main className="public-page px-5 py-8 text-white sm:px-8 lg:py-12">
+      <PublicHeader initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} redirectPath="/faq" />
+      <div className="public-content mx-auto w-full max-w-4xl">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-sm font-semibold text-[#b6bacb] transition hover:text-white"
@@ -22,7 +37,7 @@ export default function FaqPage() {
           Home
         </Link>
 
-        <header className="mx-auto mt-16 max-w-3xl text-center sm:mt-20">
+        <header className="mx-auto mt-16 max-w-2xl text-center sm:mt-20">
           <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-6xl">
             Frequently Asked Questions
           </h1>
@@ -34,15 +49,15 @@ export default function FaqPage() {
         <div className="mt-14 w-full border-t border-white/15 sm:mt-16">
           {questions.map(([question, answer]) => (
             <details key={question} className="group border-b border-white/15">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-8 py-7 text-left marker:content-none sm:py-9 [&::-webkit-details-marker]:hidden">
-                <span className="text-base font-semibold text-white sm:text-lg">{question}</span>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3.5 text-left marker:content-none sm:py-4 [&::-webkit-details-marker]:hidden">
+                <span className="text-[16px] font-medium leading-6 text-white sm:text-[18px]">{question}</span>
                 <ChevronDown
-                  size={18}
+                  size={16}
                   className="shrink-0 text-[#8f94a6] transition-transform duration-200 group-open:rotate-180"
                   aria-hidden="true"
                 />
               </summary>
-              <p className="max-w-4xl pb-8 pr-10 leading-7 text-[#aeb4c6] sm:pb-10">{answer}</p>
+              <p className="max-w-4xl pb-5 pr-10 text-[15px] leading-7 text-[#aeb4c6] sm:pb-6 sm:text-base">{answer}</p>
             </details>
           ))}
         </div>

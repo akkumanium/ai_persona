@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Send } from "lucide-react";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { AuthButton } from "@/components/auth/auth-button";
+import { PublicHeader } from "@/components/public-header";
 
 const homeSans = Inter({
   subsets: ["latin"],
@@ -25,16 +24,14 @@ const marqueeItems = [
   "Nano Banana Pro",
   "Kling 3.0",
   "Seedance 2.0",
-  "Voice clone",
+  "Natural voice",
   "Talking avatar",
   "OFM guides",
   "Same body",
   "Same voice",
   "Every platform",
-  "Zero drift",
+  "Motion control",
 ];
-
-const telegramCommunityUrl = process.env.NEXT_PUBLIC_TELEGRAM_URL ?? "https://t.me/persona_studio";
 
 export function HomePage({
   initialUserEmail,
@@ -322,34 +319,7 @@ export function HomePage({
       <div className="home-noise" />
 
       {/* ── Nav ── */}
-      <nav className="nav" aria-label="Primary navigation">
-        <div className="container nav-inner">
-          <Link href="/" className="brand">
-            <Image src="/favicon.svg" alt="" width={22} height={22} className="brand-mark" />
-            <span>persona/studio</span>
-          </Link>
-          <div className="nav-links">
-            <a href="#problem">Why</a>
-            <a href="#engine">Engine</a>
-            <a href="#why-us">Why us</a>
-            <a href="/guides">Guides</a>
-            <Link href="/pricing">Pricing</Link>
-            <Link href="/faq">FAQ</Link>
-          </div>
-          <div className="nav-actions">
-            <a
-              href={telegramCommunityUrl}
-              className="telegram-link"
-              aria-label="Open Telegram community"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Send size={16} />
-            </a>
-            <AuthButton initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} variant="dark" />
-          </div>
-        </div>
-      </nav>
+      <PublicHeader initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} />
 
       {/* ── Hero ── */}
       <section className="hero">
@@ -371,7 +341,7 @@ export function HomePage({
             <Reveal delay={160}>
               <p className="lead">
                 Persona Studio is the only workspace you need to build a consistent
-                AI persona and ship images, video, and voice that all look like the same person — every time. Stop wasting your time and start generating now.
+                AI persona and ship images, video, and voice that all look like the same person — every time. 
               </p>
             </Reveal>
             <Reveal delay={240}>
@@ -467,7 +437,7 @@ export function HomePage({
           <div className="shift-body">
             <Reveal delay={100}>
               <h2>
-                You don&apos;t need another <em>$1,200 course</em>. You need to stop Googling and start shipping.
+                No more googling and trying. Start shipping <em>now</em>.
               </h2>
             </Reveal>
             <Reveal delay={200}>
@@ -644,8 +614,8 @@ export function HomePage({
           <br></br>
           <Reveal delay={120}>
             <p className="closing-body">
-              You already lost time researching tools, watching tutorials, and comparing Discords. That part&apos;s over.
-              Define your persona, lock the references, and ship your first asset in the next ten minutes.
+              You already lost time researching tools, watching tutorials, and trying unknown workflows. That part&apos;s over.
+              Define your persona, lock the references, and ship your first video in the next ten minutes.
             </p>
           </Reveal>
           <Reveal delay={240}>
@@ -672,7 +642,6 @@ export function HomePage({
             <Link href="/faq">FAQ</Link>
             <Link href="/contact">Contact</Link>
           </div>
-          <div>v1.0 / all systems operational</div>
         </div>
       </footer>
     </main>

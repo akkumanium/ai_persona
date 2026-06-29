@@ -1,7 +1,9 @@
 import { ArrowLeft, Mail } from "lucide-react";
 import Link from "next/link";
 import { ContactForm } from "@/components/contact-form";
-import { env } from "@/lib/env";
+import { PublicHeader } from "@/components/public-header";
+import { env, hasSupabaseEnv } from "@/lib/env";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Contact | Persona Studio",
@@ -11,10 +13,21 @@ export const metadata = {
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const { from } = await searchParams;
   const returnToStudio = from === "studio";
+  const supabaseReady = hasSupabaseEnv();
+  let initialUserEmail: string | undefined;
+
+  if (supabaseReady) {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    initialUserEmail = user?.email;
+  }
+
   return (
-    <main className="min-h-screen bg-[#070711] px-5 py-8 text-white sm:px-8">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_12%,rgba(255,79,163,0.2),transparent_30%),radial-gradient(circle_at_78%_18%,rgba(116,92,246,0.16),transparent_28%),linear-gradient(135deg,#070711_0%,#0b0d1b_48%,#160b1f_100%)]" />
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col justify-center">
+    <main className="public-page px-5 py-8 text-white sm:px-8">
+      <PublicHeader initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} redirectPath="/contact" />
+      <div className="public-content mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col justify-center">
         <Link
           href={returnToStudio ? "/studio" : "/"}
           className="mb-8 inline-flex w-fit items-center gap-2 rounded-md border border-white/[0.14] bg-white/[0.08] px-3 py-2 text-sm font-semibold text-white transition hover:border-[#ff4fa3]/70 hover:bg-white/[0.12]"
