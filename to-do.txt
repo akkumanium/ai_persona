@@ -2,7 +2,6 @@
 7. Google oauth settings fix 
 8. Fix invisibility issue
 12. Email fix
-32. Change tokens buy up design
 36. Check data usage
 41. Add carousel
 42. Add runninghub
@@ -15,13 +14,15 @@
 66. Perhaps change studio
 67. Add bust
 68. Optimize for phone users
-69. Free telegram icon
-70. Check how subcription renewal works
 71. Add wan 2.7 as image generator
 72. Change referral link
-73. Why is topper different everywhere
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
+82. Centralize telegram icon and correct link
+83. Aspect ratios are invisible
+84. Put video to demo
+85. Change the way subcriptions work
+86. Hybrid mode - any amount of images must be able to be uploaded
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
@@ -80,3 +81,5 @@ surface detail. Chest and shoulder clothing visible at the bottom of frame.
 Lighting & presentation: Clean studio lighting - soft key light upper left, gentle fill from the right. Consistent character identity, proportions,
 
 and costume details across all four views. No text, no watermarks, no extra figures, no background environment. [insert outfit or clothing and basic features here]
+
+MeroMero, Oshimen, Meroi, Stanmade, Idolmade

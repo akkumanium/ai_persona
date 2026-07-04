@@ -26,7 +26,7 @@ const marqueeItems = [
   "Seedance 2.0",
   "Natural voice",
   "Talking avatar",
-  "OFM guides",
+  "Guides",
   "Same body",
   "Same voice",
   "Every platform",
@@ -377,14 +377,14 @@ export function HomePage({
                 depth="0.25"
                 base="translate(-50%, -50%) rotate(14deg)"
                 image="/home/persona-body-ref.png"
-                label="Body ref"
+                label="Outside"
               />
               <HeroCard
                 className="card-back-2"
                 depth="0.4"
                 base="translate(-50%, -50%) rotate(-10deg)"
                 image="/home/persona-wardrobe.png"
-                label="Wardrobe"
+                label="Gym"
               />
               <HeroCard
                 className="card-back-1"
@@ -395,15 +395,15 @@ export function HomePage({
               />
               <div className="card card-front" data-depth="1.0" data-base="translate(-50%, -50%)">
                 <Image
-                  src="/home/persona-primary.jpg"
+                  src="/home/persona-primary.png"
                   alt=""
                   fill
                   priority
                   sizes="(max-width: 960px) 240px, 290px"
                 />
                 <div className="card-meta">
-                  <span className="card-name">Mira Vale</span>
-                  <span className="card-tag">Primary</span>
+                  <span className="card-name">Jessica</span>
+                  <span className="card-tag">Reference</span>
                 </div>
               </div>
             </div>
@@ -510,11 +510,11 @@ export function HomePage({
         <div className="container">
           <Reveal>
             <div className="section-head">
-              <span className="eyebrow">03 / Why Persona Studio?</span>
+              <span className="eyebrow">03 / Beyond the basics</span>
               <h2>
-                Why <em>Persona Studio?</em>
+                Beyond <em>the basics</em>
               </h2>
-              <p>Three things most tools get wrong. We didn&apos;t.</p>
+              <p>Three things that make it easier to win.</p>
             </div>
           </Reveal>
           <Reveal delay={150}>
@@ -571,9 +571,9 @@ export function HomePage({
                 lineHeight: 1.6,
               }}
             >
-              Anyone can teach you to write a prompt. Almost nobody tells you how to set up accounts that survive, how
+              Learn how to set up accounts that survive, how
               to warm up a new profile without tripping every spam filter, or how platforms actually detect AI content
-              creators. We do — written guides, no fluff, updated as platforms change their rules.
+              creators. We provide written guides, updated as platforms change their rules.
             </p>
           </Reveal>
           <Reveal delay={240}>
@@ -584,7 +584,7 @@ export function HomePage({
               </div>
               <div className="guide-item">
                 <span className="guide-item-arrow">&rarr;</span>
-                Warm-up sequencing for new profiles
+                Warm-up for new profiles
               </div>
               <div className="guide-item">
                 <span className="guide-item-arrow">&rarr;</span>
