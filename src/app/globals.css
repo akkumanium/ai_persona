@@ -198,6 +198,21 @@ select option {
   background: #111827;
 }
 
+.aspect-ratio-select {
+  background-color: transparent !important;
+}
+
+.aspect-ratio-glyph {
+  background-color: rgba(255, 79, 163, 0.32) !important;
+  border-color: rgba(255, 79, 163, 0.92) !important;
+}
+
+.persona-dialog-panel {
+  background-color: #111827 !important;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
 .guide-admin-field {
   background-color: rgba(8, 13, 22, 0.62) !important;
   color: #eef6ff !important;
@@ -339,6 +354,8 @@ label {
 .site-telegram-icon {
   width: 18px;
   height: 18px;
+  display: block;
+  transform: translateX(-1px);
 }
 
 .public-content {

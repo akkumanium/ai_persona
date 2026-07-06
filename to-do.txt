@@ -10,7 +10,6 @@
 51. Check options for every video and clearly differentiate them.
 55. Open community chat
 58. Figure out Seedance prompting
-64. Change references design
 66. Perhaps change studio
 67. Add bust
 68. Optimize for phone users
@@ -21,14 +20,14 @@
 83. Aspect ratios are invisible
 84. Put video to demo
 85. Change the way subcriptions work
-88. Add wan image edit
-89. Delete the description of video models
 90. Change 1$ = 1000 tokens to 1$ = 100 tokens Maybe
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
 94. Downloading videos doesn't work, e.g. https://www.instagram.com/reel/DZjeT8hyp6i/
 95. Start frame must take the whole box's space
 96. Make personas limited, depending on the subscription
+97. Download yt-dlp
+98. Loading indicator when uploading images
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

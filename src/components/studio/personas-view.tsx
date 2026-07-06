@@ -590,8 +590,8 @@ function CreatePersonaDialog({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-stone-950/35 px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-lg rounded-lg border border-stone-200 bg-white p-5 shadow-xl">
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-stone-950/80 px-4">
+      <form onSubmit={onSubmit} className="persona-dialog-panel w-full max-w-lg rounded-lg border border-stone-200 bg-white p-5 shadow-xl">
         <div className="flex items-center justify-between gap-3">
           <PanelTitle icon={UserRound} title="Create persona" />
           <button

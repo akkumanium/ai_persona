@@ -1,14 +1,18 @@
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, Send } from "lucide-react";
 import Link from "next/link";
-import { ContactForm } from "@/components/contact-form";
 import { PublicHeader } from "@/components/public-header";
 import { env, hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Contact | Persona Studio",
-  description: "Send a short letter to the Persona Studio developer.",
+  description: "Contact Persona Studio by email or Telegram.",
 };
+
+const TELEGRAM_USER = "@persona_studio_support";
+const TELEGRAM_USER_URL = "https://t.me/persona_studio_support";
+const TELEGRAM_GROUP = "Persona Studio Telegram";
+const TELEGRAM_GROUP_URL = "https://t.me/personastudioai";
 
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const { from } = await searchParams;
@@ -43,17 +47,46 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
             </div>
             <h1 className="mt-5 text-3xl font-semibold tracking-normal sm:text-4xl">Contact us</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[#b6bacb]">
-              Report any bugs, mistakes, or suggestions you have. The site is in its early stage, so your feedback is greatly appreciated. You can also write directly to {" "}
-              <a className="font-semibold text-[#ffd0e7] hover:text-white" href={`mailto:${env.contactEmail}`}>
-                {env.contactEmail}
-              </a>
-              .
+              Report bugs, mistakes, or suggestions directly through one of these contacts.
             </p>
           </div>
 
-          <ContactForm />
+          <div className="grid gap-3">
+            <ContactLink icon={Mail} label="Email" value={env.contactEmail} href={`mailto:${env.contactEmail}`} />
+            <ContactLink icon={Send} label="Telegram user" value={TELEGRAM_USER} href={TELEGRAM_USER_URL} />
+            <ContactLink icon={Send} label="Telegram group" value={TELEGRAM_GROUP} href={TELEGRAM_GROUP_URL} />
+          </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function ContactLink({
+  icon: Icon,
+  label,
+  value,
+  href,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: string;
+  href: string;
+}) {
+  return (
+    <a
+      href={href}
+      target={href.startsWith("mailto:") ? undefined : "_blank"}
+      rel={href.startsWith("mailto:") ? undefined : "noreferrer"}
+      className="flex items-center gap-3 rounded-md border border-white/10 bg-white/[0.06] p-4 text-left transition hover:border-[#ff4fa3]/50 hover:bg-white/[0.09]"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[#ff4fa3]/14 text-[#ff8fc7]">
+        <Icon size={19} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs font-semibold uppercase tracking-[0.12em] text-[#8f98ad]">{label}</span>
+        <span className="mt-1 block break-all text-sm font-semibold text-[#ffd0e7]">{value}</span>
+      </span>
+    </a>
   );
 }

@@ -25,6 +25,7 @@ import {
   NANO_BANANA_PRO_MODEL_ID,
   chatGptImageQualities,
   imageSizesForModel,
+  requiresImageReferences,
   supportsImageQuality,
   supportsImageReferences,
   supportsImageSize,
@@ -126,6 +127,7 @@ export function GeneratePersonaView({
   const imageModelSupportsSize = supportsImageSize(safeSelectedModel);
   const imageModelSupportsQuality = supportsImageQuality(safeSelectedModel);
   const imageModelSupportsReferences = supportsImageReferences(safeSelectedModel);
+  const imageModelRequiresReferences = requiresImageReferences(safeSelectedModel);
   const referenceInputCount = isHybridFace
     ? hybridSources.length
     : isScratchFace
@@ -225,6 +227,7 @@ export function GeneratePersonaView({
     if (!selectedPersona) return;
     if (!confirmsRights || !confirmsAdultPersona) return;
     if (isScratchFace && scratchPrompt.trim().length < 10) return;
+    if (isScratchFace && imageModelRequiresReferences && scratchSources.length === 0) return;
     if (isHybridFace && hybridSources.length < 2) return;
     if (selectedSlotId !== "face" && selectedReferenceSelection.length === 0) return;
 
@@ -496,6 +499,7 @@ export function GeneratePersonaView({
               !confirmsRights ||
               !confirmsAdultPersona ||
               (isScratchFace && scratchPrompt.trim().length < 10) ||
+              (isScratchFace && imageModelRequiresReferences && scratchSources.length === 0) ||
               (isHybridFace && hybridSources.length < 2) ||
               (selectedSlotId !== "face" && selectedReferenceSelection.length === 0)
             }

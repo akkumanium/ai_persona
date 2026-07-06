@@ -2,6 +2,7 @@ export const NANO_BANANA_PRO_MODEL_ID = "gemini-3-pro-image";
 export const CHATGPT_IMAGE_MODEL_ID = "gpt-image-2";
 export const SEEDREAM_4_5_MODEL_ID = "seedream-v4.5";
 export const WAN_2_7_IMAGE_MODEL_ID = "wan-2.7-image";
+export const WAN_2_7_IMAGE_EDIT_MODEL_ID = "wan-2.7-image-edit";
 
 export const nanoBananaProAspectRatios = [
   "1:1",
@@ -36,10 +37,18 @@ export function isWan27ImageModel(modelId: string) {
   return modelId === WAN_2_7_IMAGE_MODEL_ID;
 }
 
+export function isWan27ImageEditModel(modelId: string) {
+  return modelId === WAN_2_7_IMAGE_EDIT_MODEL_ID;
+}
+
+export function isWan27ImageFamilyModel(modelId: string) {
+  return isWan27ImageModel(modelId) || isWan27ImageEditModel(modelId);
+}
+
 export function aspectRatiosForImageModel(modelId: string) {
   if (isChatGptImageModel(modelId)) return chatGptImageAspectRatios;
   if (isSeedream45ImageModel(modelId)) return seedream45AspectRatios;
-  if (isWan27ImageModel(modelId)) return wan27ImageAspectRatios;
+  if (isWan27ImageFamilyModel(modelId)) return wan27ImageAspectRatios;
   return nanoBananaProAspectRatios;
 }
 
@@ -48,7 +57,7 @@ export function supportsImageSize(modelId: string) {
 }
 
 export function imageSizesForModel(modelId: string) {
-  if (isWan27ImageModel(modelId)) return wan27ImageSizes;
+  if (isWan27ImageFamilyModel(modelId)) return wan27ImageSizes;
   return isSeedream45ImageModel(modelId) ? seedream45ImageSizes : nanoBananaProImageSizes;
 }
 
@@ -58,4 +67,8 @@ export function supportsImageQuality(modelId: string) {
 
 export function supportsImageReferences(modelId: string) {
   return !isWan27ImageModel(modelId);
+}
+
+export function requiresImageReferences(modelId: string) {
+  return isWan27ImageEditModel(modelId);
 }

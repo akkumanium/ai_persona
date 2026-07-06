@@ -34,7 +34,7 @@ export type Asset = {
   prompt: string;
   personaId?: string;
   referenceAssetIds?: string[];
-  referenceSlot?: "face" | "face-grid" | "body" | "more";
+  referenceSlot?: "face" | "chest-up" | "face-grid" | "body" | "more";
   isDefaultReference?: boolean;
   generationType: GenerationType;
   provider: ProviderName | "demo";

@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthButton } from "@/components/auth/auth-button";
 
+const TELEGRAM_GROUP_URL = "https://t.me/personastudioai";
+
 export function PublicHeader({
   initialUserEmail,
   supabaseReady,
@@ -27,9 +29,9 @@ export function PublicHeader({
           <Link href="/faq">FAQ</Link>
         </div>
         <div className="site-nav-actions">
-          <Link href="/contact" className="site-telegram-link" aria-label="Telegram">
+          <a href={TELEGRAM_GROUP_URL} target="_blank" rel="noreferrer" className="site-telegram-link" aria-label="Telegram">
             <TelegramIcon />
-          </Link>
+          </a>
           <AuthButton
             initialUserEmail={initialUserEmail}
             supabaseReady={supabaseReady}

@@ -1,3 +1,9 @@
+import { execFile } from "child_process";
+import { randomUUID } from "crypto";
+import { mkdir, readFile, stat, unlink } from "fs/promises";
+import { tmpdir } from "os";
+import { join } from "path";
+import { promisify } from "util";
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { assertSafeRemoteMediaUrl } from "@/lib/server/media-storage";
@@ -7,6 +13,13 @@ export const runtime = "nodejs";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".m4v"];
+const execFileAsync = promisify(execFile);
+
+type DownloadedVideo = {
+  bytes: Uint8Array;
+  mimeType: string;
+  originalName: string;
+};
 
 export async function POST(request: Request) {
   try {
@@ -25,49 +38,22 @@ export async function POST(request: Request) {
 
     await assertSafeRemoteMediaUrl(parsed);
 
-    const response = await fetch(parsed.toString(), {
-      headers: {
-        Accept: "video/*,*/*;q=0.8",
-        "User-Agent": "PersonaStudio/1.0",
-      },
-      redirect: "follow",
-    });
+    const downloaded =
+      await downloadDirectVideo(parsed) ??
+      await downloadFromPageMetadata(parsed) ??
+      await downloadWithYtDlp(parsed);
 
-    if (!response.ok) {
-      return NextResponse.json({ error: "Could not download that video link." }, { status: 400 });
-    }
-
-    const contentLength = Number(response.headers.get("content-length") ?? 0);
-    if (contentLength > MAX_VIDEO_BYTES) {
-      return NextResponse.json({ error: "Video links must be under 100 MB." }, { status: 413 });
-    }
-
-    const mimeType = response.headers.get("content-type")?.split(";")[0] ?? "application/octet-stream";
-    const hasVideoExtension = VIDEO_EXTENSIONS.some((extension) => parsed.pathname.toLowerCase().endsWith(extension));
-    if (!mimeType.startsWith("video/") && !hasVideoExtension) {
-      return NextResponse.json(
-        { error: "That link did not resolve to a downloadable video file. Use a direct MP4/WebM link or upload the clip." },
-        { status: 415 },
-      );
-    }
-
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > MAX_VIDEO_BYTES) {
-      return NextResponse.json({ error: "Video links must be under 100 MB." }, { status: 413 });
-    }
-
-    const originalName = decodeURIComponent(parsed.pathname.split("/").pop() || "trend-video.mp4");
     const saved = await saveTempMedia({
-      bytes,
-      mimeType: mimeType.startsWith("video/") ? mimeType : "video/mp4",
-      originalName,
+      bytes: downloaded.bytes,
+      mimeType: downloaded.mimeType,
+      originalName: downloaded.originalName,
       userId: auth.user?.id,
     });
 
     return NextResponse.json({
-      name: originalName,
-      mimeType: mimeType.startsWith("video/") ? mimeType : "video/mp4",
-      sizeBytes: bytes.byteLength,
+      name: downloaded.originalName,
+      mimeType: downloaded.mimeType,
+      sizeBytes: downloaded.bytes.byteLength,
       url: saved.url,
     });
   } catch (error) {
@@ -76,4 +62,156 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+}
+
+async function downloadDirectVideo(url: URL, referer?: string): Promise<DownloadedVideo | undefined> {
+  const response = await fetch(url.toString(), {
+    headers: {
+      Accept: "video/*,text/html,*/*;q=0.8",
+      Referer: referer ?? url.origin,
+      "User-Agent": browserUserAgent(),
+    },
+    redirect: "follow",
+  });
+
+  if (!response.ok) return undefined;
+
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_VIDEO_BYTES) {
+    throw new Error("Video links must be under 100 MB.");
+  }
+
+  const mimeType = response.headers.get("content-type")?.split(";")[0] ?? "application/octet-stream";
+  const hasVideoExtension = VIDEO_EXTENSIONS.some((extension) => url.pathname.toLowerCase().endsWith(extension));
+  if (!mimeType.startsWith("video/") && !hasVideoExtension) return undefined;
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > MAX_VIDEO_BYTES) {
+    throw new Error("Video links must be under 100 MB.");
+  }
+
+  return {
+    bytes,
+    mimeType: mimeType.startsWith("video/") ? mimeType : "video/mp4",
+    originalName: decodeURIComponent(url.pathname.split("/").pop() || "trend-video.mp4"),
+  };
+}
+
+async function downloadFromPageMetadata(pageUrl: URL): Promise<DownloadedVideo | undefined> {
+  const response = await fetch(pageUrl.toString(), {
+    headers: {
+      Accept: "text/html,*/*;q=0.8",
+      "User-Agent": browserUserAgent(),
+    },
+    redirect: "follow",
+  });
+  if (!response.ok) return undefined;
+
+  const html = await response.text();
+  const videoUrl = extractVideoUrlFromHtml(html, pageUrl);
+  if (!videoUrl) return undefined;
+
+  await assertSafeRemoteMediaUrl(videoUrl);
+  return downloadDirectVideo(videoUrl, pageUrl.toString());
+}
+
+async function downloadWithYtDlp(url: URL): Promise<DownloadedVideo> {
+  const tempDir = join(tmpdir(), "persona-studio-imports");
+  const outputPath = join(tempDir, `${randomUUID()}.mp4`);
+  const ytdlpPaths = [
+    process.env.YTDLP_PATH,
+    join(process.cwd(), "node_modules", "youtube-dl-exec", "bin", process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp"),
+    "yt-dlp",
+  ].filter((path): path is string => Boolean(path));
+
+  await mkdir(tempDir, { recursive: true });
+
+  try {
+    let lastError: unknown;
+    for (const ytdlpPath of ytdlpPaths) {
+      try {
+        await execFileAsync(
+          ytdlpPath,
+          [
+            "--no-playlist",
+            "--max-filesize",
+            `${MAX_VIDEO_BYTES}`,
+            "--merge-output-format",
+            "mp4",
+            "-f",
+            "bv*+ba/best[ext=mp4]/best",
+            "-o",
+            outputPath,
+            url.toString(),
+          ],
+          { timeout: 120000, maxBuffer: 1024 * 1024 },
+        );
+        lastError = undefined;
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (lastError) throw lastError;
+
+    const fileStat = await stat(outputPath);
+    if (fileStat.size > MAX_VIDEO_BYTES) {
+      throw new Error("Video links must be under 100 MB.");
+    }
+
+    return {
+      bytes: new Uint8Array(await readFile(outputPath)),
+      mimeType: "video/mp4",
+      originalName: `${socialVideoName(url)}.mp4`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("not recognized") || message.includes("ENOENT") || message.includes("spawn")) {
+      throw new Error("That link did not resolve to a direct video. Install yt-dlp on the server or upload the clip.");
+    }
+    throw new Error("Could not download that video link.");
+  } finally {
+    await unlink(outputPath).catch(() => undefined);
+  }
+}
+
+function extractVideoUrlFromHtml(html: string, baseUrl: URL) {
+  const candidates = [
+    /<meta\s+(?:property|name)=["'](?:og:video|og:video:url|twitter:player:stream)["']\s+content=["']([^"']+)["']/i,
+    /<meta\s+content=["']([^"']+)["']\s+(?:property|name)=["'](?:og:video|og:video:url|twitter:player:stream)["']/i,
+    /"video_url"\s*:\s*"([^"]+)"/i,
+    /"playable_url"\s*:\s*"([^"]+)"/i,
+    /"contentUrl"\s*:\s*"([^"]+\.(?:mp4|webm|mov|m4v)[^"]*)"/i,
+  ];
+
+  for (const pattern of candidates) {
+    const match = html.match(pattern);
+    const raw = match?.[1];
+    if (!raw) continue;
+    try {
+      return new URL(decodeHtmlValue(raw), baseUrl);
+    } catch {
+      continue;
+    }
+  }
+
+  return undefined;
+}
+
+function decodeHtmlValue(value: string) {
+  return value
+    .replaceAll("\\/", "/")
+    .replaceAll("\\u0026", "&")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&#x2F;", "/");
+}
+
+function socialVideoName(url: URL) {
+  const parts = url.pathname.split("/").filter(Boolean);
+  return parts.at(-1) ?? parts.at(-2) ?? "trend-video";
+}
+
+function browserUserAgent() {
+  return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
 }

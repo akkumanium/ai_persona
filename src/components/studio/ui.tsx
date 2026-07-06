@@ -363,7 +363,7 @@ export function SelectField({
           <select
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            className="h-full w-full rounded-md border-0 bg-transparent px-9 text-sm outline-none"
+            className="aspect-ratio-select h-full w-full rounded-md border-0 bg-transparent px-9 text-sm outline-none"
           >
             {options.map((option) => (
               <option key={option} value={option}>
@@ -405,7 +405,7 @@ function AspectRatioGlyph({ ratio }: { ratio: string }) {
   const isSquare = width === height;
   const isHorizontal = width > height;
   const className = cn(
-    "shrink-0 border border-emerald-800 bg-emerald-800/25",
+    "aspect-ratio-glyph shrink-0 border border-emerald-800 bg-emerald-800/25",
     isAuto
       ? "h-3.5 w-4 border-dashed opacity-80"
       : isSquare

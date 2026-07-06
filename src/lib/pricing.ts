@@ -4,7 +4,7 @@ import type {
   SpeechGenerationRequest,
   VideoGenerationRequest,
 } from "@/lib/providers/types";
-import { WAN_2_7_IMAGE_MODEL_ID } from "@/lib/image-model-options";
+import { WAN_2_7_IMAGE_EDIT_MODEL_ID, WAN_2_7_IMAGE_MODEL_ID } from "@/lib/image-model-options";
 
 export const TOKENS_PER_USD = 1000;
 
@@ -39,7 +39,7 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
     };
   }
 
-  if (request.model === WAN_2_7_IMAGE_MODEL_ID) {
+  if (request.model === WAN_2_7_IMAGE_MODEL_ID || request.model === WAN_2_7_IMAGE_EDIT_MODEL_ID) {
     const rawUsd = 0.03 * count;
     return {
       rawUsd,

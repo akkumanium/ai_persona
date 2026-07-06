@@ -36,6 +36,6 @@ export type View =
   | "community";
 export type GenerationMode = "images" | "videos" | "motion";
 export type AssetFilter = "all" | "avatar" | "upload" | "image" | "video" | "audio";
-export type ReferenceSlotId = "face" | "face-grid" | "body" | "more";
+export type ReferenceSlotId = "face" | "chest-up" | "body" | "face-grid";
 export type FaceGenerationMode = "scratch" | "hybrid";
 export type VideoFrameSlot = "start" | "end";

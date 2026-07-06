@@ -25,6 +25,7 @@ import {
   NANO_BANANA_PRO_MODEL_ID,
   chatGptImageQualities,
   imageSizesForModel,
+  requiresImageReferences,
   supportsImageQuality,
   supportsImageReferences,
   supportsImageSize,
@@ -165,6 +166,7 @@ export function GenerationView({
   const imageModelSupportsSize = supportsImageSize(imageModel);
   const imageModelSupportsQuality = supportsImageQuality(imageModel);
   const imageModelSupportsReferences = supportsImageReferences(imageModel);
+  const imageModelRequiresReferences = requiresImageReferences(imageModel);
   // References are now always "on" by default when the model supports them.
   // The user opts out by deselecting every reference tile (selectedReferenceSelection becomes empty),
   // at which point the request falls through to prompt-only generation.
@@ -671,7 +673,7 @@ export function GenerationView({
               icon={ImageIcon}
               label="Generate images"
               costLabel={imageCostLabel}
-              disabled={!selectedPersona || imagePrompt.trim().length < 10}
+              disabled={!selectedPersona || imagePrompt.trim().length < 10 || (imageModelRequiresReferences && totalReferenceCount === 0)}
             />
           </form>
         ) : null}
@@ -693,7 +695,7 @@ export function GenerationView({
               onSelect={selectVideoFrame}
               onClearEnd={clearVideoEndFrame}
             />
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <div className={cn("mt-2.5 grid gap-2", normalVideoSupportsEndFrame ? "grid-cols-2" : "grid-cols-1")}>
               <UploadBox
                 accept="image/*"
                 compact
@@ -709,9 +711,7 @@ export function GenerationView({
                   label={uploadedVideoEndFrame ? uploadedVideoEndFrame.name : "Upload end frame"}
                   onChange={(files) => void captureVideoFrame(files, "end")}
                 />
-              ) : (
-                <div className="min-h-9" />
-              )}
+              ) : null}
             </div>
             {isSeedanceVideoModel(videoModel) ? (
               <div className="mt-2.5 grid grid-cols-2 gap-2">

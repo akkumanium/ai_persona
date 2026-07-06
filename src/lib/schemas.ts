@@ -4,7 +4,7 @@ export const aspectRatioSchema = z.enum(["1:1", "2:3", "3:2", "3:4", "4:3", "4:5
 export const videoAspectRatioSchema = z.enum(["auto", "1:1", "3:4", "4:3", "4:5", "9:16", "16:9", "21:9"]);
 export const imageSizeSchema = z.enum(["1K", "2K", "4K"]);
 export const imageQualitySchema = z.enum(["auto", "low", "medium", "high"]);
-export const referenceSlotSchema = z.enum(["face", "face-grid", "body", "more"]);
+export const referenceSlotSchema = z.enum(["face", "chest-up", "face-grid", "body"]);
 
 export const providerImageInputSchema = z.object({
   name: z.string().max(200).optional(),
