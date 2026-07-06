@@ -26,6 +26,7 @@ export type View =
   | "generate"
   | "images"
   | "videos"
+  | "trends"
   | "motion"
   | "speech"
   | "avatar"

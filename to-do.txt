@@ -23,6 +23,14 @@
 84. Put video to demo
 85. Change the way subcriptions work
 86. Hybrid mode - any amount of images must be able to be uploaded
+87. Check aspect ratios in reference generation
+88. Add wan image edit
+89. Delete the description of video models
+90. Change 1$ = 1000 tokens to 1$ = 100 tokens Maybe
+91. Emphasize targeting both OFM and UGC
+92. Generate terms and privacy
+93. Delete reference mode from Images
+94. Downloading videos doesn;t work, e.g. https://www.instagram.com/reel/DZjeT8hyp6i/
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
@@ -47,7 +55,7 @@ Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent
 Elevenlabs:sk_84b6297aec782c86eb03363a44c44f0018eaae12c734a148
 
 
-I want you to thoroughly analyze and describe the photo I send you. Based on that analysis, you need to create a prompt for Seedream 4.5 and/or Nano Banana Pro. Use the following format:
+I want you to thoroughly analyze and describe the photo I sent you. Based on that analysis, you need to create a prompt for Seedream 4.5 and/or Nano Banana Pro. Use the following format:
 🎨 Camera Angle / Framing - description of the shot, angle, composition
 🎨 Subject Styling - pose, clothing, footwear, props the subject is holding
 🎨 Setting & Props - interior/exterior, furniture, windows, landscape, decoration, etc.
@@ -64,7 +72,7 @@ Single shot. In a parked car. The woman raises her hands and puts them behind he
 An authentic, high-resolution lifestyle selfie of a woman sitting inside a modern car, chest-up framing, eye-level perspective. She is wearing a casual white ribbed camisole with a delicate white lace trim along the V-neckline. She is leaning back against a black leather car seat that features clean white contrast stitching. The car interior is bright and airy, flooded with soft, natural diffused daylight. Visible through the car side windows and rear windshield is a blurry background of a tropical beachside street lined with tall palm trees under a sunny blue sky. Casual Instagram selfie aesthetic, soft depth of field, sun-kissed mood, cinematic yet realistic smartphone photo quality
 
 ----
-Jimmy's promot
+Jimmy's prompt
 ----
 Create a Character reference sheet - four views on a neutral grey background:
 
@@ -82,4 +90,39 @@ Lighting & presentation: Clean studio lighting - soft key light upper left, gent
 
 and costume details across all four views. No text, no watermarks, no extra figures, no background environment. [insert outfit or clothing and basic features here]
 
-MeroMero, Oshimen, Meroi, Stanmade, Idolmade
+
+---Names---
+MeroMero, Oshimen, Meroi, Stanmade, Idolmade, Idolborn
+
+---Chest up---
+
+Extend the image to a chest-up portrait photography. She's wearing a tight, fitted gym bra with cleavage. Increase the size of her bust in a tasteful manner.
+
+.\first_frame.bat myvideo.mp4 cover.png
+
+---Faceswap---
+Replace the woman in the second reference image with the woman from the first reference image. The first image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
+Use the exact outfit, clothing fit, styling, and details from the second reference image.
+Crucially important: Transfer the woman into the pose of the second reference image with absolute precision. Match the pose 100% exactly — every limb angle, joint position, hand placement, finger position, torso tilt, shoulder position, head angle, and body orientation must be copied perfectly from the second image. Do not change the pose in any way. Strongest possible pose adherence is required. The pose from reference photo 2 must remain completely unchanged.
+The second image defines the entire scene: keep the exact same background, environment, camera angle, framing, perspective, depth of field, and composition without any deviation.
+Match the lighting from the second image with perfect accuracy: same light direction, intensity, shadows, highlights, reflections, and color grading.
+Replicate the image quality of the second photo exactly: same resolution, sharpness, skin texture detail, noise level, lens characteristics, and photorealism. Do not enhance or degrade the quality.
+Ensure seamless integration with correct perspective, depth, and contact with the environment. Photorealistic result, natural skin, no stylization, no artistic interpretation, no body reshaping.
+Delete the tattoo on the hand. No text, no logos, no watermarks.
+
+---Faceswap 2---
+CRITICAL TASK: Accurate Identity Transfer with specific Hair and modified Emotion.
+
+ROLE DEFINITION: IMAGE 1 is the IDENTITY SOURCE (Face features AND complete Hairstyle structure). IMAGE 2 is the CONTEXT TARGET (Body, Clothing, Pose, Background, Lighting, Gaze Direction).
+
+INSTRUCTIONS:
+
+Start with the base composition of IMAGE 2, keeping the clothes and body exactly as they are.
+
+Replace the entire head in IMAGE 2 with the face and hair from IMAGE 1.
+
+MANDATORY (Emotion adjustment): The new face MUST adopt the general emotion from IMAGE 2, BUT make the smile slightly smaller and softer than shown in IMAGE 2.
+
+MANDATORY (Eye Gaze): The eyes MUST match the exact gaze direction in IMAGE 2.
+
+RESULT: A photorealistic image of the person from Image 1 (with their hair) wearing the clothes from Image 2. The person is looking at camera with a slight smile. Seamless blend, 8k, high detail.

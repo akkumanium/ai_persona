@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, AudioLines, Clapperboard, Home, ImageIcon, Mail, Play, Settings, UserRound, Video, type LucideIcon } from "lucide-react";
+import { Activity, AudioLines, Clapperboard, Flame, Home, ImageIcon, Mail, Play, Settings, UserRound, Video, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
+import { TrendVideoView } from "@/components/studio/trend-video-view";
 import type { ReferenceSlotId, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -23,6 +24,7 @@ const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: bo
   { id: "personas", label: "Personas", icon: UserRound },
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "videos", label: "Videos", icon: Clapperboard },
+  { id: "trends", label: "Trend Videos", icon: Flame },
   { id: "motion", label: "Motion Control", icon: Play },
   { id: "speech", label: "Speech", icon: AudioLines },
   { id: "avatar", label: "Avatar", icon: Video },
@@ -503,6 +505,24 @@ export function StudioWorkspace({
               }}
               onSelectPersona={setSelectedPersonaId}
               onDeleteAsset={deleteAsset}
+            />
+          )}
+          {view === "trends" && (
+            <TrendVideoView
+              personas={personas}
+              assets={assets}
+              selectedPersona={selectedPersona}
+              supabaseReady={supabaseReady}
+              onAssetsCreated={(nextAssets, job) => {
+                addAssets(nextAssets, job);
+                addJob(job);
+                setNotice(
+                  nextAssets.some((asset) => asset.kind === "video")
+                    ? "Trend video generated."
+                    : `${nextAssets.length} face frame${nextAssets.length === 1 ? "" : "s"} generated.`,
+                );
+              }}
+              onSelectPersona={setSelectedPersonaId}
             />
           )}
           {view === "speech" && (

@@ -148,7 +148,7 @@ export async function resolveAssetContent(url: string, userId?: string) {
   };
 }
 
-async function assertSafeRemoteMediaUrl(url: URL) {
+export async function assertSafeRemoteMediaUrl(url: URL) {
   if (url.username || url.password) {
     throw new Error("Remote media URL credentials are not supported.");
   }
