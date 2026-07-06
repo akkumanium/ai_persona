@@ -9,7 +9,7 @@ import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts
 import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
-import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -42,20 +42,12 @@ async function generateAvatarReference(body: unknown, userId?: string) {
     return NextResponse.json({ error: "Identity rights and adult-persona confirmations are required." }, { status: 400 });
   }
 
-  const urlReferences = await Promise.all(
-    input.sourceImageUrls.map((url, index) =>
-      imageUrlToProviderInput(url, `${input.personaName}-source-${index + 1}`, userId),
-    ),
-  );
-  const referenceImages: ProviderImageInput[] = [
-    ...input.sourceImages,
-    ...urlReferences.filter((image): image is ProviderImageInput => Boolean(image)),
-  ];
+  const sourceCount = input.sourceImages.length + input.sourceImageUrls.length;
 
-  if (input.mode === "blend" && referenceImages.length < 2) {
+  if (input.mode === "blend" && sourceCount < 2) {
     return NextResponse.json({ error: "Blend mode requires two source face images." }, { status: 400 });
   }
-  if (input.mode === "normalization" && referenceImages.length < 1) {
+  if (input.mode === "normalization" && sourceCount < 1) {
     return NextResponse.json({ error: "Normalization requires a source image." }, { status: 400 });
   }
 
@@ -81,6 +73,39 @@ async function generateAvatarReference(body: unknown, userId?: string) {
   if (finalPrompt.trim().length < 10) {
     return NextResponse.json({ error: "Prompt must be at least 10 characters." }, { status: 400 });
   }
+
+  // Fail fast on insufficient balance BEFORE resolving/downloading any source media,
+  // so an underfunded account returns 402 instantly instead of after long network work.
+  await assertSufficientTokens(
+    userId,
+    Math.max(
+      1,
+      estimateImageGenerationPricing({
+        prompt: finalPrompt,
+        model: input.model,
+        aspectRatio: input.aspectRatio,
+        imageSize: input.imageSize,
+        imageQuality: input.imageQuality,
+        count: input.count,
+        referenceImages: Array.from({ length: sourceCount }, (_, index) => ({
+          name: `reference-${index + 1}`,
+          mimeType: "image/png",
+          data: "x",
+        })),
+        generationType,
+      }).tokens,
+    ),
+  );
+
+  const urlReferences = await Promise.all(
+    input.sourceImageUrls.map((url, index) =>
+      imageUrlToProviderInput(url, `${input.personaName}-source-${index + 1}`, userId),
+    ),
+  );
+  const referenceImages: ProviderImageInput[] = [
+    ...input.sourceImages,
+    ...urlReferences.filter((image): image is ProviderImageInput => Boolean(image)),
+  ];
 
   const providerRequest: ImageGenerationRequest = {
     prompt: finalPrompt,

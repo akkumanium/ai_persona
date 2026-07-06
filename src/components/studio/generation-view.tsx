@@ -1,19 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { AudioLines, Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, WandSparkles, X } from "lucide-react";
+import { AudioLines, Check, Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
-import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import { encodeFiles } from "@/components/studio/media";
 import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
 import {
   CheckboxField,
+  ImageThumbStrip,
   ModelSelect,
   ModeToggle,
   NumberField,
   PanelTitle,
   PersonaSelect,
   RangeField,
-  ReferencePicker,
-  ReferenceSummary,
   SelectField,
   SubmitButton,
   TextArea,
@@ -64,7 +63,6 @@ export function GenerationView({
 }) {
   const [imagePrompt, setImagePrompt] = useState("Editorial product photo for a social launch campaign.");
   const [videoPrompt, setVideoPrompt] = useState("Short vertical clip with a confident camera turn and subtle smile.");
-  const [useImageReferences, setUseImageReferences] = useState(true);
   const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [imageAspectRatio, setImageAspectRatio] = useState("4:5");
   const [imageSize, setImageSize] = useState("2K");
@@ -154,8 +152,6 @@ export function GenerationView({
     ? videoResolution
     : videoResolutionOptionsForModel[0];
   const normalVideoRequiresStartFrame = requiresStartFrame(videoModel);
-  const selectedVideoModel = videoModelOptions.find((model) => model.id === videoModel);
-  const selectedMotionModel = motionModelOptions.find((model) => model.id === motionVideoModel);
   const latestAssets = useMemo(
     () =>
       assets.filter((asset) => {
@@ -169,6 +165,11 @@ export function GenerationView({
   const imageModelSupportsSize = supportsImageSize(imageModel);
   const imageModelSupportsQuality = supportsImageQuality(imageModel);
   const imageModelSupportsReferences = supportsImageReferences(imageModel);
+  // References are now always "on" by default when the model supports them.
+  // The user opts out by deselecting every reference tile (selectedReferenceSelection becomes empty),
+  // at which point the request falls through to prompt-only generation.
+  const useImageReferences = imageModelSupportsReferences;
+  const totalReferenceCount = selectedReferenceSelection.length + uploadedImageReferences.length;
   const imageCostLabel = formatTokens(
     estimateImageGenerationPricing({
       prompt: imagePrompt,
@@ -177,21 +178,14 @@ export function GenerationView({
       imageSize: imageModelSupportsSize ? imageSize : "2K",
       imageQuality: imageModelSupportsQuality ? (imageQuality as "low" | "medium" | "high") : undefined,
       count: 1,
-      referenceImages: useImageReferences && imageModelSupportsReferences
-        ? [
-            ...selectedReferenceSelection.map((asset) => ({
-              name: asset.title,
-              mimeType: asset.mimeType,
-              data: "x",
-            })),
-            ...uploadedImageReferences.map((image) => ({
-              name: image.name,
-              mimeType: image.mimeType,
-              data: "x",
-            })),
-          ]
+      referenceImages: useImageReferences
+        ? Array.from({ length: totalReferenceCount }, (_, index) => ({
+            name: `reference-${index + 1}`,
+            mimeType: "image/png",
+            data: "x",
+          }))
         : [],
-      generationType: useImageReferences && imageModelSupportsReferences ? "image_from_reference" : "image_from_prompt",
+      generationType: useImageReferences && totalReferenceCount > 0 ? "image_from_reference" : "image_from_prompt",
     }).tokens,
   );
   const normalVideoCostLabel = formatTokens(
@@ -208,9 +202,7 @@ export function GenerationView({
       resolution: safeVideoResolution,
       returnLastFrame: videoReturnLastFrame,
       endFrameImageUrl: normalVideoSupportsEndFrame
-        ? uploadedVideoEndFrame
-          ? sourceImageToDataUrl(uploadedVideoEndFrame)
-          : selectedVideoEndFrame?.url
+        ? uploadedVideoEndFrame?.url ?? selectedVideoEndFrame?.url
         : undefined,
     }).tokens,
   );
@@ -231,10 +223,6 @@ export function GenerationView({
 
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
-    if (!supportsImageReferences(modelId)) {
-      setUseImageReferences(false);
-      setUploadedImageReferences([]);
-    }
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(imageAspectRatio)) {
       setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
@@ -308,10 +296,8 @@ export function GenerationView({
   async function generateImage(event: FormEvent) {
     event.preventDefault();
     if (!selectedPersona) return;
-    const canUseReferences = useImageReferences && imageModelSupportsReferences;
-    const referenceAssets = canUseReferences ? selectedReferenceSelection : [];
-    const uploadedReferences = canUseReferences ? uploadedImageReferences : [];
-    if (canUseReferences && !referenceAssets.length && !uploadedReferences.length) return;
+    const referenceAssets = useImageReferences ? selectedReferenceSelection : [];
+    const uploadedReferences = useImageReferences ? uploadedImageReferences : [];
     if (imagePrompt.trim().length < 10) return;
     const uploadedReferenceUrls = uploadedReferences.map((image) => image.url).filter((url): url is string => Boolean(url));
     const uploadedReferenceInputs = uploadedReferences
@@ -364,10 +350,10 @@ export function GenerationView({
     if (!selectedPersona) return;
     const startFrameAsset = mode === "normal" ? selectedVideoStartFrame : undefined;
     const endFrameAsset = mode === "normal" && normalVideoSupportsEndFrame ? selectedVideoEndFrame : undefined;
-    const uploadedStartFrameUrl = mode === "normal" && uploadedVideoStartFrame ? sourceImageToDataUrl(uploadedVideoStartFrame) : undefined;
+    const uploadedStartFrameUrl = mode === "normal" && uploadedVideoStartFrame ? uploadedVideoStartFrame.url : undefined;
     const uploadedEndFrameUrl =
       mode === "normal" && normalVideoSupportsEndFrame && uploadedVideoEndFrame
-        ? sourceImageToDataUrl(uploadedVideoEndFrame)
+        ? uploadedVideoEndFrame.url
         : undefined;
     const uploadedStartFrameInput =
       mode === "normal" && uploadedVideoStartFrame?.data
@@ -381,7 +367,7 @@ export function GenerationView({
     const referenceImageUrl =
       mode === "motion"
         ? motionReferenceImage
-          ? sourceImageToDataUrl(motionReferenceImage)
+          ? motionReferenceImage.url
           : selectedReference?.url
         : uploadedStartFrameUrl ?? startFrameAsset?.url;
     const requestReferenceImageUrl = uploadedStartFrameInput ? undefined : referenceImageUrl;
@@ -520,11 +506,11 @@ export function GenerationView({
         : "Motion-control videos will appear here.";
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_410px]">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={PanelIcon} title={`${panelTitle} Result`} />
 
-        <div className="mt-5 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
+        <div className="mt-4 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
           {isGenerating ? (
             <div className="flex min-h-[24rem] flex-col items-center justify-center text-center text-sm text-stone-600">
               <Loader2 className="mb-3 animate-spin text-emerald-800" size={28} />
@@ -533,32 +519,28 @@ export function GenerationView({
           ) : latestAssets.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {latestAssets.slice(0, 6).map((asset) => (
-                <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
-                  <div className="aspect-[4/5] bg-stone-100">
+                <article key={asset.id} className="group overflow-hidden rounded-lg border border-stone-200 bg-white">
+                  <div className="relative aspect-[4/5] bg-stone-100">
                     {asset.kind === "video" ? (
                       <video src={asset.url} className="h-full w-full object-cover" controls />
                     ) : (
                       <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
                     )}
+                    <button
+                      type="button"
+                      onClick={() => onDeleteAsset(asset.id)}
+                      className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-md bg-black/50 text-white opacity-0 transition hover:bg-red-700 group-hover:opacity-100"
+                      aria-label={`Delete ${asset.title}`}
+                    >
+                      <Trash2 size={15} />
+                    </button>
                   </div>
                   <div className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
-                        <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
-                        {asset.prompt ? (
-                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-stone-600">{asset.prompt}</p>
-                        ) : null}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteAsset(asset.id)}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-md border border-stone-200 text-stone-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
-                        aria-label={`Delete ${asset.title}`}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
+                    <p className="mt-0.5 text-xs text-stone-500">{asset.model}</p>
+                    {asset.prompt ? (
+                      <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-stone-600">{asset.prompt}</p>
+                    ) : null}
                   </div>
                 </article>
               ))}
@@ -573,117 +555,123 @@ export function GenerationView({
         </div>
       </section>
 
-      <aside className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
+      <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
         {mode === "images" ? (
           <form onSubmit={generateImage}>
             <PanelTitle icon={ImageIcon} title="Image Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-            <ModelSelect label="Image model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
-            <SelectField
-              label="Aspect ratio"
-              value={safeImageAspectRatio}
-              options={imageAspectRatioOptions}
-              onChange={setImageAspectRatio}
-            />
-            {imageModelSupportsSize ? (
-              <SelectField label="Image size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
-            ) : null}
+            <ModelSelect label="Model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <SelectField
+                label="Aspect ratio"
+                value={safeImageAspectRatio}
+                options={imageAspectRatioOptions}
+                onChange={setImageAspectRatio}
+              />
+              {imageModelSupportsSize ? (
+                <SelectField label="Size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
+              ) : (
+                <div />
+              )}
+            </div>
             {imageModelSupportsQuality ? (
               <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
             ) : null}
+
             {imageModelSupportsReferences ? (
-              <ModeToggle
-                label="Reference mode"
-                value={useImageReferences ? "references" : "prompt"}
-                options={[
-                  { value: "references", label: "Use references" },
-                  { value: "prompt", label: "Prompt only" },
-                ]}
-                onChange={(value) => setUseImageReferences(value === "references")}
-              />
-            ) : (
-              <p className="mt-3 rounded-lg bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600">
-                This model is prompt-only, so reference images are not used.
-              </p>
-            )}
-            <ReferenceSummary
-              useReferences={useImageReferences && imageModelSupportsReferences}
-              selectedCount={imageModelSupportsReferences ? selectedReferenceSelection.length + uploadedImageReferences.length : 0}
-              totalCount={imageModelSupportsReferences ? selectedReferenceAssets.length + uploadedImageReferences.length : 0}
-            />
-            {useImageReferences && imageModelSupportsReferences ? (
-              <>
+              <div className="mt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium text-stone-700">References</p>
+                  <span className="text-[11px] text-stone-500">
+                    {totalReferenceCount > 0
+                      ? `${totalReferenceCount} selected`
+                      : "none — prompt only"}
+                  </span>
+                </div>
                 <UploadBox
                   accept="image/*"
                   multiple
+                  compact
                   icon={Upload}
-                  label="Upload image references"
-                  detail={
-                    uploadedImageReferences.length
-                      ? `${uploadedImageReferences.length} local image${uploadedImageReferences.length === 1 ? "" : "s"} ready`
-                      : "Use images from your computer for this generation."
-                  }
+                  label={uploadedImageReferences.length ? "Add more references" : "Upload references"}
                   onChange={(files) => void captureUploadedImageReferences(files)}
                 />
-                {uploadedImageReferences.length ? (
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {uploadedImageReferences.map((image, index) => (
-                      <div key={`${image.name}-${index}`} className="relative overflow-hidden rounded-md border border-stone-200 bg-stone-100">
-                        <img src={sourceImageToDataUrl(image)} alt={image.name ?? `Uploaded reference ${index + 1}`} className="aspect-square w-full object-cover" />
+                <ImageThumbStrip images={uploadedImageReferences} onRemove={removeUploadedImageReference} />
+                {selectedReferenceAssets.length ? (
+                  <div className="mt-2 grid grid-cols-3 gap-1.5">
+                    {selectedReferenceAssets.map((asset) => {
+                      const isSelected = selectedReferenceIds.includes(asset.id);
+                      return (
                         <button
                           type="button"
-                          onClick={() => removeUploadedImageReference(index)}
-                          className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-md bg-white/90 text-stone-700 shadow-sm transition hover:text-red-700"
-                          aria-label="Remove uploaded reference"
+                          key={asset.id}
+                          onClick={() => toggleReferenceSelection(asset.id)}
+                          title={asset.title}
+                          className={cn(
+                            "group relative aspect-square overflow-hidden rounded-md border bg-stone-100 transition",
+                            isSelected
+                              ? "border-emerald-800 ring-1 ring-emerald-800"
+                              : "border-stone-200 opacity-55 hover:opacity-100 hover:border-emerald-800",
+                          )}
                         >
-                          <X size={14} />
+                          <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                          <span
+                            className={cn(
+                              "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
+                              isSelected
+                                ? "border-emerald-800 bg-emerald-800 text-white"
+                                : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
+                            )}
+                          >
+                            <Check size={12} strokeWidth={3} />
+                          </span>
+                          {asset.isDefaultReference ? (
+                            <span className="absolute bottom-1 left-1 rounded-sm bg-black/55 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+                              Default
+                            </span>
+                          ) : null}
                         </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                ) : null}
-                {selectedReferenceAssets.length ? (
-                  <ReferencePicker
-                    references={selectedReferenceAssets}
-                    selectedIds={selectedReferenceIds}
-                    onToggle={toggleReferenceSelection}
-                  />
-                ) : null}
-              </>
-            ) : null}
+                ) : (
+                  <p className="mt-2 rounded-md border border-dashed border-stone-300 bg-stone-50 px-3 py-2 text-[11px] text-stone-600">
+                    No persona references yet. Add references from the persona manager.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 rounded-md bg-stone-50 px-3 py-2 text-xs leading-5 text-stone-600">
+                This model is prompt-only, so reference images are not used.
+              </p>
+            )}
+
             <TextArea
               label="Image prompt"
               value={imagePrompt}
               onChange={setImagePrompt}
-              rows={6}
+              rows={5}
               action={
                 <button
                   type="button"
                   onClick={applyRandomImagePrompt}
                   disabled={!imagePromptSuggestions.length}
-                  className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-stone-200 px-2.5 text-xs font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-stone-950 disabled:opacity-50"
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border border-stone-200 px-2 text-[11px] font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-stone-950 disabled:opacity-50"
                 >
-                  <WandSparkles size={14} />
+                  <WandSparkles size={12} />
                   Magic
                 </button>
               }
             />
             {generationError ? (
-              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
+              <p className="mt-2.5 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{generationError}</p>
             ) : null}
             <SubmitButton
               loading={isGeneratingImage}
               icon={ImageIcon}
               label="Generate images"
               costLabel={imageCostLabel}
-              disabled={
-                !selectedPersona ||
-                imagePrompt.trim().length < 10 ||
-                (useImageReferences &&
-                  imageModelSupportsReferences &&
-                  !selectedReferenceSelection.length &&
-                  !uploadedImageReferences.length)
-              }
+              disabled={!selectedPersona || imagePrompt.trim().length < 10}
             />
           </form>
         ) : null}
@@ -692,10 +680,7 @@ export function GenerationView({
           <form onSubmit={(event) => void generateVideo(event, "normal")}>
             <PanelTitle icon={Clapperboard} title="Video Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-            <ModelSelect label="Video model" value={videoModel} options={videoModelOptions} onChange={changeVideoModel} />
-            {selectedVideoModel?.notes ? (
-              <p className="mt-3 rounded-lg bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600">{selectedVideoModel.notes}</p>
-            ) : null}
+            <ModelSelect label="Model" value={videoModel} options={videoModelOptions} onChange={changeVideoModel} />
             <VideoFramePicker
               images={generatedImageAssets}
               activeSlot={videoFrameSlot}
@@ -708,84 +693,90 @@ export function GenerationView({
               onSelect={selectVideoFrame}
               onClearEnd={clearVideoEndFrame}
             />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
               <UploadBox
                 accept="image/*"
+                compact
                 icon={Upload}
                 label={uploadedVideoStartFrame ? uploadedVideoStartFrame.name : "Upload start frame"}
-                detail={uploadedVideoStartFrame ? "Using uploaded image." : ""}
                 onChange={(files) => void captureVideoFrame(files, "start")}
               />
               {normalVideoSupportsEndFrame ? (
                 <UploadBox
                   accept="image/*"
+                  compact
                   icon={Upload}
                   label={uploadedVideoEndFrame ? uploadedVideoEndFrame.name : "Upload end frame"}
-                  detail={uploadedVideoEndFrame ? "Using uploaded image." : ""}
                   onChange={(files) => void captureVideoFrame(files, "end")}
                 />
-              ) : null}
+              ) : (
+                <div className="min-h-9" />
+              )}
             </div>
             {isSeedanceVideoModel(videoModel) ? (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
                 <UploadBox
                   accept="video/*"
+                  compact
                   icon={Clapperboard}
-                  label={seedanceReferenceVideo?.name ?? "Upload reference video"}
-                  detail={seedanceReferenceVideo ? "Reference video ready." : "Optional; up to 15 seconds total."}
+                  label={seedanceReferenceVideo?.name ?? "Reference video"}
+                  detail={seedanceReferenceVideo ? "Ready" : "Optional; up to 15s"}
                   onChange={(files) => void captureSeedanceReferenceVideo(files)}
                 />
                 <UploadBox
                   accept="audio/*"
+                  compact
                   icon={AudioLines}
-                  label={seedanceReferenceAudio?.name ?? "Upload reference audio"}
-                  detail={seedanceReferenceAudio ? "Reference audio ready." : "Optional; up to 15 seconds total."}
+                  label={seedanceReferenceAudio?.name ?? "Reference audio"}
+                  detail={seedanceReferenceAudio ? "Ready" : "Optional; up to 15s"}
                   onChange={(files) => void captureSeedanceReferenceAudio(files)}
                 />
               </div>
             ) : null}
-            <NumberField
-              label="Duration"
-              value={safeVideoDuration}
-              min={durationBounds.min}
-              max={durationBounds.max}
-              step={durationBounds.step}
-              suffix="s"
-              onChange={setVideoDurationSeconds}
-            />
-            <SelectField
-              label="Aspect ratio"
-              value={safeVideoAspectRatio}
-              options={videoAspectRatioOptions}
-              onChange={setVideoAspectRatio}
-            />
-            {supportsCfgScale(videoModel) ? (
-              <RangeField label="CFG" value={videoCfgScale} min={0} max={1} step={0.05} onChange={setVideoCfgScale} />
-            ) : null}
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <NumberField
+                label="Duration"
+                value={safeVideoDuration}
+                min={durationBounds.min}
+                max={durationBounds.max}
+                step={durationBounds.step}
+                suffix="s"
+                onChange={setVideoDurationSeconds}
+              />
+              <SelectField
+                label="Aspect ratio"
+                value={safeVideoAspectRatio}
+                options={videoAspectRatioOptions}
+                onChange={setVideoAspectRatio}
+              />
+            </div>
             {showsResolutionControl(videoModel) ? (
-              <>
-                <SelectField
-                  label="Resolution"
-                  value={safeVideoResolution}
-                  options={videoResolutionOptionsForModel}
-                  onChange={(value) => setVideoResolution(value as "480p" | "720p" | "1080p" | "4K")}
-                />
-              </>
-            ) : null}
-            {isSeedanceVideoModel(videoModel) ? (
-              <CheckboxField
-                label="Return last frame"
-                checked={videoReturnLastFrame}
-                onChange={setVideoReturnLastFrame}
+              <SelectField
+                label="Resolution"
+                value={safeVideoResolution}
+                options={videoResolutionOptionsForModel}
+                onChange={(value) => setVideoResolution(value as "480p" | "720p" | "1080p" | "4K")}
               />
             ) : null}
-            {supportsGeneratedAudio(videoModel) ? (
-              <CheckboxField label="Generate audio" checked={videoGenerateAudio} onChange={setVideoGenerateAudio} />
-            ) : null}
-            <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={5} />
-            <TextArea label="Negative prompt" value={videoNegativePrompt} onChange={setVideoNegativePrompt} rows={3} />
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              {supportsCfgScale(videoModel) ? (
+                <RangeField label="CFG" value={videoCfgScale} min={0} max={1} step={0.05} onChange={setVideoCfgScale} />
+              ) : (
+                <div />
+              )}
+              <div className="flex flex-col gap-2">
+                {isSeedanceVideoModel(videoModel) ? (
+                  <CheckboxField label="Return last frame" checked={videoReturnLastFrame} onChange={setVideoReturnLastFrame} />
+                ) : null}
+                {supportsGeneratedAudio(videoModel) ? (
+                  <CheckboxField label="Generate audio" checked={videoGenerateAudio} onChange={setVideoGenerateAudio} />
+                ) : null}
+              </div>
+            </div>
+            <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={4} />
+            <TextArea label="Negative prompt" value={videoNegativePrompt} onChange={setVideoNegativePrompt} rows={2} />
             {generationError ? (
-              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
+              <p className="mt-2.5 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{generationError}</p>
             ) : null}
             <SubmitButton
               loading={isGeneratingVideo}
@@ -802,16 +793,14 @@ export function GenerationView({
             <PanelTitle icon={Play} title="Motion Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
             <ModelSelect
-              label="Motion model"
+              label="Model"
               value={motionVideoModel}
               options={motionModelOptions}
               onChange={setMotionVideoModel}
             />
-            {selectedMotionModel?.notes ? (
-              <p className="mt-3 rounded-lg bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600">{selectedMotionModel.notes}</p>
-            ) : null}
             <UploadBox
               accept="image/*"
+              compact
               icon={Upload}
               label={motionReferenceImage ? motionReferenceImage.name : "Upload reference image"}
               detail={selectedReference && !motionReferenceImage ? `Using ${selectedReference.title}` : ""}
@@ -819,11 +808,12 @@ export function GenerationView({
             />
             <UploadBox
               accept="video/*"
+              compact
               icon={Clapperboard}
               label={motionReferenceVideo ? motionReferenceVideo.name : "Upload motion video to imitate"}
               onChange={(files) => void captureMotionReferenceVideo(files)}
             />
-            <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={5} />
+            <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={4} />
             {motionVideoModel === "wan-animate" ? (
               <>
                 <ModeToggle
@@ -849,16 +839,16 @@ export function GenerationView({
                   onChange={(value) => setMotionCharacterOrientation(value as "image" | "video")}
                 />
                 <CheckboxField label="Keep original sound" checked={motionKeepOriginalSound} onChange={setMotionKeepOriginalSound} />
-                <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={3} />
+                <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
               </>
             )}
             {generationError ? (
-              <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{generationError}</p>
+              <p className="mt-2.5 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{generationError}</p>
             ) : null}
             <SubmitButton
               loading={isGeneratingVideo}
               icon={Play}
-              label="Generate motion video"
+              label="Generate video"
               costLabel={motionVideoCostLabel}
               disabled={!selectedPersona || (!selectedReference && !motionReferenceImage) || !motionReferenceVideo}
             />
@@ -868,6 +858,12 @@ export function GenerationView({
     </div>
   );
 }
+
+/**
+ * Redesigned video frame picker: a compact search box + a tight responsive grid
+ * of image thumbnails. Selected thumbnails get an accent ring + corner badge
+ * showing which slot (Start/End) they belong to.
+ */
 function VideoFramePicker({
   images,
   activeSlot,
@@ -900,28 +896,27 @@ function VideoFramePicker({
   });
 
   return (
-    <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-stone-700">Video frames</p>
+    <div className="mt-2.5 rounded-md border border-stone-200 bg-stone-50 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-stone-700">Video frames</p>
         {supportsEndFrame && selectedEndId ? (
           <button
             type="button"
             onClick={onClearEnd}
-            className="inline-flex h-8 items-center gap-1 rounded-md border border-stone-200 bg-white px-2 text-xs font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-stone-950"
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-stone-950"
           >
-            <X size={14} />
             Clear end
           </button>
         ) : null}
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
+      <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
         {(["start", ...(supportsEndFrame ? ["end"] : [])] as VideoFrameSlot[]).map((slot) => (
           <button
             key={slot}
             type="button"
             onClick={() => onActiveSlotChange(slot)}
             className={cn(
-              "h-9 rounded-[5px] px-3 text-sm font-medium capitalize transition",
+              "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
               activeSlot === slot ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
             )}
           >
@@ -929,8 +924,8 @@ function VideoFramePicker({
           </button>
         ))}
       </div>
-      <label className="mt-3 flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-600 focus-within:border-emerald-800">
-        <Search size={16} />
+      <label className="mt-2 flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-xs text-stone-600 focus-within:border-emerald-800">
+        <Search size={14} />
         <input
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
@@ -939,35 +934,44 @@ function VideoFramePicker({
         />
       </label>
       {visibleImages.length ? (
-        <div className="mt-3 grid max-h-72 grid-cols-2 gap-2 overflow-y-auto pr-1">
+        <div className="mt-2 grid max-h-72 grid-cols-3 gap-1.5 overflow-y-auto pr-1">
           {visibleImages.map((image) => {
             const isStart = image.id === selectedStartId;
             const isEnd = image.id === selectedEndId;
+            const isActive = (activeSlot === "start" && isStart) || (activeSlot === "end" && isEnd);
             return (
               <button
                 key={image.id}
                 type="button"
                 onClick={() => onSelect(image.id)}
+                title={image.title}
                 className={cn(
-                  "overflow-hidden rounded-md border bg-white text-left transition hover:border-emerald-800",
-                  (activeSlot === "start" && isStart) || (activeSlot === "end" && isEnd)
-                    ? "border-emerald-800"
-                    : "border-stone-200",
+                  "group relative overflow-hidden rounded-md border bg-white text-left transition hover:border-emerald-800",
+                  isActive ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200",
                 )}
               >
-                <img src={image.url} alt={image.title} className="aspect-[4/5] w-full object-cover" />
-                <div className="p-2">
-                  <p className="line-clamp-1 text-xs font-semibold text-stone-900">{image.title}</p>
-                  <p className="mt-1 text-[11px] text-stone-500">
-                    {isStart ? "Start" : isEnd ? "End" : "Available"}
-                  </p>
-                </div>
+                <img src={image.url} alt={image.title} className="aspect-square w-full object-cover" />
+                {isStart ? (
+                  <span className="absolute left-1 top-1 rounded-sm bg-emerald-800 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                    Start
+                  </span>
+                ) : null}
+                {isEnd ? (
+                  <span className="absolute right-1 top-1 rounded-sm bg-emerald-800 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                    End
+                  </span>
+                ) : null}
+                {isActive ? (
+                  <span className="absolute right-1 bottom-1 flex size-5 items-center justify-center rounded-full bg-emerald-800 text-white">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                ) : null}
               </button>
             );
           })}
         </div>
       ) : (
-        <div className="mt-3 rounded-md border border-dashed border-stone-300 bg-white px-3 py-4 text-sm text-stone-500">
+        <div className="mt-2 rounded-md border border-dashed border-stone-300 bg-white px-3 py-3 text-xs text-stone-500">
           Generate still images first, then choose one as the video start frame.
         </div>
       )}

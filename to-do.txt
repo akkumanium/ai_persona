@@ -14,7 +14,6 @@
 66. Perhaps change studio
 67. Add bust
 68. Optimize for phone users
-71. Add wan 2.7 as image generator
 72. Change referral link
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
@@ -22,15 +21,14 @@
 83. Aspect ratios are invisible
 84. Put video to demo
 85. Change the way subcriptions work
-86. Hybrid mode - any amount of images must be able to be uploaded
-87. Check aspect ratios in reference generation
 88. Add wan image edit
 89. Delete the description of video models
 90. Change 1$ = 1000 tokens to 1$ = 100 tokens Maybe
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
-93. Delete reference mode from Images
-94. Downloading videos doesn;t work, e.g. https://www.instagram.com/reel/DZjeT8hyp6i/
+94. Downloading videos doesn't work, e.g. https://www.instagram.com/reel/DZjeT8hyp6i/
+95. Start frame must take the whole box's space
+96. Make personas limited, depending on the subscription
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
@@ -109,20 +107,3 @@ Match the lighting from the second image with perfect accuracy: same light direc
 Replicate the image quality of the second photo exactly: same resolution, sharpness, skin texture detail, noise level, lens characteristics, and photorealism. Do not enhance or degrade the quality.
 Ensure seamless integration with correct perspective, depth, and contact with the environment. Photorealistic result, natural skin, no stylization, no artistic interpretation, no body reshaping.
 Delete the tattoo on the hand. No text, no logos, no watermarks.
-
----Faceswap 2---
-CRITICAL TASK: Accurate Identity Transfer with specific Hair and modified Emotion.
-
-ROLE DEFINITION: IMAGE 1 is the IDENTITY SOURCE (Face features AND complete Hairstyle structure). IMAGE 2 is the CONTEXT TARGET (Body, Clothing, Pose, Background, Lighting, Gaze Direction).
-
-INSTRUCTIONS:
-
-Start with the base composition of IMAGE 2, keeping the clothes and body exactly as they are.
-
-Replace the entire head in IMAGE 2 with the face and hair from IMAGE 1.
-
-MANDATORY (Emotion adjustment): The new face MUST adopt the general emotion from IMAGE 2, BUT make the smile slightly smaller and softer than shown in IMAGE 2.
-
-MANDATORY (Eye Gaze): The eyes MUST match the exact gaze direction in IMAGE 2.
-
-RESULT: A photorealistic image of the person from Image 1 (with their hair) wearing the clothes from Image 2. The person is looking at camera with a slight smile. Seamless blend, 8k, high detail.

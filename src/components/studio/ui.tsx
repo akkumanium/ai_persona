@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { Loader2 } from "lucide-react";
+import { Check, Loader2, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Asset, Persona } from "@/lib/types";
@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 
 export function PanelTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex size-10 items-center justify-center rounded-md bg-emerald-50 text-emerald-800">
-        <Icon size={19} />
+    <div className="flex items-center gap-2.5">
+      <div className="flex size-8 items-center justify-center rounded-md bg-emerald-50 text-emerald-800">
+        <Icon size={16} />
       </div>
-      <h2 className="text-lg font-semibold text-stone-950">{title}</h2>
+      <h2 className="text-base font-semibold text-stone-950">{title}</h2>
     </div>
   );
 }
@@ -24,6 +24,7 @@ export function UploadBox({
   label,
   detail,
   onChange,
+  compact = false,
 }: {
   accept: string;
   multiple?: boolean;
@@ -31,14 +32,20 @@ export function UploadBox({
   label: string;
   detail?: string;
   onChange: (files: FileList | null) => void;
+  compact?: boolean;
 }) {
   return (
-    <label className="mt-4 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 text-center text-sm font-medium text-stone-700 transition hover:border-emerald-800 hover:bg-white">
-      <span className="inline-flex items-center gap-2">
-        <Icon className="text-emerald-800" size={18} />
-        {label}
+    <label
+      className={cn(
+        "flex cursor-pointer items-center gap-2.5 rounded-md border border-dashed border-stone-300 bg-stone-50 px-3 text-left transition hover:border-emerald-800 hover:bg-white",
+        compact ? "mt-2.5 h-9" : "mt-3 min-h-11 px-4",
+      )}
+    >
+      <Icon className="size-4 shrink-0 text-emerald-800" />
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-xs font-semibold text-stone-950">{label}</span>
+        {detail ? <span className="truncate text-[11px] font-normal text-stone-500">{detail}</span> : null}
       </span>
-      {detail ? <span className="mt-2 max-w-full truncate text-xs font-normal text-stone-500">{detail}</span> : null}
       <input
         className="sr-only"
         type="file"
@@ -50,6 +57,11 @@ export function UploadBox({
   );
 }
 
+/**
+ * Compact, image-led reference picker. Each reference is a square thumbnail tile;
+ * selected tiles show a check badge. Clicking a selected tile deselects it.
+ * The first tile ("Default") doubles as the toggle-all affordance.
+ */
 export function ReferencePicker({
   references,
   selectedIds,
@@ -61,40 +73,44 @@ export function ReferencePicker({
 }) {
   if (!references.length) {
     return (
-      <div className="mt-4 rounded-lg border border-dashed border-stone-300 bg-stone-50 px-4 py-3 text-sm text-stone-600">
+      <div className="mt-2.5 rounded-md border border-dashed border-stone-300 bg-stone-50 px-3 py-2.5 text-xs text-stone-600">
         No reference images yet. Add references from the persona manager.
       </div>
     );
   }
 
   return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+    <div className="mt-2.5 grid grid-cols-3 gap-1.5">
       {references.map((asset) => {
         const isSelected = selectedIds.includes(asset.id);
         return (
-          <label
+          <button
+            type="button"
             key={asset.id}
+            onClick={() => onToggle(asset.id)}
+            title={asset.title}
             className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-lg border bg-stone-50 p-3 text-sm text-stone-700 transition",
-              isSelected ? "border-emerald-800" : "border-stone-200",
+              "group relative aspect-square overflow-hidden rounded-md border bg-stone-100 transition",
+              isSelected ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
             )}
           >
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={() => onToggle(asset.id)}
-              className="size-4 accent-emerald-800"
-            />
-            <div className="flex size-14 items-center justify-center overflow-hidden rounded-md bg-stone-100 p-2">
-              <img src={asset.url} alt={asset.title} className="h-full w-full object-contain" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-stone-950">{asset.title}</p>
-              <p className="mt-1 text-xs text-stone-500">
-                {asset.isDefaultReference ? "Default" : "Optional"}
-              </p>
-            </div>
-          </label>
+            <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+            <span
+              className={cn(
+                "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
+                isSelected
+                  ? "border-emerald-800 bg-emerald-800 text-white"
+                  : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
+              )}
+            >
+              <Check size={12} strokeWidth={3} />
+            </span>
+            {asset.isDefaultReference ? (
+              <span className="absolute bottom-1 left-1 rounded-sm bg-black/55 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
+                Default
+              </span>
+            ) : null}
+          </button>
         );
       })}
     </div>
@@ -112,31 +128,32 @@ export function ReferenceSummary({
   selectedCount: number;
   totalCount: number;
 }) {
+  let copy: string;
+  if (!useReferences) {
+    copy = allowPromptOnly ? "Prompt-only generation enabled. No references will be used." : "No references will be used.";
+  } else if (totalCount === 0) {
+    copy = "No references available yet. Add references to this persona first.";
+  } else if (selectedCount === 0) {
+    copy = allowPromptOnly ? "No references selected — generation will be prompt-only." : "Select at least one reference image.";
+  } else {
+    copy = `${selectedCount} of ${totalCount} reference${totalCount === 1 ? "" : "s"} selected`;
+  }
+
   return (
-    <div className="mt-4 rounded-lg bg-stone-50 px-4 py-3 text-sm text-stone-600">
-      {!useReferences
-        ? allowPromptOnly
-          ? "Prompt-only generation enabled. No references will be used."
-          : "No references will be used."
-        : totalCount === 0
-          ? "No references available yet. Add references to this persona first."
-          : selectedCount === 0
-            ? allowPromptOnly
-              ? "Select at least one reference or switch to prompt-only."
-              : "Select at least one reference image."
-            : `${selectedCount} of ${totalCount} reference image${totalCount === 1 ? "" : "s"} selected.`}
+    <div className="mt-2.5 rounded-md bg-stone-50 px-3 py-2 text-xs leading-5 text-stone-600">
+      {copy}
     </div>
   );
 }
 
 export function TextField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="mt-4 block">
-      <span className="text-sm font-medium text-stone-700">{label}</span>
+    <label className="mt-2.5 block">
+      <span className="text-xs font-medium text-stone-700">{label}</span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
+        className="mt-1.5 h-9 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
       />
     </label>
   );
@@ -156,8 +173,8 @@ export function TextArea({
   action?: ReactNode;
 }) {
   return (
-    <label className="mt-4 block">
-      <span className="flex min-h-8 items-center justify-between gap-3 text-sm font-medium text-stone-700">
+    <label className="mt-2.5 block">
+      <span className="flex min-h-6 items-center justify-between gap-2 text-xs font-medium text-stone-700">
         {label}
         {action}
       </span>
@@ -165,7 +182,7 @@ export function TextArea({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={rows}
-        className="mt-2 w-full resize-y rounded-md border border-stone-200 bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-emerald-800"
+        className="mt-1.5 w-full resize-y rounded-md border border-stone-200 bg-white px-3 py-2 text-sm leading-5 outline-none transition focus:border-emerald-800"
       />
     </label>
   );
@@ -183,16 +200,16 @@ export function ModeToggle({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="mt-4">
-      <p className="text-sm font-medium text-stone-700">{label}</p>
-      <div className="mt-2 flex flex-wrap gap-1 rounded-md bg-stone-100 p-1">
+    <div className="mt-2.5">
+      {label ? <p className="text-xs font-medium text-stone-700">{label}</p> : null}
+      <div className="mt-1.5 flex flex-wrap gap-1 rounded-md bg-stone-100 p-1">
         {options.map((option) => (
           <button
             type="button"
             key={option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "h-10 flex-1 rounded-[5px] px-3 text-sm font-medium transition",
+              "h-8 flex-1 rounded-[5px] px-2 text-xs font-medium transition",
               value === option.value ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
             )}
           >
@@ -214,12 +231,12 @@ export function PersonaSelect({
   onChange: (id: string) => void;
 }) {
   return (
-    <label className="mt-4 block">
-      <span className="text-sm font-medium text-stone-700">Persona</span>
+    <label className="mt-2.5 block">
+      <span className="text-xs font-medium text-stone-700">Persona</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
+        className="mt-1.5 h-9 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
       >
         {personas.map((persona) => (
           <option key={persona.id} value={persona.id}>
@@ -243,12 +260,12 @@ export function ModelSelect({
   onChange: (id: string) => void;
 }) {
   return (
-    <label className="mt-4 block">
-      <span className="text-sm font-medium text-stone-700">{label}</span>
+    <label className="mt-2.5 block">
+      <span className="text-xs font-medium text-stone-700">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
+        className="mt-1.5 h-9 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
       >
         {options.map((option) => (
           <option key={option.id} value={option.id}>
@@ -277,16 +294,17 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={loading || disabled}
-      className="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
+      className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
     >
-      {loading ? <Loader2 className="animate-spin" size={18} /> : <Icon size={18} />}
+      {loading ? <Loader2 className="size-4 animate-spin" /> : <Icon size={16} />}
       {label}
       {costLabel ? (
-        <span className="rounded-sm bg-white/15 px-2 py-0.5 text-xs font-semibold">{costLabel}</span>
+        <span className="ml-1 rounded-sm bg-white/15 px-1.5 py-0.5 text-[11px] font-semibold">{costLabel}</span>
       ) : null}
     </button>
   );
 }
+
 export function NumberField({
   label,
   value,
@@ -305,9 +323,9 @@ export function NumberField({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="mt-4 block">
-      <span className="text-sm font-medium text-stone-700">{label}</span>
-      <div className="mt-2 flex h-11 items-center rounded-md border border-stone-200 bg-white px-3 focus-within:border-emerald-800">
+    <label className="mt-2.5 block">
+      <span className="text-xs font-medium text-stone-700">{label}</span>
+      <div className="mt-1.5 flex h-9 items-center rounded-md border border-stone-200 bg-white px-3 focus-within:border-emerald-800">
         <input
           type="number"
           value={value}
@@ -317,7 +335,7 @@ export function NumberField({
           onChange={(event) => onChange(Number(event.target.value))}
           className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none"
         />
-        {suffix ? <span className="ml-2 text-sm text-stone-500">{suffix}</span> : null}
+        {suffix ? <span className="ml-2 text-xs text-stone-500">{suffix}</span> : null}
       </div>
     </label>
   );
@@ -336,16 +354,16 @@ export function SelectField({
 }) {
   if (label.toLowerCase().includes("aspect ratio")) {
     return (
-      <label className="mt-4 block">
-        <span className="text-sm font-medium text-stone-700">{label}</span>
-        <span className="relative mt-2 flex h-11 items-center rounded-md border border-stone-200 bg-white focus-within:border-emerald-800">
-          <span className="pointer-events-none absolute left-3 z-10 text-stone-500">
+      <label className="mt-2.5 block">
+        <span className="text-xs font-medium text-stone-700">{label}</span>
+        <span className="relative mt-1.5 flex h-9 items-center rounded-md border border-stone-200 bg-white focus-within:border-emerald-800">
+          <span className="pointer-events-none absolute left-3 z-10 text-emerald-800">
             <AspectRatioGlyph ratio={value} />
           </span>
           <select
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            className="h-full w-full rounded-md border-0 bg-transparent px-10 text-sm outline-none"
+            className="h-full w-full rounded-md border-0 bg-transparent px-9 text-sm outline-none"
           >
             {options.map((option) => (
               <option key={option} value={option}>
@@ -359,12 +377,12 @@ export function SelectField({
   }
 
   return (
-    <label className="mt-4 block">
-      <span className="text-sm font-medium text-stone-700">{label}</span>
+    <label className="mt-2.5 block">
+      <span className="text-xs font-medium text-stone-700">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-11 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
+        className="mt-1.5 h-9 w-full rounded-md border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-800"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -376,20 +394,25 @@ export function SelectField({
   );
 }
 
+/**
+ * Visible aspect-ratio glyph. Uses an explicit accent color (emerald) instead of
+ * `border-current`/`bg-current`, which was rendering nearly invisibly under the
+ * dark reskin in globals.css.
+ */
 function AspectRatioGlyph({ ratio }: { ratio: string }) {
   const [width, height] = ratio.split(":").map(Number);
   const isAuto = ratio === "auto" || !width || !height;
   const isSquare = width === height;
   const isHorizontal = width > height;
   const className = cn(
-    "shrink-0 rounded-[3px] border border-current bg-current/10",
+    "shrink-0 border border-emerald-800 bg-emerald-800/25",
     isAuto
-      ? "h-4 w-5 border-dashed opacity-70"
+      ? "h-3.5 w-4 border-dashed opacity-80"
       : isSquare
-        ? "size-4"
+        ? "size-3.5"
         : isHorizontal
-          ? "h-3.5 w-6"
-          : "h-5 w-3.5",
+          ? "h-3 w-5"
+          : "h-5 w-3",
   );
 
   return <span className={className} aria-hidden="true" />;
@@ -411,10 +434,10 @@ export function RangeField({
   onChange: (value: number) => void;
 }) {
   return (
-    <label className="mt-4 block">
-      <span className="flex items-center justify-between gap-3 text-sm font-medium text-stone-700">
+    <label className="mt-2.5 block">
+      <span className="flex items-center justify-between gap-3 text-xs font-medium text-stone-700">
         {label}
-        <span className="font-mono text-xs text-stone-500">{value.toFixed(2)}</span>
+        <span className="font-mono text-[11px] text-stone-500">{value.toFixed(2)}</span>
       </span>
       <input
         type="range"
@@ -423,7 +446,7 @@ export function RangeField({
         max={max}
         step={step}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-2 w-full accent-emerald-800"
+        className="mt-1.5 w-full accent-emerald-800"
       />
     </label>
   );
@@ -439,7 +462,7 @@ export function CheckboxField({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="mt-4 flex items-center gap-3 rounded-lg bg-stone-50 p-3 text-sm font-medium text-stone-700">
+    <label className="mt-2 flex h-9 cursor-pointer items-center gap-2.5 rounded-md border border-stone-200 bg-stone-50 px-3 text-xs font-medium text-stone-700 transition hover:border-emerald-800">
       <input
         type="checkbox"
         checked={checked}
@@ -448,5 +471,42 @@ export function CheckboxField({
       />
       {label}
     </label>
+  );
+}
+
+/**
+ * Removable thumbnail strip for uploaded/source images. Used by image-reference
+ * uploads, hybrid face sources, and scratch sources.
+ */
+export function ImageThumbStrip({
+  images,
+  onRemove,
+}: {
+  images: { name?: string; data?: string; url?: string; mimeType: string }[];
+  onRemove: (index: number) => void;
+}) {
+  if (!images.length) return null;
+  return (
+    <div className="mt-2 grid grid-cols-4 gap-1.5">
+      {images.map((image, index) => {
+        const src = image.url ?? (image.data ? `data:${image.mimeType};base64,${image.data}` : undefined);
+        return (
+          <div
+            key={`${image.name ?? "image"}-${index}`}
+            className="relative aspect-square overflow-hidden rounded-md border border-stone-200 bg-stone-100"
+          >
+            {src ? <img src={src} alt={image.name ?? `Image ${index + 1}`} className="h-full w-full object-cover" /> : null}
+            <button
+              type="button"
+              onClick={() => onRemove(index)}
+              className="absolute right-1 top-1 flex size-5 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-red-700"
+              aria-label="Remove image"
+            >
+              <X size={12} strokeWidth={2.5} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }

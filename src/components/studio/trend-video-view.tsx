@@ -147,6 +147,12 @@ export function TrendVideoView({
     }).tokens,
   );
 
+  const stageSteps: Array<{ id: GenerationStage; label: string; done: boolean }> = [
+    { id: "import", label: "Source", done: Boolean(importedVideo) },
+    { id: "faces", label: "Faces", done: candidateAssets.length > 0 },
+    { id: "motion", label: "Motion", done: Boolean(finalVideo) },
+  ];
+
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
     const ratios = aspectRatiosForImageModel(modelId);
@@ -326,14 +332,48 @@ export function TrendVideoView({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_430px]">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <PanelTitle icon={Flame} title="Trend Video Result" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <PanelTitle icon={Flame} title="Trend Video" />
+          <ol className="flex items-center gap-1 text-[11px] font-medium text-stone-500">
+            {stageSteps.map((step, index) => {
+              const isActive = stage === step.id;
+              return (
+                <li key={step.id} className="flex items-center gap-1">
+                  {index > 0 ? <span className="text-stone-300">/</span> : null}
+                  <button
+                    type="button"
+                    onClick={() => setStage(step.id)}
+                    className={cn(
+                      "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 transition",
+                      isActive ? "bg-emerald-50 text-emerald-800" : step.done ? "text-stone-700 hover:bg-stone-100" : "hover:bg-stone-100",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex size-4 items-center justify-center rounded-full text-[9px] font-bold",
+                        isActive ? "bg-emerald-800 text-white" : step.done ? "bg-emerald-800/70 text-white" : "bg-stone-200 text-stone-500",
+                      )}
+                    >
+                      {step.done && !isActive ? <Check size={10} strokeWidth={3} /> : index + 1}
+                    </span>
+                    {step.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(220px,0.42fr)_minmax(0,1fr)]">
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <p className="text-sm font-semibold text-stone-950">Source</p>
-            <div className="mt-3 aspect-[9/16] overflow-hidden rounded-md border border-stone-200 bg-stone-900">
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <TrendPanel
+            step="01"
+            title="Source"
+            subtitle={importedVideo ? `${Math.round(detectedDuration)}s clip` : "Import a trend"}
+            active={stage === "import"}
+          >
+            <div className="aspect-[9/16] overflow-hidden rounded-md border border-stone-200 bg-stone-900">
               {importedVideo ? (
                 <video src={sourceVideoToUrl(importedVideo)} className="h-full w-full object-cover" controls muted />
               ) : (
@@ -341,58 +381,97 @@ export function TrendVideoView({
               )}
             </div>
             {firstFramePreview ? (
-              <div className="mt-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">First frame</p>
-                <img src={firstFramePreview} alt="Captured first frame" className="aspect-[9/16] w-full rounded-md border border-stone-200 object-cover" />
+              <div className="mt-3 flex items-center gap-3">
+                <img
+                  src={firstFramePreview}
+                  alt="Captured first frame"
+                  className="h-20 w-12 shrink-0 rounded-md border border-stone-200 object-cover"
+                />
+                <div>
+                  <p className="text-xs font-semibold text-stone-950">First frame captured</p>
+                  <p className="mt-0.5 text-[11px] text-stone-500">Used as the face-swap source.</p>
+                </div>
               </div>
             ) : null}
-          </div>
+          </TrendPanel>
 
-          <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-stone-950">Face candidates</p>
-              {candidateAssets.length ? (
-                <span className="rounded-sm border border-stone-200 bg-white px-2 py-1 text-xs font-semibold text-stone-500">
-                  {candidateAssets.length} generated
-                </span>
-              ) : null}
-            </div>
+          <TrendPanel
+            step="02"
+            title="Face candidates"
+            subtitle={candidateAssets.length ? `${candidateAssets.length} generated` : "Swap the face"}
+            active={stage === "faces"}
+            className="lg:col-span-2"
+          >
             {isGeneratingFaces ? (
               <LoadingBlock label="Generating face-swapped frames" />
             ) : candidateAssets.length ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {candidateAssets.map((asset) => (
-                  <button
-                    type="button"
-                    key={asset.id}
-                    onClick={() => setSelectedCandidateId(asset.id)}
-                    className={cn(
-                      "overflow-hidden rounded-md border bg-white text-left transition hover:border-emerald-800",
-                      selectedCandidate?.id === asset.id ? "border-emerald-800" : "border-stone-200",
-                    )}
-                  >
-                    <div className="relative aspect-[9/16] bg-stone-100">
-                      <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
-                      {selectedCandidate?.id === asset.id ? (
-                        <span className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-md bg-emerald-800 text-white">
-                          <Check size={15} />
+              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+                {candidateAssets.map((asset) => {
+                  const isSelected = selectedCandidate?.id === asset.id;
+                  return (
+                    <button
+                      type="button"
+                      key={asset.id}
+                      onClick={() => setSelectedCandidateId(asset.id)}
+                      title={asset.title}
+                      className={cn(
+                        "group relative overflow-hidden rounded-md border bg-white text-left transition",
+                        isSelected ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
+                      )}
+                    >
+                      <div className="relative aspect-[9/16] bg-stone-100">
+                        <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                        <span
+                          className={cn(
+                            "absolute right-2 top-2 flex size-6 items-center justify-center rounded-full border transition",
+                            isSelected
+                              ? "border-emerald-800 bg-emerald-800 text-white"
+                              : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
+                          )}
+                        >
+                          <Check size={14} strokeWidth={3} />
                         </span>
-                      ) : null}
-                    </div>
-                    <div className="p-3">
-                      <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
-                      <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
-                    </div>
-                  </button>
-                ))}
+                      </div>
+                      <div className="px-2.5 py-2">
+                        <p className="line-clamp-1 text-xs font-semibold text-stone-950">{asset.title}</p>
+                        <p className="mt-0.5 text-[11px] text-stone-500">{isSelected ? "Selected for motion" : asset.model}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
-              <EmptyPreview icon={ImageIcon} label="No face frames" />
+              <EmptyPreview icon={ImageIcon} label="No face frames yet" />
             )}
+          </TrendPanel>
 
-            <div className="mt-5 border-t border-stone-200 pt-4">
-              <p className="text-sm font-semibold text-stone-950">Final video</p>
-              <div className="mt-3 aspect-[9/16] max-h-[32rem] overflow-hidden rounded-md border border-stone-200 bg-stone-900">
+          <TrendPanel
+            step="03"
+            title="Final video"
+            subtitle={finalVideo ? "Ready" : "Apply the motion"}
+            active={stage === "motion"}
+            className="lg:col-span-3"
+          >
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              {selectedCandidate ? (
+                <div className="flex items-center gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
+                  <img
+                    src={selectedCandidate.url}
+                    alt={selectedCandidate.title}
+                    className="h-24 w-16 shrink-0 rounded-md border border-stone-200 object-cover"
+                  />
+                  <div>
+                    <p className="text-xs font-semibold text-stone-950">Selected frame</p>
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-stone-500">{selectedCandidate.title}</p>
+                    <p className="mt-2 text-[11px] text-stone-500">Driving motion from the source clip.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center rounded-md border border-dashed border-stone-300 bg-stone-50 p-3 text-xs text-stone-500">
+                  Pick a candidate first.
+                </div>
+              )}
+              <div className="aspect-[9/16] max-h-[34rem] overflow-hidden rounded-md border border-stone-200 bg-stone-900">
                 {isGeneratingVideo ? (
                   <LoadingBlock label="Generating motion video" />
                 ) : finalVideo ? (
@@ -402,34 +481,13 @@ export function TrendVideoView({
                 )}
               </div>
             </div>
-          </div>
+          </TrendPanel>
         </div>
       </section>
 
-      <aside className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
-        <div className="grid grid-cols-3 gap-1 rounded-md bg-stone-100 p-1">
-          {([
-            ["import", LinkIcon, "Import"],
-            ["faces", ImageIcon, "Faces"],
-            ["motion", Play, "Motion"],
-          ] as const).map(([id, Icon, label]) => (
-            <button
-              type="button"
-              key={id}
-              onClick={() => setStage(id)}
-              className={cn(
-                "inline-flex h-10 items-center justify-center gap-2 rounded-[5px] px-2 text-sm font-medium transition",
-                stage === id ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
-              )}
-            >
-              <Icon size={16} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-
+      <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
         {stage === "import" ? (
-          <div className="mt-5">
+          <div>
             <PanelTitle icon={Download} title="Trend Source" />
             <PersonaSelect personas={personas} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
             <form onSubmit={importVideoFromUrl}>
@@ -443,6 +501,7 @@ export function TrendVideoView({
             </form>
             <UploadBox
               accept="video/*"
+              compact
               icon={Upload}
               label={importedVideo?.name ?? "Upload trend video"}
               detail={importedVideo?.durationSeconds ? `${Math.round(importedVideo.durationSeconds)}s detected` : "MP4, WebM, or MOV"}
@@ -452,18 +511,20 @@ export function TrendVideoView({
         ) : null}
 
         {stage === "faces" ? (
-          <form className="mt-5" onSubmit={(event) => void generateFaceCandidates(event)}>
+          <form onSubmit={(event) => void generateFaceCandidates(event)}>
             <PanelTitle icon={ImageIcon} title="Image Options" />
-            <ModelSelect label="Image model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
-            <SelectField label="Aspect ratio" value={safeImageAspectRatio} options={imageAspectRatioOptions} onChange={setImageAspectRatio} />
-            {imageModelSupportsSize ? (
-              <SelectField label="Image size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
-            ) : null}
+            <ModelSelect label="Model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <SelectField label="Aspect ratio" value={safeImageAspectRatio} options={imageAspectRatioOptions} onChange={setImageAspectRatio} />
+              {imageModelSupportsSize ? (
+                <SelectField label="Size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
+              ) : <div />}
+            </div>
             {imageModelSupportsQuality ? (
               <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
             ) : null}
             <NumberField label="Candidates" value={safeCandidateCount} min={1} max={4} onChange={setCandidateCount} />
-            <TextArea label="Face swap prompt" value={facePrompt} onChange={setFacePrompt} rows={5} />
+            <TextArea label="Face swap prompt" value={facePrompt} onChange={setFacePrompt} rows={4} />
             <SubmitButton
               loading={isGeneratingFaces}
               icon={ImageIcon}
@@ -475,31 +536,31 @@ export function TrendVideoView({
         ) : null}
 
         {stage === "motion" ? (
-          <form className="mt-5" onSubmit={(event) => void generateTrendVideo(event)}>
+          <form onSubmit={(event) => void generateTrendVideo(event)}>
             <PanelTitle icon={Settings2} title="Video Options" />
-            <ModelSelect label="Motion model" value={motionModel} options={motionModelOptions} onChange={setMotionModel} />
+            <ModelSelect label="Model" value={motionModel} options={motionModelOptions} onChange={setMotionModel} />
             <SelectField
               label="Resolution"
               value={motionResolution}
               options={[...motionResolutions]}
               onChange={(value) => setMotionResolution(value as (typeof motionResolutions)[number])}
             />
-            <div className="mt-4 grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
-              {(["animate", "replace"] as const).map((mode) => (
+            <div className="mt-2.5 grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
+              {(["animate", "replace"] as const).map((modeValue) => (
                 <button
                   type="button"
-                  key={mode}
-                  onClick={() => setMotionMode(mode)}
+                  key={modeValue}
+                  onClick={() => setMotionMode(modeValue)}
                   className={cn(
-                    "h-10 rounded-[5px] px-3 text-sm font-medium capitalize transition",
-                    motionMode === mode ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
+                    "h-9 rounded-[5px] px-3 text-xs font-medium capitalize transition",
+                    motionMode === modeValue ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
                   )}
                 >
-                  {mode}
+                  {modeValue}
                 </button>
               ))}
             </div>
-            <label className="mt-4 flex items-center gap-3 rounded-lg bg-stone-50 p-3 text-sm font-medium text-stone-700">
+            <label className="mt-2.5 flex h-9 cursor-pointer items-center gap-2.5 rounded-md border border-stone-200 bg-stone-50 px-3 text-xs font-medium text-stone-700 transition hover:border-emerald-800">
               <input
                 type="checkbox"
                 checked={keepOriginalSound}
@@ -508,9 +569,9 @@ export function TrendVideoView({
               />
               Keep original sound
             </label>
-            <TextArea label="Video prompt" value={motionPrompt} onChange={setMotionPrompt} rows={5} />
+            <TextArea label="Video prompt" value={motionPrompt} onChange={setMotionPrompt} rows={4} />
             <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
-            <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={3} />
+            <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
             <SubmitButton
               loading={isGeneratingVideo}
               icon={Play}
@@ -522,17 +583,52 @@ export function TrendVideoView({
         ) : null}
 
         {error ? (
-          <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+          <p className="mt-3 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p>
         ) : null}
       </aside>
     </div>
   );
 }
 
+function TrendPanel({
+  step,
+  title,
+  subtitle,
+  active,
+  className,
+  children,
+}: {
+  step: string;
+  title: string;
+  subtitle?: string;
+  active?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-stone-50 p-3.5 transition",
+        active ? "border-emerald-800/60 ring-1 ring-emerald-800/30" : "border-stone-200",
+        className,
+      )}
+    >
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-[11px] font-semibold text-emerald-800">{step}</span>
+          <p className="text-sm font-semibold text-stone-950">{title}</p>
+        </div>
+        {subtitle ? <span className="text-[11px] text-stone-500">{subtitle}</span> : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function EmptyPreview({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
   return (
-    <div className="flex h-full min-h-56 flex-col items-center justify-center text-center text-sm text-stone-500">
-      <Icon className="mb-2 text-emerald-800" size={28} />
+    <div className="flex h-full min-h-48 flex-col items-center justify-center rounded-md text-center text-xs text-stone-500">
+      <Icon className="mb-2 text-emerald-800" size={26} />
       {label}
     </div>
   );
@@ -540,8 +636,8 @@ function EmptyPreview({ icon: Icon, label }: { icon: LucideIcon; label: string }
 
 function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="flex min-h-56 flex-col items-center justify-center rounded-md text-center text-sm text-stone-600">
-      <Loader2 className="mb-3 animate-spin text-emerald-800" size={26} />
+    <div className="flex min-h-48 flex-col items-center justify-center rounded-md text-center text-xs text-stone-600">
+      <Loader2 className="mb-3 animate-spin text-emerald-800" size={24} />
       {label}
     </div>
   );

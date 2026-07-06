@@ -8,7 +8,7 @@ import { promptForReferenceSlot } from "@/lib/reference-prompts";
 import { imageGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
-import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -18,6 +18,36 @@ export async function POST(request: Request) {
     if (auth.response) return auth.response;
 
     const input = imageGenerationSchema.parse(await request.json());
+
+    const totalReferenceCount =
+      input.sourceImages.length +
+      input.sourceImageUrls.length +
+      input.referenceImageUrls.length +
+      (input.referenceImageUrl ? 1 : 0);
+
+    // Fail fast on insufficient balance BEFORE resolving/downloading any reference media,
+    // so an underfunded account returns 402 instantly instead of after long network work.
+    await assertSufficientTokens(
+      auth.user?.id,
+      Math.max(
+        1,
+        estimateImageGenerationPricing({
+          prompt: input.prompt,
+          model: input.model,
+          aspectRatio: input.aspectRatio,
+          imageSize: input.imageSize,
+          imageQuality: input.imageQuality,
+          count: input.count,
+          referenceImages: Array.from({ length: totalReferenceCount }, (_, index) => ({
+            name: `reference-${index + 1}`,
+            mimeType: "image/png",
+            data: "x",
+          })),
+          generationType: totalReferenceCount > 0 ? "image_from_reference" : "image_from_prompt",
+        }).tokens,
+      ),
+    );
+
     const referenceUrls = [
       ...(input.referenceImageUrls.length
         ? input.referenceImageUrls

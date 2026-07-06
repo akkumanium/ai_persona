@@ -313,17 +313,17 @@ export function StudioWorkspace({
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 hidden w-68 flex-col border-r border-stone-200 bg-white/82 px-4 py-4 backdrop-blur lg:flex">
-        <div className="flex items-center gap-3 px-2">
-          <div className="flex size-10 items-center justify-center rounded-md">
-            <Image src="/favicon.svg" alt="" width={40} height={40} className="rounded-md" />
+      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-stone-200 bg-white/82 px-3 py-4 backdrop-blur lg:flex">
+        <div className="flex items-center gap-2.5 px-1.5">
+          <div className="flex size-8 items-center justify-center rounded-md">
+            <Image src="/favicon.svg" alt="" width={32} height={32} className="rounded-md" />
           </div>
           <div>
-            <p className="text-base font-semibold tracking-normal">Persona Studio</p>
+            <p className="text-sm font-semibold tracking-normal">Persona Studio</p>
           </div>
         </div>
 
-        <nav className="mt-6 grid flex-1 content-start gap-1 overflow-y-auto pb-3">
+        <nav className="mt-5 grid flex-1 content-start gap-0.5 overflow-y-auto pb-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -332,7 +332,7 @@ export function StudioWorkspace({
                 onClick={() => setView(item.id)}
                 disabled={item.disabled}
                 className={cn(
-                  "flex h-10 items-center gap-3 rounded-md px-3 text-left text-sm font-medium text-stone-600 transition",
+                  "flex h-9 items-center gap-2.5 rounded-md px-2.5 text-left text-[13px] font-medium text-stone-600 transition",
                   item.disabled
                     ? "cursor-not-allowed text-stone-400"
                     : view === item.id
@@ -340,10 +340,10 @@ export function StudioWorkspace({
                     : "hover:bg-stone-100 hover:text-stone-950",
                 )}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 <span className="min-w-0 truncate">{item.label}</span>
                 {item.badge ? (
-                  <span className="ml-auto shrink-0 rounded-full border border-stone-300 bg-white/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                  <span className="ml-auto shrink-0 rounded-full border border-stone-300 bg-white/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-stone-400">
                     {item.badge}
                   </span>
                 ) : null}
@@ -353,28 +353,30 @@ export function StudioWorkspace({
         </nav>
 
         <div className="grid shrink-0 gap-2 border-t border-stone-200 pt-3">
-          <div className="flex h-10 items-center justify-between gap-3 rounded-md bg-stone-50 px-3 text-sm">
+          <div className="flex h-9 items-center justify-between gap-3 rounded-md bg-stone-50 px-2.5 text-xs">
             <span className="font-medium text-stone-600">Balance</span>
             <span className="font-semibold text-emerald-900">{formatTokens(displayedBalanceCents)}</span>
           </div>
-          <Link
-            href="/contact?from=studio"
-            className="flex h-10 items-center gap-3 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
-          >
-            <Mail size={18} />
-            Contact us
-          </Link>
-          <Link
-            href="/"
-            className="flex h-10 items-center gap-3 rounded-md bg-emerald-800 px-3 text-sm font-semibold text-white transition hover:bg-emerald-900"
-          >
-            <Home size={18} />
-            Main page
-          </Link>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/contact?from=studio"
+              className="flex h-9 items-center justify-center gap-2 rounded-md border border-stone-200 bg-white px-2 text-xs font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
+            >
+              <Mail size={15} />
+              Contact
+            </Link>
+            <Link
+              href="/"
+              className="flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-800 px-2 text-xs font-semibold text-white transition hover:bg-emerald-900"
+            >
+              <Home size={15} />
+              Main
+            </Link>
+          </div>
         </div>
       </aside>
 
-      <main className="lg:pl-68">
+      <main className="lg:pl-60">
         <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/84 backdrop-blur">
           {previewMode ? (
             <div className="border-b border-amber-500/30 bg-amber-950 px-4 py-3 text-amber-50 lg:px-8">
@@ -394,10 +396,10 @@ export function StudioWorkspace({
               </div>
             </div>
           ) : null}
-          <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
+          <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-8">
             <div>
-              <h1 className="text-xl font-semibold text-stone-950">{navItems.find((item) => item.id === view)?.label}</h1>
-              <p className="text-sm text-stone-500">{notice}</p>
+              <h1 className="text-lg font-semibold text-stone-950">{navItems.find((item) => item.id === view)?.label}</h1>
+              <p className="text-xs text-stone-500">{notice}</p>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto lg:hidden">
               {navItems.map((item) => (

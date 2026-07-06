@@ -1,12 +1,13 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { ArrowLeft, ImageIcon, Loader2, Upload, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, ImageIcon, Loader2, Upload, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { referenceSlots } from "@/components/studio/constants";
-import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import { encodeFiles } from "@/components/studio/media";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
   CheckboxField,
+  ImageThumbStrip,
   ModelSelect,
   ModeToggle,
   PanelTitle,
@@ -199,7 +200,7 @@ export function GeneratePersonaView({
       bucket: "uploads",
       folder: `hybrid-sources/${selectedPersona?.id ?? "unassigned"}`,
     });
-    setHybridSources((current) => [...current, ...newImages].slice(0, 2));
+    setHybridSources((current) => [...current, ...newImages].slice(0, 8));
   }
 
   async function captureScratchSources(files: FileList | null) {
@@ -208,7 +209,7 @@ export function GeneratePersonaView({
       bucket: "uploads",
       folder: `scratch-sources/${selectedPersona?.id ?? "unassigned"}`,
     });
-    setScratchSources((current) => [...current, ...newImages].slice(0, 4));
+    setScratchSources((current) => [...current, ...newImages].slice(0, 8));
   }
 
   function removeHybridSource(index: number) {
@@ -315,7 +316,7 @@ export function GeneratePersonaView({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_410px]">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -331,7 +332,7 @@ export function GeneratePersonaView({
           </div>
         </div>
 
-        <div className="mt-5 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
+        <div className="mt-4 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
           {isGenerating ? (
             <div className="flex min-h-[24rem] flex-col items-center justify-center text-center text-sm text-stone-600">
               <Loader2 className="mb-3 animate-spin text-emerald-800" size={28} />
@@ -363,7 +364,7 @@ export function GeneratePersonaView({
         </div>
       </section>
 
-      <aside className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
+      <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
         <form onSubmit={generateReference}>
           <PanelTitle icon={WandSparkles} title="Reference Options" />
           <PersonaSelect personas={personas} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
@@ -419,27 +420,14 @@ export function GeneratePersonaView({
             <>
               <UploadBox
                 accept="image/*"
+                multiple
+                compact
                 icon={Upload}
-                label={hybridSources.length < 2 ? `Upload face ${hybridSources.length + 1} of 2` : "Both faces uploaded"}
-                detail={hybridSources.length ? `${hybridSources.length} face image${hybridSources.length === 1 ? "" : "s"} ready` : undefined}
+                label={hybridSources.length ? "Add more faces" : "Upload face images"}
+                detail={hybridSources.length ? `${hybridSources.length} face image${hybridSources.length === 1 ? "" : "s"} ready (min 2)` : "Add 2 or more faces to blend"}
                 onChange={(files) => void captureHybridSources(files)}
               />
-              {hybridSources.length ? (
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  {hybridSources.map((image, index) => (
-                    <div key={`${image.name}-${index}`} className="relative overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
-                      <img src={sourceImageToDataUrl(image)} alt={`Face source ${index + 1}`} className="aspect-square w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeHybridSource(index)}
-                        className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-md bg-white/90 text-stone-700 shadow-sm transition hover:text-red-700"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <ImageThumbStrip images={hybridSources} onRemove={removeHybridSource} />
             </>
           ) : null}
 
@@ -465,6 +453,7 @@ export function GeneratePersonaView({
                 <UploadBox
                   accept="image/*"
                   multiple
+                  compact
                   icon={Upload}
                   label="Upload optional source images"
                   detail={
@@ -475,23 +464,7 @@ export function GeneratePersonaView({
                   onChange={(files) => void captureScratchSources(files)}
                 />
               ) : null}
-              {imageModelSupportsReferences && scratchSources.length ? (
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {scratchSources.map((image, index) => (
-                    <div key={`${image.name}-${index}`} className="relative overflow-hidden rounded-md border border-stone-200 bg-stone-100">
-                      <img src={sourceImageToDataUrl(image)} alt={image.name ?? `Source ${index + 1}`} className="aspect-square w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removeScratchSource(index)}
-                        className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-md bg-white/90 text-stone-700 shadow-sm transition hover:text-red-700"
-                        aria-label="Remove source image"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <ImageThumbStrip images={scratchSources} onRemove={removeScratchSource} />
               <TextArea label="Prompt" value={scratchPrompt} onChange={setScratchPrompt} rows={6} />
             </>
           ) : (

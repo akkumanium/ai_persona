@@ -6,7 +6,7 @@ import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
-import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -16,17 +16,21 @@ export async function POST(request: Request) {
     if (auth.response) return auth.response;
 
     const input = videoGenerationSchema.parse(await request.json());
-    const motionReferenceVideo =
-      input.motionReferenceVideo ??
-      (input.motionReferenceVideoUrl
-        ? await mediaUrlToProviderInput(input.motionReferenceVideoUrl, `${input.personaName}-motion-reference`, auth.user?.id)
-        : undefined);
     const generationType =
       input.mode === "motion"
         ? "video_motion"
         : input.startFrameImageUrl || input.startFrameImage || input.referenceImageUrl
           ? "video_normal"
           : "video_prompt";
+    // Fail fast on insufficient balance BEFORE resolving any reference video media,
+    // so an underfunded account returns 402 instantly instead of after long downloads.
+    await assertSufficientTokens(auth.user?.id, Math.max(1, estimateVideoGenerationPricing(input).tokens));
+
+    const motionReferenceVideo =
+      input.motionReferenceVideo ??
+      (input.motionReferenceVideoUrl
+        ? await mediaUrlToProviderInput(input.motionReferenceVideoUrl, `${input.personaName}-motion-reference`, auth.user?.id)
+        : undefined);
     const estimatedPricing = estimateVideoGenerationPricing(input);
     const jobId = crypto.randomUUID();
     await reserveTokens(
