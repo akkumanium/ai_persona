@@ -1,28 +1,23 @@
 6. Come up with a name
 7. Google oauth settings fix 
-8. Fix invisibility issue
 12. Email fix
 36. Check data usage
 41. Add carousel
 42. Add runninghub
 46. Maybe change "tokens" to tokens icon
-49. Probably change the prompt for body
 51. Check options for every video and clearly differentiate them.
-55. Open community chat
 58. Figure out Seedance prompting
 68. Optimize for phone users
 72. Change referral link
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
-82. Centralize telegram icon and correct link
 84. Put video to demo
 85. Change the way subcriptions work
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
-96. Make personas limited, depending on the subscription
-97. Download yt-dlp
 99. Think more on the name
 100. Delete Plan quota: 0/0 personas - upgrade or delete a persona to create another., but make sure to warn user that they can't create a persona via some another way
+101. The videos are not actually saved.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

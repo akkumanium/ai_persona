@@ -9,10 +9,10 @@ export const metadata = {
   description: "Contact Persona Studio by email or Telegram.",
 };
 
-const TELEGRAM_USER = "@persona_studio_support";
-const TELEGRAM_USER_URL = "https://t.me/persona_studio_support";
-const TELEGRAM_GROUP = "Persona Studio Telegram";
-const TELEGRAM_GROUP_URL = "https://t.me/personastudioai";
+const TELEGRAM_USER = "Idolborn support";
+const TELEGRAM_USER_URL = "https://t.me/idolborn_support";
+const TELEGRAM_GROUP = "Idolborn public telegram chat";
+const TELEGRAM_GROUP_URL = "https://t.me/idolborn";
 
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
   const { from } = await searchParams;

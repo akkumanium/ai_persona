@@ -94,6 +94,11 @@ button:disabled {
   background-image: none !important;
 }
 
+.trend-step-panel {
+  background-color: var(--surface) !important;
+  background-image: none !important;
+}
+
 .bg-stone-300 {
   background-color: rgba(79, 93, 117, 0.55) !important;
 }

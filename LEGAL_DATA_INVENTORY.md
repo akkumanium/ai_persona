@@ -20,7 +20,7 @@ Scope reviewed:
 
 ## Runtime Configuration Observed
 
-Code supports these env vars: Supabase, Paddle, Gemini, OpenAI, Wan, Kling, Seedance/BytePlus, WaveSpeed, ElevenLabs, contact email, and `YTDLP_PATH`.
+Code supports these env vars: Supabase, Paddle, Gemini, OpenAI, Wan, Kling, Seedance/BytePlus, WaveSpeed, ElevenLabs, and contact email.
 
 The local `.env.local` file contains only variable names for:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -403,19 +403,16 @@ Retention behavior visible in code:
 Uncertainty:
 - WaveSpeed provider-side retention/training/use of image/audio/prompt.
 
-### Trend-video import
+### Trend-video upload
 
-Evidence: `src/components/studio/trend-video-view.tsx`, `src/app/api/media/import-video/route.ts`
+Evidence: `src/components/studio/trend-video-view.tsx`, `src/app/api/media/upload/route.ts`
 
 Collected:
-- User-provided video URL.
 - Uploaded trend video files.
-- Downloaded video bytes, original/imported name, MIME type, size.
+- Uploaded video bytes, original/imported name, MIME type, size.
 - First frame captured in browser as base64 JPEG for face generation.
 
 Sent to:
-- For URL import, the server fetches the provided remote URL and may fetch Instagram embed metadata.
-- `yt-dlp` may be executed server-side to download from the user-provided URL.
 - Supabase Storage `uploads` or server temp media.
 - Later generation providers when used for face swap/motion generation.
 

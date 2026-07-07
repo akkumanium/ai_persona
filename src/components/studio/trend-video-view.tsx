@@ -8,10 +8,8 @@ import {
   Clapperboard,
   Film,
   ImageIcon,
-  Link2,
   Loader2,
   Play,
-  Plus,
   ScanFace,
   Settings2,
   Upload,
@@ -48,9 +46,7 @@ import { cn, formatTokens } from "@/lib/utils";
 
 type ImportState = "capturing" | "ready";
 type ImportedVideo = SourceVideoInput & {
-  sourceUrl?: string;
   durationSeconds?: number;
-  sizeBytes?: number;
 };
 
 export type LibraryItem = {
@@ -89,8 +85,7 @@ export function TrendVideoView({
 }) {
   const [editingId, setEditingId] = useState<string | undefined>();
 
-  const [trendUrl, setTrendUrl] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState("");
 
@@ -214,41 +209,10 @@ export function TrendVideoView({
     }
   }
 
-  async function importFromUrl(event: FormEvent) {
-    event.preventDefault();
-    const trimmedUrl = trendUrl.trim();
-    if (!trimmedUrl) return;
-    setError("");
-    setIsImporting(true);
-    try {
-      const response = await fetch("/api/media/import-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: trimmedUrl }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Video import failed.");
-      }
-      await addImportedVideo({
-        name: payload.name ?? "trend-video.mp4",
-        mimeType: payload.mimeType ?? "video/mp4",
-        url: payload.url,
-        sourceUrl: trimmedUrl,
-        sizeBytes: payload.sizeBytes,
-      });
-      setTrendUrl("");
-    } catch (importError) {
-      setError(importError instanceof Error ? importError.message : "Video import failed.");
-    } finally {
-      setIsImporting(false);
-    }
-  }
-
   async function importFromFiles(files: FileList | null) {
     if (!files || !files.length) return;
     setError("");
-    setIsImporting(true);
+    setIsUploading(true);
     try {
       const encoded = await encodeFiles(files, "video/mp4", {
         enabled: supabaseReady,
@@ -266,7 +230,7 @@ export function TrendVideoView({
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Video upload failed.");
     } finally {
-      setIsImporting(false);
+      setIsUploading(false);
     }
   }
 
@@ -678,10 +642,7 @@ export function TrendVideoView({
   return (
     <div className="grid gap-5">
       <SourceIngress
-        trendUrl={trendUrl}
-        onTrendUrlChange={setTrendUrl}
-        onSubmit={importFromUrl}
-        isImporting={isImporting}
+        isUploading={isUploading}
         isDragOver={isDragOver}
         onDragStateChange={setIsDragOver}
         onDrop={handleDrop}
@@ -776,7 +737,7 @@ export function TrendVideoView({
             </div>
             <p className="mt-3 text-sm font-semibold text-stone-950">No trend videos yet</p>
             <p className="mt-1 max-w-sm text-xs leading-5 text-stone-500">
-              Paste a link or drop a file above. Your sources are saved here as a library you can edit anytime.
+              Upload a video above. Your sources are saved here as a library you can edit anytime.
             </p>
           </div>
         </div>
@@ -788,19 +749,13 @@ export function TrendVideoView({
 }
 
 function SourceIngress({
-  trendUrl,
-  onTrendUrlChange,
-  onSubmit,
-  isImporting,
+  isUploading,
   isDragOver,
   onDragStateChange,
   onDrop,
   onFiles,
 }: {
-  trendUrl: string;
-  onTrendUrlChange: (value: string) => void;
-  onSubmit: (event: FormEvent) => void;
-  isImporting: boolean;
+  isUploading: boolean;
   isDragOver: boolean;
   onDragStateChange: (value: boolean) => void;
   onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
@@ -814,34 +769,8 @@ function SourceIngress({
         </div>
         <div>
           <h2 className="text-base font-semibold text-stone-950">Add a trend video</h2>
-          <p className="text-[11px] text-stone-500">Paste a link or drop a file — sources are saved to your library below.</p>
+          <p className="text-[11px] text-stone-500">Drop a file or browse from your device.</p>
         </div>
-      </div>
-
-      <form onSubmit={onSubmit} className="mt-3 flex items-center gap-2">
-        <div className="relative flex-1">
-          <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
-          <input
-            value={trendUrl}
-            onChange={(event) => onTrendUrlChange(event.target.value)}
-            placeholder="Paste a trend video URL (Instagram, TikTok, Reels, direct MP4…)"
-            className="h-11 w-full rounded-md border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm outline-none transition focus:border-emerald-800 focus:bg-white"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={!trendUrl.trim() || isImporting}
-          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
-        >
-          {isImporting ? <Loader2 className="size-4 animate-spin" /> : <Plus size={16} />}
-          Add
-        </button>
-      </form>
-
-      <div className="my-3 flex items-center gap-3">
-        <span className="h-px flex-1 bg-stone-200" />
-        <span className="text-[11px] uppercase tracking-wide text-stone-400">or drop a file</span>
-        <span className="h-px flex-1 bg-stone-200" />
       </div>
 
       <div
@@ -856,10 +785,10 @@ function SourceIngress({
           isDragOver ? "border-emerald-800 bg-emerald-50" : "border-stone-300 bg-stone-50 hover:border-emerald-800 hover:bg-white",
         )}
       >
-        {isImporting ? (
+        {isUploading ? (
           <>
             <Loader2 className="size-4 animate-spin text-emerald-800" />
-            <span className="text-stone-600">Importing…</span>
+            <span className="text-stone-600">Uploading…</span>
           </>
         ) : (
           <>
@@ -899,7 +828,7 @@ function StepSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-stone-200 bg-stone-50/60 p-4">
+    <section className="trend-step-panel rounded-lg border border-stone-200 p-4">
       <div className="mb-3 flex items-center gap-2.5">
         <span className="flex size-7 items-center justify-center rounded-full bg-emerald-800 text-xs font-bold text-white">
           {step}

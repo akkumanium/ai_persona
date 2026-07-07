@@ -4,13 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run download:yt-dlp",
     "build": "next build",
-    "postinstall": "npm run download:yt-dlp",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
-    "download:yt-dlp": "node node_modules/youtube-dl-exec/scripts/postinstall.js"
+    "test": "vitest run"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.52.0",
@@ -24,7 +21,6 @@
     "react-dom": "^19.2.4",
     "tailwind-merge": "^3.6.0",
     "wavespeed": "^0.2.3",
-    "youtube-dl-exec": "^3.1.9",
     "zod": "^4.4.3"
   },
   "devDependencies": {
