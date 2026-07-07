@@ -9,7 +9,7 @@ import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
-import { TrendVideoView } from "@/components/studio/trend-video-view";
+import { TrendVideoView, type LibraryItem } from "@/components/studio/trend-video-view";
 import type { ReferenceSlotId, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -39,6 +39,7 @@ export function StudioWorkspace({
   initialUserId,
   initialUserEmail,
   paddleConfig,
+  personaLimit = 0,
   imagePromptSuggestions = [],
   previewMode = false,
 }: {
@@ -47,6 +48,7 @@ export function StudioWorkspace({
   initialUserId?: string;
   initialUserEmail?: string;
   paddleConfig: PublicPaddleConfig;
+  personaLimit?: number | null;
   imagePromptSuggestions?: PromptSuggestion[];
   previewMode?: boolean;
 }) {
@@ -54,7 +56,8 @@ export function StudioWorkspace({
   const [personas, setPersonas] = useState<Persona[]>(initialData?.personas ?? demoPersonas);
   const [assets, setAssets] = useState<Asset[]>(initialData?.assets ?? demoAssets);
   const [jobs, setJobs] = useState<GenerationJob[]>(initialData?.jobs ?? demoJobs);
-  const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 5000));
+  const [trendLibrary, setTrendLibrary] = useState<LibraryItem[]>([]);
+  const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 500));
   const [userId, setUserId] = useState<string | undefined>(initialUserId);
   const [selectedPersonaId, setSelectedPersonaId] = useState(
     initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
@@ -159,6 +162,10 @@ export function StudioWorkspace({
   }
 
   function addPersona(persona: Persona) {
+    if (personaLimit !== null && personas.length >= personaLimit) {
+      setNotice("Your current plan persona limit has been reached.");
+      return;
+    }
     setPersonas((current) => [persona, ...current]);
     setSelectedPersonaId(persona.id);
     void (async () => {
@@ -446,6 +453,7 @@ export function StudioWorkspace({
               personas={personas}
               assets={assets}
               supabaseReady={supabaseReady}
+              personaLimit={personaLimit}
               selectedPersonaId={selectedPersona?.id}
               onSelect={setSelectedPersonaId}
               onUpdatePersona={updatePersona}
@@ -515,6 +523,8 @@ export function StudioWorkspace({
               assets={assets}
               selectedPersona={selectedPersona}
               supabaseReady={supabaseReady}
+              library={trendLibrary}
+              onLibraryChange={setTrendLibrary}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);
                 addJob(job);

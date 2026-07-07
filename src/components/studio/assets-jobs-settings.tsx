@@ -250,7 +250,7 @@ export function SettingsView({
       <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={Gift} title="Referrals" />
         <p className="mt-4 text-sm leading-6 text-stone-600">
-          Invite someone and get {formatTokens(1000)} after they subscribe through your link.
+          Invite someone and get {formatTokens(100)} after they subscribe through your link.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
           <input

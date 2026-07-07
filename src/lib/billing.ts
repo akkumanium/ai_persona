@@ -1,7 +1,9 @@
 import { env } from "@/lib/env";
 
-export type BillingPlanId = "starter" | "plus";
+export type BillingPlanId = "solo" | "creator" | "agency";
 export type BillingTopUpId = "topup_2" | "topup_5" | "topup_10" | "topup_20" | "topup_50" | "topup_100";
+export const WELCOME_CREDIT_CENTS = 300;
+export const UNLIMITED_PERSONAS = null;
 
 export type BillingPlan = {
   id: BillingPlanId;
@@ -10,6 +12,7 @@ export type BillingPlan = {
   priceLabel: string;
   tokenLabel: string;
   creditCents: number;
+  personaLimit: number | null;
   priceId?: string;
   description: string;
 };
@@ -34,24 +37,37 @@ export type PublicPaddleConfig = {
 
 export const billingPlans: BillingPlan[] = [
   {
-    id: "starter",
+    id: "solo",
     kind: "subscription",
-    name: "Studio Light",
-    priceLabel: "$5",
-    tokenLabel: "5,000 tokens",
-    creditCents: 5000,
-    priceId: env.paddleFiveDollarPriceId,
-    description: "A focused monthly balance for early persona and reference work.",
+    name: "Solo",
+    priceLabel: "$10",
+    tokenLabel: "300 welcome tokens",
+    creditCents: WELCOME_CREDIT_CENTS,
+    personaLimit: 1,
+    priceId: env.paddleTenDollarPriceId,
+    description: "For one creator persona with the full generation workspace.",
   },
   {
-    id: "plus",
+    id: "creator",
     kind: "subscription",
-    name: "Studio Plus",
-    priceLabel: "$10",
-    tokenLabel: "10,000 tokens",
-    creditCents: 10000,
-    priceId: env.paddleTenDollarPriceId,
-    description: "More room for image, video, and campaign iteration.",
+    name: "Creator",
+    priceLabel: "$50",
+    tokenLabel: "300 welcome tokens",
+    creditCents: WELCOME_CREDIT_CENTS,
+    personaLimit: 5,
+    priceId: env.paddleFiftyDollarPriceId,
+    description: "For managing a small portfolio of up to five personas.",
+  },
+  {
+    id: "agency",
+    kind: "subscription",
+    name: "Agency",
+    priceLabel: "$100",
+    tokenLabel: "300 welcome tokens",
+    creditCents: WELCOME_CREDIT_CENTS,
+    personaLimit: UNLIMITED_PERSONAS,
+    priceId: env.paddleHundredDollarPriceId,
+    description: "For teams and operators who need limitless personas.",
   },
 ];
 
@@ -61,8 +77,8 @@ export const billingTopUps: BillingTopUp[] = [
     kind: "topup",
     name: "Small top-up",
     priceLabel: "$2",
-    tokenLabel: "2,000 tokens",
-    creditCents: 2000,
+    tokenLabel: "200 tokens",
+    creditCents: 200,
     priceId: env.paddleTwoDollarPriceId,
     description: "A quick bump for a few image iterations.",
   },
@@ -71,8 +87,8 @@ export const billingTopUps: BillingTopUp[] = [
     kind: "topup",
     name: "Starter top-up",
     priceLabel: "$5",
-    tokenLabel: "5,000 tokens",
-    creditCents: 5000,
+    tokenLabel: "500 tokens",
+    creditCents: 500,
     priceId: env.paddleFiveDollarPriceId,
     description: "Enough for references and lighter still-image work.",
   },
@@ -81,8 +97,8 @@ export const billingTopUps: BillingTopUp[] = [
     kind: "topup",
     name: "Creator top-up",
     priceLabel: "$10",
-    tokenLabel: "10,000 tokens",
-    creditCents: 10000,
+    tokenLabel: "1,000 tokens",
+    creditCents: 1000,
     priceId: env.paddleTenDollarPriceId,
     description: "A comfortable refill for daily generation.",
   },
@@ -91,8 +107,8 @@ export const billingTopUps: BillingTopUp[] = [
     kind: "topup",
     name: "Campaign top-up",
     priceLabel: "$20",
-    tokenLabel: "20,000 tokens",
-    creditCents: 20000,
+    tokenLabel: "2,000 tokens",
+    creditCents: 2000,
     priceId: env.paddleTwentyDollarPriceId,
     description: "More room for image sets and video tests.",
   },
@@ -101,8 +117,8 @@ export const billingTopUps: BillingTopUp[] = [
     kind: "topup",
     name: "Studio top-up",
     priceLabel: "$50",
-    tokenLabel: "50,000 tokens",
-    creditCents: 50000,
+    tokenLabel: "5,000 tokens",
+    creditCents: 5000,
     priceId: env.paddleFiftyDollarPriceId,
     description: "For larger batches and production weeks.",
   },
@@ -111,8 +127,8 @@ export const billingTopUps: BillingTopUp[] = [
     kind: "topup",
     name: "Scale top-up",
     priceLabel: "$100",
-    tokenLabel: "100,000 tokens",
-    creditCents: 100000,
+    tokenLabel: "10,000 tokens",
+    creditCents: 10000,
     priceId: env.paddleHundredDollarPriceId,
     description: "Best for sustained video and campaign output.",
   },
@@ -134,6 +150,14 @@ export function getBillingOptionByPriceId(priceId?: string | null) {
   return [...billingPlans, ...billingTopUps].find((option) => option.priceId && option.priceId === priceId);
 }
 
+export function getPersonaLimitForPlan(planId?: string | null) {
+  return getPlanById(planId)?.personaLimit ?? 0;
+}
+
+export function formatPersonaLimit(limit: number | null) {
+  return limit === null ? "Limitless personas" : `${limit} persona${limit === 1 ? "" : "s"}`;
+}
+
 export function hasPaddleCheckoutEnv() {
   return Boolean(env.paddleClientToken && billingPlans.every((plan) => plan.priceId));
 }
@@ -152,6 +176,7 @@ export function getPublicPaddleConfig() {
       priceLabel: plan.priceLabel,
       tokenLabel: plan.tokenLabel,
       creditCents: plan.creditCents,
+      personaLimit: plan.personaLimit,
       priceId: plan.priceId ?? "",
       description: plan.description,
     })),

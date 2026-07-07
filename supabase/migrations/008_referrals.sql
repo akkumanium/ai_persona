@@ -18,7 +18,7 @@ create table if not exists public.referral_rewards (
   referred_user_id uuid not null references auth.users(id) on delete cascade,
   referral_code text not null,
   status text not null default 'pending' check (status in ('pending', 'rewarded')),
-  reward_amount_cents integer not null default 1000 check (reward_amount_cents > 0),
+  reward_amount_cents integer not null default 100 check (reward_amount_cents > 0),
   rewarded_subscription_id text,
   rewarded_event_id text,
   created_at timestamptz not null default now(),

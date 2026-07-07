@@ -1,31 +1,36 @@
 /* eslint-disable @next/next/no-img-element */
 
 import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   Check,
   Clapperboard,
-  Download,
-  Flame,
+  Film,
   ImageIcon,
-  LinkIcon,
+  Link2,
   Loader2,
   Play,
+  Plus,
+  ScanFace,
   Settings2,
   Upload,
+  Wand2,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
+import { useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   ModelSelect,
   NumberField,
   PanelTitle,
-  PersonaSelect,
   SelectField,
   SubmitButton,
   TextArea,
   TextField,
-  UploadBox,
 } from "@/components/studio/ui";
 import {
   aspectRatiosForImageModel,
@@ -41,12 +46,24 @@ import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatTokens } from "@/lib/utils";
 
-type ImportState = "idle" | "importing" | "capturing" | "ready";
-type GenerationStage = "import" | "faces" | "motion";
+type ImportState = "capturing" | "ready";
 type ImportedVideo = SourceVideoInput & {
   sourceUrl?: string;
   durationSeconds?: number;
   sizeBytes?: number;
+};
+
+export type LibraryItem = {
+  id: string;
+  video: ImportedVideo;
+  firstFrame?: SourceImageInput;
+  firstFramePreview?: string;
+  importState: ImportState;
+  candidates: Asset[];
+  selectedCandidateId: string;
+  finalVideo?: Asset;
+  isGeneratingFaces?: boolean;
+  isGeneratingVideo?: boolean;
 };
 
 const motionResolutions = ["480p", "720p"] as const;
@@ -58,6 +75,8 @@ export function TrendVideoView({
   supabaseReady,
   onAssetsCreated,
   onSelectPersona,
+  library,
+  onLibraryChange,
 }: {
   personas: Persona[];
   assets: Asset[];
@@ -65,13 +84,16 @@ export function TrendVideoView({
   supabaseReady?: boolean;
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
+  library: LibraryItem[];
+  onLibraryChange: Dispatch<SetStateAction<LibraryItem[]>>;
 }) {
-  const [stage, setStage] = useState<GenerationStage>("import");
+  const [editingId, setEditingId] = useState<string | undefined>();
+
   const [trendUrl, setTrendUrl] = useState("");
-  const [importedVideo, setImportedVideo] = useState<ImportedVideo | undefined>();
-  const [firstFrame, setFirstFrame] = useState<SourceImageInput | undefined>();
-  const [firstFramePreview, setFirstFramePreview] = useState("");
-  const [importState, setImportState] = useState<ImportState>("idle");
+  const [isImporting, setIsImporting] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [error, setError] = useState("");
+
   const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [imageAspectRatio, setImageAspectRatio] = useState("9:16");
   const [imageSize, setImageSize] = useState("2K");
@@ -80,8 +102,6 @@ export function TrendVideoView({
   const [facePrompt, setFacePrompt] = useState(
     "Replace the visible face with the selected Persona while preserving the original frame, pose, styling, lighting, clothing, hands, body, camera angle, and background.",
   );
-  const [candidateAssets, setCandidateAssets] = useState<Asset[]>([]);
-  const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [motionModel, setMotionModel] = useState("wan-animate");
   const [motionPrompt, setMotionPrompt] = useState(
     "Follow the driving video's motion, timing, framing, dance movement, and camera rhythm with stable identity.",
@@ -91,10 +111,6 @@ export function TrendVideoView({
   const [motionResolution, setMotionResolution] = useState<(typeof motionResolutions)[number]>("720p");
   const [motionNegativePrompt, setMotionNegativePrompt] = useState("blur, distorted body, warped hands, flicker, low quality");
   const [keepOriginalSound, setKeepOriginalSound] = useState(true);
-  const [isGeneratingFaces, setIsGeneratingFaces] = useState(false);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [finalVideo, setFinalVideo] = useState<Asset | undefined>();
-  const [error, setError] = useState("");
 
   const personaReferences = useMemo(
     () =>
@@ -112,10 +128,16 @@ export function TrendVideoView({
     : imageAspectRatioOptions[0];
   const imageModelSupportsSize = supportsImageSize(imageModel);
   const imageModelSupportsQuality = supportsImageQuality(imageModel);
-  const selectedCandidate = candidateAssets.find((asset) => asset.id === selectedCandidateId) ?? candidateAssets[0];
+
+  const editingItem = library.find((item) => item.id === editingId);
+  const selectedCandidate = editingItem
+    ? (editingItem.candidates.find((asset) => asset.id === editingItem.selectedCandidateId) ??
+      editingItem.candidates[0])
+    : undefined;
   const safeCandidateCount = Math.min(4, Math.max(1, Math.round(candidateCount)));
-  const detectedDuration = importedVideo?.durationSeconds ? Math.round(importedVideo.durationSeconds) : 5;
+  const detectedDuration = editingItem?.video.durationSeconds ? Math.round(editingItem.video.durationSeconds) : 5;
   const safeMotionDuration = Math.min(15, Math.max(3, detectedDuration));
+
   const faceCostLabel = formatTokens(
     estimateImageGenerationPricing({
       prompt: facePrompt,
@@ -126,7 +148,9 @@ export function TrendVideoView({
       count: safeCandidateCount,
       referenceImages: [
         ...personaReferences.map((asset) => ({ name: asset.title, mimeType: asset.mimeType, data: "x" })),
-        ...(firstFrame ? [{ name: firstFrame.name, mimeType: firstFrame.mimeType, data: "x" }] : []),
+        ...(editingItem?.firstFrame
+          ? [{ name: editingItem.firstFrame.name, mimeType: editingItem.firstFrame.mimeType, data: "x" }]
+          : []),
       ],
       generationType: "image_from_reference",
     }).tokens,
@@ -147,11 +171,9 @@ export function TrendVideoView({
     }).tokens,
   );
 
-  const stageSteps: Array<{ id: GenerationStage; label: string; done: boolean }> = [
-    { id: "import", label: "Source", done: Boolean(importedVideo) },
-    { id: "faces", label: "Faces", done: candidateAssets.length > 0 },
-    { id: "motion", label: "Motion", done: Boolean(finalVideo) },
-  ];
+  function updateLibraryItem(id: string, updates: Partial<LibraryItem>) {
+    onLibraryChange((current) => current.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  }
 
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
@@ -165,13 +187,39 @@ export function TrendVideoView({
     }
   }
 
-  async function importVideoFromUrl(event: FormEvent) {
+  async function addImportedVideo(video: ImportedVideo) {
+    const id = crypto.randomUUID();
+    onLibraryChange((current) => [
+      {
+        id,
+        video,
+        importState: "capturing",
+        candidates: [],
+        selectedCandidateId: "",
+      },
+      ...current,
+    ]);
+    try {
+      const videoUrl = sourceVideoToUrl(video);
+      const captured = await captureFirstFrame(videoUrl, video.name);
+      updateLibraryItem(id, {
+        video: { ...video, durationSeconds: captured.durationSeconds },
+        firstFrame: captured.image,
+        firstFramePreview: sourceImageToDataUrl(captured.image),
+        importState: "ready",
+      });
+    } catch (captureError) {
+      updateLibraryItem(id, { importState: "ready" });
+      setError(captureError instanceof Error ? captureError.message : "Could not capture the first frame.");
+    }
+  }
+
+  async function importFromUrl(event: FormEvent) {
     event.preventDefault();
     const trimmedUrl = trendUrl.trim();
     if (!trimmedUrl) return;
     setError("");
-    setFinalVideo(undefined);
-    setImportState("importing");
+    setIsImporting(true);
     try {
       const response = await fetch("/api/media/import-video", {
         method: "POST",
@@ -182,66 +230,85 @@ export function TrendVideoView({
       if (!response.ok) {
         throw new Error(payload.error ?? "Video import failed.");
       }
-      const video: ImportedVideo = {
+      await addImportedVideo({
         name: payload.name ?? "trend-video.mp4",
         mimeType: payload.mimeType ?? "video/mp4",
         url: payload.url,
         sourceUrl: trimmedUrl,
         sizeBytes: payload.sizeBytes,
-      };
-      await prepareImportedVideo(video);
+      });
+      setTrendUrl("");
     } catch (importError) {
-      setImportState("idle");
       setError(importError instanceof Error ? importError.message : "Video import failed.");
+    } finally {
+      setIsImporting(false);
     }
   }
 
-  async function captureUploadedVideo(files: FileList | null) {
+  async function importFromFiles(files: FileList | null) {
+    if (!files || !files.length) return;
     setError("");
-    setFinalVideo(undefined);
-    setImportState("importing");
+    setIsImporting(true);
     try {
-      const [video] = await encodeFiles(files, "video/mp4", {
+      const encoded = await encodeFiles(files, "video/mp4", {
         enabled: supabaseReady,
         bucket: "uploads",
         folder: `trend-videos/${selectedPersona?.id ?? "unassigned"}`,
       });
-      if (!video) {
-        setImportState("idle");
-        return;
+      for (const video of encoded) {
+        await addImportedVideo({
+          name: video.name,
+          mimeType: video.mimeType,
+          data: video.data,
+          url: video.url,
+        });
       }
-      await prepareImportedVideo({
-        name: video.name,
-        mimeType: video.mimeType,
-        data: video.data,
-        url: video.url,
-      });
     } catch (uploadError) {
-      setImportState("idle");
       setError(uploadError instanceof Error ? uploadError.message : "Video upload failed.");
+    } finally {
+      setIsImporting(false);
     }
   }
 
-  async function prepareImportedVideo(video: ImportedVideo) {
-    const videoUrl = sourceVideoToUrl(video);
-    setImportedVideo(video);
-    setCandidateAssets([]);
-    setSelectedCandidateId("");
-    setFirstFrame(undefined);
-    setFirstFramePreview("");
-    setImportState("capturing");
-    const captured = await captureFirstFrame(videoUrl, video.name);
-    setImportedVideo((current) => current ? { ...current, durationSeconds: captured.durationSeconds } : current);
-    setFirstFrame(captured.image);
-    setFirstFramePreview(sourceImageToDataUrl(captured.image));
-    setImportState("ready");
-    setStage("faces");
+  async function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(event.dataTransfer.files);
+    const videoFiles = files.filter((file) => file.type.startsWith("video/"));
+    if (!videoFiles.length) {
+      setError("Only video files are supported.");
+      return;
+    }
+    const dataTransfer = new DataTransfer();
+    videoFiles.forEach((file) => dataTransfer.items.add(file));
+    await importFromFiles(dataTransfer.files);
+  }
+
+  function openEditor(item: LibraryItem) {
+    setEditingId(item.id);
+    setError("");
+  }
+
+  function closeEditor() {
+    setEditingId(undefined);
+    setError("");
+  }
+
+  function removeLibraryItem(id: string) {
+    onLibraryChange((current) => current.filter((item) => item.id !== id));
+    if (editingId === id) setEditingId(undefined);
+  }
+
+  function selectCandidate(assetId: string) {
+    if (!editingItem) return;
+    updateLibraryItem(editingItem.id, { selectedCandidateId: assetId });
   }
 
   async function generateFaceCandidates(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPersona || !firstFrame || !personaReferences.length || !supportsImageReferences(imageModel)) return;
-    setIsGeneratingFaces(true);
+    const item = editingItem;
+    if (!item || !item.firstFrame || !selectedPersona || !personaReferences.length || !supportsImageReferences(imageModel)) return;
+    updateLibraryItem(item.id, { isGeneratingFaces: true });
     setError("");
     try {
       const response = await fetch("/api/generate/image", {
@@ -258,7 +325,7 @@ export function TrendVideoView({
           imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
           count: safeCandidateCount,
           referenceImageUrls: personaReferences.map((asset) => asset.url),
-          sourceImages: [{ name: firstFrame.name, mimeType: firstFrame.mimeType, data: firstFrame.data ?? "" }],
+          sourceImages: [{ name: item.firstFrame.name, mimeType: item.firstFrame.mimeType, data: item.firstFrame.data ?? "" }],
           referenceAssetIds: personaReferences.map((asset) => asset.id),
           titlePrefix: `${selectedPersona.name} trend face`,
         }),
@@ -271,21 +338,23 @@ export function TrendVideoView({
         ...asset,
         referenceAssetIds: personaReferences.map((reference) => reference.id),
       }));
-      setCandidateAssets(nextAssets);
-      setSelectedCandidateId(nextAssets[0]?.id ?? "");
+      updateLibraryItem(item.id, {
+        candidates: nextAssets,
+        selectedCandidateId: nextAssets[0]?.id ?? "",
+        isGeneratingFaces: false,
+      });
       onAssetsCreated(nextAssets, payload.job);
-      setStage("motion");
     } catch (generationError) {
+      updateLibraryItem(item.id, { isGeneratingFaces: false });
       setError(generationError instanceof Error ? generationError.message : "Face frame generation failed.");
-    } finally {
-      setIsGeneratingFaces(false);
     }
   }
 
   async function generateTrendVideo(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPersona || !selectedCandidate || !importedVideo) return;
-    setIsGeneratingVideo(true);
+    const item = editingItem;
+    if (!item || !selectedPersona || !selectedCandidate) return;
+    updateLibraryItem(item.id, { isGeneratingVideo: true });
     setError("");
     try {
       const candidateInput = await assetToProviderImageInput(selectedCandidate);
@@ -311,9 +380,9 @@ export function TrendVideoView({
           characterOrientation: "video",
           keepOriginalSound,
           startFrameImage: candidateInput,
-          motionReferenceVideoUrl: importedVideo.url,
-          motionReferenceVideo: importedVideo.data
-            ? { name: importedVideo.name, mimeType: importedVideo.mimeType, data: importedVideo.data }
+          motionReferenceVideoUrl: item.video.url,
+          motionReferenceVideo: item.video.data
+            ? { name: item.video.name, mimeType: item.video.mimeType, data: item.video.data }
             : undefined,
         }),
       });
@@ -322,314 +391,563 @@ export function TrendVideoView({
         throw new Error(payload.error ?? "Trend video generation failed.");
       }
       const nextAssets = payload.asset ? [{ ...payload.asset, referenceAssetIds: [selectedCandidate.id] }] : [];
-      if (nextAssets[0]) setFinalVideo(nextAssets[0]);
-      onAssetsCreated(nextAssets, payload.job);
+      updateLibraryItem(item.id, { finalVideo: nextAssets[0], isGeneratingVideo: false });
+      if (nextAssets[0]) onAssetsCreated(nextAssets, payload.job);
     } catch (generationError) {
+      updateLibraryItem(item.id, { isGeneratingVideo: false });
       setError(generationError instanceof Error ? generationError.message : "Trend video generation failed.");
-    } finally {
-      setIsGeneratingVideo(false);
     }
   }
 
-  return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <PanelTitle icon={Flame} title="Trend Video" />
-          <ol className="flex items-center gap-1 text-[11px] font-medium text-stone-500">
-            {stageSteps.map((step, index) => {
-              const isActive = stage === step.id;
-              return (
-                <li key={step.id} className="flex items-center gap-1">
-                  {index > 0 ? <span className="text-stone-300">/</span> : null}
-                  <button
-                    type="button"
-                    onClick={() => setStage(step.id)}
-                    className={cn(
-                      "inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 transition",
-                      isActive ? "bg-emerald-50 text-emerald-800" : step.done ? "text-stone-700 hover:bg-stone-100" : "hover:bg-stone-100",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-4 items-center justify-center rounded-full text-[9px] font-bold",
-                        isActive ? "bg-emerald-800 text-white" : step.done ? "bg-emerald-800/70 text-white" : "bg-stone-200 text-stone-500",
-                      )}
-                    >
-                      {step.done && !isActive ? <Check size={10} strokeWidth={3} /> : index + 1}
-                    </span>
-                    {step.label}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
+  if (editingItem) {
+    return (
+      <div className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
+          <button
+            type="button"
+            onClick={closeEditor}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-950"
+          >
+            <ArrowLeft size={16} />
+            Library
+          </button>
+          <div className="min-w-0 flex-1 text-center">
+            <p className="truncate text-sm font-semibold text-stone-950" title={editingItem.video.name}>
+              {editingItem.video.name}
+            </p>
+            <p className="text-[11px] text-stone-500">
+              {editingItem.video.durationSeconds ? `${Math.round(editingItem.video.durationSeconds)}s · ` : ""}
+              {editingItem.finalVideo ? "Completed" : editingItem.candidates.length ? "Faces ready" : "Draft"}
+            </p>
+          </div>
+          <label className="flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-white px-2.5 text-xs">
+            <span className="font-medium text-stone-500">Persona</span>
+            <select
+              value={selectedPersona?.id ?? ""}
+              onChange={(event) => onSelectPersona(event.target.value)}
+              className="max-w-[7rem] bg-transparent text-xs font-semibold text-stone-950 outline-none"
+            >
+              {personas.map((persona) => (
+                <option key={persona.id} value={persona.id}>
+                  {persona.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
-        <div className="mt-4 grid gap-4 lg:grid-cols-3">
-          <TrendPanel
-            step="01"
-            title="Source"
-            subtitle={importedVideo ? `${Math.round(detectedDuration)}s clip` : "Import a trend"}
-            active={stage === "import"}
+        <div className="space-y-3 p-4">
+          <StepSection
+            step={1}
+            title="Face Swap"
+            icon={Wand2}
+            hint="Replace the target frame's face with your persona, then pick the best result"
           >
-            <div className="aspect-[9/16] overflow-hidden rounded-md border border-stone-200 bg-stone-900">
-              {importedVideo ? (
-                <video src={sourceVideoToUrl(importedVideo)} className="h-full w-full object-cover" controls muted />
-              ) : (
-                <EmptyPreview icon={Clapperboard} label="No video" />
-              )}
-            </div>
-            {firstFramePreview ? (
-              <div className="mt-3 flex items-center gap-3">
-                <img
-                  src={firstFramePreview}
-                  alt="Captured first frame"
-                  className="h-20 w-12 shrink-0 rounded-md border border-stone-200 object-cover"
-                />
-                <div>
-                  <p className="text-xs font-semibold text-stone-950">First frame captured</p>
-                  <p className="mt-0.5 text-[11px] text-stone-500">Used as the face-swap source.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <MediaTile label="Source reel" width="w-[4.5rem]">
+                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls muted />
+              </MediaTile>
+
+              <FlowArrow />
+
+              <div className="relative shrink-0">
+                <span className="absolute -top-2.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  <ScanFace size={11} />
+                  Target
+                </span>
+                <div className="w-32 overflow-hidden rounded-lg border-2 border-emerald-800 bg-stone-900 shadow-sm">
+                  {editingItem.firstFramePreview ? (
+                    <img
+                      src={editingItem.firstFramePreview}
+                      alt="Face-swap target"
+                      className="aspect-[9/16] h-full w-full object-cover"
+                    />
+                  ) : (
+                    <TilePlaceholder icon={Loader2} label="Capturing…" spin />
+                  )}
                 </div>
+                <p className="mt-1.5 text-center text-[10px] font-medium text-emerald-800">First frame</p>
               </div>
-            ) : null}
-          </TrendPanel>
 
-          <TrendPanel
-            step="02"
-            title="Face candidates"
-            subtitle={candidateAssets.length ? `${candidateAssets.length} generated` : "Swap the face"}
-            active={stage === "faces"}
-            className="lg:col-span-2"
-          >
-            {isGeneratingFaces ? (
-              <LoadingBlock label="Generating face-swapped frames" />
-            ) : candidateAssets.length ? (
-              <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
-                {candidateAssets.map((asset) => {
-                  const isSelected = selectedCandidate?.id === asset.id;
-                  return (
-                    <button
-                      type="button"
-                      key={asset.id}
-                      onClick={() => setSelectedCandidateId(asset.id)}
-                      title={asset.title}
-                      className={cn(
-                        "group relative overflow-hidden rounded-md border bg-white text-left transition",
-                        isSelected ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
-                      )}
-                    >
-                      <div className="relative aspect-[9/16] bg-stone-100">
-                        <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
-                        <span
-                          className={cn(
-                            "absolute right-2 top-2 flex size-6 items-center justify-center rounded-full border transition",
-                            isSelected
-                              ? "border-emerald-800 bg-emerald-800 text-white"
-                              : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
-                          )}
-                        >
-                          <Check size={14} strokeWidth={3} />
-                        </span>
-                      </div>
-                      <div className="px-2.5 py-2">
-                        <p className="line-clamp-1 text-xs font-semibold text-stone-950">{asset.title}</p>
-                        <p className="mt-0.5 text-[11px] text-stone-500">{isSelected ? "Selected for motion" : asset.model}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <EmptyPreview icon={ImageIcon} label="No face frames yet" />
-            )}
-          </TrendPanel>
+              <FlowArrow />
 
-          <TrendPanel
-            step="03"
-            title="Final video"
-            subtitle={finalVideo ? "Ready" : "Apply the motion"}
-            active={stage === "motion"}
-            className="lg:col-span-3"
-          >
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              {selectedCandidate ? (
-                <div className="flex items-center gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
-                  <img
-                    src={selectedCandidate.url}
-                    alt={selectedCandidate.title}
-                    className="h-24 w-16 shrink-0 rounded-md border border-stone-200 object-cover"
-                  />
-                  <div>
-                    <p className="text-xs font-semibold text-stone-950">Selected frame</p>
-                    <p className="mt-0.5 line-clamp-1 text-[11px] text-stone-500">{selectedCandidate.title}</p>
-                    <p className="mt-2 text-[11px] text-stone-500">Driving motion from the source clip.</p>
+              <div className="w-24 shrink-0">
+                <p className="mb-1.5 text-center text-[10px] font-medium text-stone-500">Persona refs</p>
+                {personaReferences.length ? (
+                  <div className="grid grid-cols-3 gap-1">
+                    {personaReferences.slice(0, 6).map((ref) => (
+                      <div key={ref.id} className="aspect-square overflow-hidden rounded border border-stone-200">
+                        <img src={ref.url} alt={ref.title} className="h-full w-full object-cover" />
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center rounded-md border border-dashed border-stone-300 bg-stone-50 p-3 text-xs text-stone-500">
-                  Pick a candidate first.
-                </div>
-              )}
-              <div className="aspect-[9/16] max-h-[34rem] overflow-hidden rounded-md border border-stone-200 bg-stone-900">
-                {isGeneratingVideo ? (
-                  <LoadingBlock label="Generating motion video" />
-                ) : finalVideo ? (
-                  <video src={finalVideo.url} className="h-full w-full object-cover" controls />
                 ) : (
-                  <EmptyPreview icon={Play} label="No output video" />
+                  <p className="text-center text-[10px] text-stone-400">None</p>
                 )}
               </div>
-            </div>
-          </TrendPanel>
-        </div>
-      </section>
 
-      <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
-        {stage === "import" ? (
-          <div>
-            <PanelTitle icon={Download} title="Trend Source" />
-            <PersonaSelect personas={personas} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-            <form onSubmit={importVideoFromUrl}>
-              <TextField label="Video link" value={trendUrl} onChange={setTrendUrl} />
-              <SubmitButton
-                loading={importState === "importing" || importState === "capturing"}
-                icon={LinkIcon}
-                label={importState === "capturing" ? "Capturing frame" : "Import video"}
-                disabled={!trendUrl.trim()}
-              />
-            </form>
-            <UploadBox
-              accept="video/*"
-              compact
-              icon={Upload}
-              label={importedVideo?.name ?? "Upload trend video"}
-              detail={importedVideo?.durationSeconds ? `${Math.round(importedVideo.durationSeconds)}s detected` : "MP4, WebM, or MOV"}
-              loading={importState === "importing" || importState === "capturing"}
-              onChange={(files) => void captureUploadedVideo(files)}
-            />
-          </div>
-        ) : null}
-
-        {stage === "faces" ? (
-          <form onSubmit={(event) => void generateFaceCandidates(event)}>
-            <PanelTitle icon={ImageIcon} title="Image Options" />
-            <ModelSelect label="Model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
-              <SelectField label="Aspect ratio" value={safeImageAspectRatio} options={imageAspectRatioOptions} onChange={setImageAspectRatio} />
-              {imageModelSupportsSize ? (
-                <SelectField label="Size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
-              ) : <div />}
+              <form onSubmit={(event) => void generateFaceCandidates(event)} className="ml-auto w-full max-w-[15rem]">
+                <details className="rounded-md border border-stone-200 bg-stone-50">
+                  <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-xs font-semibold text-stone-700">
+                    Face settings
+                    <Settings2 size={13} className="text-stone-400" />
+                  </summary>
+                  <div className="space-y-1 px-3 pb-3">
+                    <ModelSelect label="Model" value={imageModel} options={imageModelOptions} onChange={changeImageModel} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <SelectField label="Aspect" value={safeImageAspectRatio} options={imageAspectRatioOptions} onChange={setImageAspectRatio} />
+                      {imageModelSupportsSize ? (
+                        <SelectField label="Size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
+                      ) : (
+                        <div />
+                      )}
+                    </div>
+                    {imageModelSupportsQuality ? (
+                      <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
+                    ) : null}
+                    <NumberField label="Candidates" value={safeCandidateCount} min={1} max={4} onChange={setCandidateCount} />
+                    <TextArea label="Prompt" value={facePrompt} onChange={setFacePrompt} rows={3} />
+                  </div>
+                </details>
+                <SubmitButton
+                  loading={Boolean(editingItem.isGeneratingFaces)}
+                  icon={Wand2}
+                  label="Generate faces"
+                  costLabel={faceCostLabel}
+                  disabled={
+                    !selectedPersona ||
+                    !editingItem.firstFrame ||
+                    !personaReferences.length ||
+                    !supportsImageReferences(imageModel)
+                  }
+                />
+              </form>
             </div>
-            {imageModelSupportsQuality ? (
-              <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />
+
+            {editingItem.isGeneratingFaces ? (
+              <div className="mt-3 border-t border-stone-100 pt-3">
+                <LoadingBlock label="Generating face-swapped frames" />
+              </div>
+            ) : editingItem.candidates.length ? (
+              <div className="mt-3 border-t border-stone-100 pt-3">
+                <p className="mb-2 text-[11px] font-semibold text-stone-700">
+                  Candidates — tap one to use it as the identity for motion
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {editingItem.candidates.map((asset, index) => {
+                    const isPicked = selectedCandidate?.id === asset.id;
+                    return (
+                      <button
+                        type="button"
+                        key={asset.id}
+                        onClick={() => selectCandidate(asset.id)}
+                        title={asset.title}
+                        className={cn(
+                          "group relative w-20 shrink-0 overflow-hidden rounded-md border bg-white text-left transition",
+                          isPicked ? "border-emerald-800 ring-2 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
+                        )}
+                      >
+                        <div className="relative aspect-[9/16] bg-stone-100">
+                          <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                          <span
+                            className={cn(
+                              "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
+                              isPicked
+                                ? "border-emerald-800 bg-emerald-800 text-white"
+                                : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
+                            )}
+                          >
+                            <Check size={12} strokeWidth={3} />
+                          </span>
+                        </div>
+                        <p className="px-1.5 py-1 text-[9px] font-semibold text-stone-700">
+                          {isPicked ? "Selected" : `#${index + 1}`}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ) : null}
-            <NumberField label="Candidates" value={safeCandidateCount} min={1} max={4} onChange={setCandidateCount} />
-            <TextArea label="Face swap prompt" value={facePrompt} onChange={setFacePrompt} rows={4} />
-            <SubmitButton
-              loading={isGeneratingFaces}
-              icon={ImageIcon}
-              label="Generate face frames"
-              costLabel={faceCostLabel}
-              disabled={!selectedPersona || !firstFrame || !personaReferences.length || !supportsImageReferences(imageModel)}
-            />
-          </form>
-        ) : null}
+          </StepSection>
 
-        {stage === "motion" ? (
-          <form onSubmit={(event) => void generateTrendVideo(event)}>
-            <PanelTitle icon={Settings2} title="Video Options" />
-            <ModelSelect label="Model" value={motionModel} options={motionModelOptions} onChange={setMotionModel} />
-            <SelectField
-              label="Resolution"
-              value={motionResolution}
-              options={[...motionResolutions]}
-              onChange={(value) => setMotionResolution(value as (typeof motionResolutions)[number])}
-            />
-            <div className="mt-2.5 grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
-              {(["animate", "replace"] as const).map((modeValue) => (
-                <button
-                  type="button"
-                  key={modeValue}
-                  onClick={() => setMotionMode(modeValue)}
-                  className={cn(
-                    "h-9 rounded-[5px] px-3 text-xs font-medium capitalize transition",
-                    motionMode === modeValue ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
+          <div className="flex justify-center" aria-hidden="true">
+            <span className="flex size-6 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+              <ArrowDown size={14} />
+            </span>
+          </div>
+
+          <StepSection
+            step={2}
+            title="Motion"
+            icon={Film}
+            hint="Drive the selected identity frame with the reel's motion"
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <MediaTile label="Identity frame" width="w-[4.5rem]">
+                {selectedCandidate ? (
+                  <img src={selectedCandidate.url} alt={selectedCandidate.title} className="h-full w-full object-cover" />
+                ) : (
+                  <TilePlaceholder icon={ImageIcon} label="From step 1" />
+                )}
+              </MediaTile>
+
+              <FlowArrow />
+
+              <MediaTile label="Motion source" width="w-[4.5rem]">
+                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls muted />
+              </MediaTile>
+
+              <FlowArrow />
+
+              <div className="w-32 shrink-0">
+                <div className="aspect-[9/16] overflow-hidden rounded-lg border-2 border-emerald-800/30 bg-stone-900">
+                  {editingItem.isGeneratingVideo ? (
+                    <div className="flex h-full items-center justify-center">
+                      <Loader2 className="size-5 animate-spin text-white/80" />
+                    </div>
+                  ) : editingItem.finalVideo ? (
+                    <video src={editingItem.finalVideo.url} className="h-full w-full object-cover" controls />
+                  ) : (
+                    <TilePlaceholder icon={Play} label="Output" />
                   )}
-                >
-                  {modeValue}
-                </button>
-              ))}
-            </div>
-            <label className="mt-2.5 flex h-9 cursor-pointer items-center gap-2.5 rounded-md border border-stone-200 bg-stone-50 px-3 text-xs font-medium text-stone-700 transition hover:border-emerald-800">
-              <input
-                type="checkbox"
-                checked={keepOriginalSound}
-                onChange={(event) => setKeepOriginalSound(event.target.checked)}
-                className="size-4 accent-emerald-800"
-              />
-              Keep original sound
-            </label>
-            <TextArea label="Video prompt" value={motionPrompt} onChange={setMotionPrompt} rows={4} />
-            <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
-            <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
-            <SubmitButton
-              loading={isGeneratingVideo}
-              icon={Play}
-              label="Generate trend video"
-              costLabel={motionCostLabel}
-              disabled={!selectedPersona || !importedVideo || !selectedCandidate}
-            />
-          </form>
-        ) : null}
+                </div>
+                <p className="mt-1.5 text-center text-[10px] font-medium text-stone-500">Final video</p>
+              </div>
 
-        {error ? (
-          <p className="mt-3 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p>
-        ) : null}
-      </aside>
+              <form onSubmit={(event) => void generateTrendVideo(event)} className="ml-auto w-full max-w-[15rem]">
+                <details className="rounded-md border border-stone-200 bg-stone-50">
+                  <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-xs font-semibold text-stone-700">
+                    Motion settings
+                    <Settings2 size={13} className="text-stone-400" />
+                  </summary>
+                  <div className="space-y-1 px-3 pb-3">
+                    <ModelSelect label="Model" value={motionModel} options={motionModelOptions} onChange={setMotionModel} />
+                    <SelectField
+                      label="Resolution"
+                      value={motionResolution}
+                      options={[...motionResolutions]}
+                      onChange={(value) => setMotionResolution(value as (typeof motionResolutions)[number])}
+                    />
+                    <div className="grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
+                      {(["animate", "replace"] as const).map((modeValue) => (
+                        <button
+                          type="button"
+                          key={modeValue}
+                          onClick={() => setMotionMode(modeValue)}
+                          className={cn(
+                            "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
+                            motionMode === modeValue ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
+                          )}
+                        >
+                          {modeValue}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="mt-1 flex h-9 cursor-pointer items-center gap-2.5 rounded-md border border-stone-200 bg-white px-3 text-xs font-medium text-stone-700 transition hover:border-emerald-800">
+                      <input
+                        type="checkbox"
+                        checked={keepOriginalSound}
+                        onChange={(event) => setKeepOriginalSound(event.target.checked)}
+                        className="size-4 accent-emerald-800"
+                      />
+                      Keep original sound
+                    </label>
+                    <TextArea label="Video prompt" value={motionPrompt} onChange={setMotionPrompt} rows={3} />
+                    <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
+                    <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
+                  </div>
+                </details>
+                <SubmitButton
+                  loading={Boolean(editingItem.isGeneratingVideo)}
+                  icon={Film}
+                  label="Generate video"
+                  costLabel={motionCostLabel}
+                  disabled={!selectedPersona || !selectedCandidate}
+                />
+              </form>
+            </div>
+          </StepSection>
+
+          {error ? <p className="rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p> : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-5">
+      <SourceIngress
+        trendUrl={trendUrl}
+        onTrendUrlChange={setTrendUrl}
+        onSubmit={importFromUrl}
+        isImporting={isImporting}
+        isDragOver={isDragOver}
+        onDragStateChange={setIsDragOver}
+        onDrop={handleDrop}
+        onFiles={importFromFiles}
+      />
+
+      {library.length ? (
+        <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <PanelTitle icon={Clapperboard} title="Library" />
+            <span className="text-[11px] text-stone-500">
+              {library.length} source{library.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+            {library.map((item) => {
+              const hasCandidates = item.candidates.length > 0;
+              const hasFinal = Boolean(item.finalVideo);
+              const PrimaryIcon: LucideIcon = hasFinal ? Play : hasCandidates ? Film : Wand2;
+              const primaryLabel = hasFinal ? "Open" : hasCandidates ? "Continue" : "Face swap";
+              const statusLabel = item.importState === "capturing"
+                ? "Preparing"
+                : hasFinal
+                  ? "Done"
+                  : hasCandidates
+                    ? "Faces ready"
+                    : "Draft";
+              return (
+                <div
+                  key={item.id}
+                  className="group relative w-36 shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-white transition hover:border-emerald-800"
+                >
+                  <div className="relative aspect-[9/16] bg-stone-900">
+                    {item.importState === "capturing" ? (
+                      <div className="flex h-full items-center justify-center">
+                        <Loader2 className="size-5 animate-spin text-white/80" />
+                      </div>
+                    ) : item.firstFramePreview ? (
+                      <img src={item.firstFramePreview} alt={item.video.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <video src={sourceVideoToUrl(item.video)} className="h-full w-full object-cover" muted />
+                    )}
+                    {item.video.durationSeconds ? (
+                      <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1 py-0.5 text-[9px] font-semibold text-white">
+                        {Math.round(item.video.durationSeconds)}s
+                      </span>
+                    ) : null}
+                    <span
+                      className={cn(
+                        "absolute bottom-1.5 left-1.5 rounded px-1.5 py-0.5 text-[9px] font-semibold",
+                        hasFinal
+                          ? "bg-emerald-800 text-white"
+                          : hasCandidates
+                            ? "bg-emerald-50 text-emerald-800"
+                            : "bg-black/45 text-white",
+                      )}
+                    >
+                      {statusLabel}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeLibraryItem(item.id)}
+                      className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition hover:bg-red-700 group-hover:opacity-100"
+                      aria-label="Remove video"
+                    >
+                      <X size={12} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                  <div className="p-2">
+                    <p className="line-clamp-1 text-[11px] font-medium text-stone-950" title={item.video.name}>
+                      {item.video.name}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openEditor(item)}
+                      className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-800 text-[11px] font-semibold text-white transition hover:bg-emerald-900"
+                    >
+                      <PrimaryIcon size={13} />
+                      {primaryLabel}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : (
+        <div className="rounded-lg border border-stone-200 bg-white p-10 shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <div className="flex size-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">
+              <Clapperboard size={26} />
+            </div>
+            <p className="mt-3 text-sm font-semibold text-stone-950">No trend videos yet</p>
+            <p className="mt-1 max-w-sm text-xs leading-5 text-stone-500">
+              Paste a link or drop a file above. Your sources are saved here as a library you can edit anytime.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {error ? <p className="rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p> : null}
     </div>
   );
 }
 
-function TrendPanel({
-  step,
-  title,
-  subtitle,
-  active,
-  className,
-  children,
+function SourceIngress({
+  trendUrl,
+  onTrendUrlChange,
+  onSubmit,
+  isImporting,
+  isDragOver,
+  onDragStateChange,
+  onDrop,
+  onFiles,
 }: {
-  step: string;
-  title: string;
-  subtitle?: string;
-  active?: boolean;
-  className?: string;
-  children: React.ReactNode;
+  trendUrl: string;
+  onTrendUrlChange: (value: string) => void;
+  onSubmit: (event: FormEvent) => void;
+  isImporting: boolean;
+  isDragOver: boolean;
+  onDragStateChange: (value: boolean) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
+  onFiles: (files: FileList | null) => void;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border bg-stone-50 p-3.5 transition",
-        active ? "border-emerald-800/60 ring-1 ring-emerald-800/30" : "border-stone-200",
-        className,
-      )}
-    >
-      <div className="mb-3 flex items-baseline justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-[11px] font-semibold text-emerald-800">{step}</span>
-          <p className="text-sm font-semibold text-stone-950">{title}</p>
+    <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2.5">
+        <div className="flex size-8 items-center justify-center rounded-md bg-emerald-50 text-emerald-800">
+          <Upload size={16} />
         </div>
-        {subtitle ? <span className="text-[11px] text-stone-500">{subtitle}</span> : null}
+        <div>
+          <h2 className="text-base font-semibold text-stone-950">Add a trend video</h2>
+          <p className="text-[11px] text-stone-500">Paste a link or drop a file — sources are saved to your library below.</p>
+        </div>
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-3 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+          <input
+            value={trendUrl}
+            onChange={(event) => onTrendUrlChange(event.target.value)}
+            placeholder="Paste a trend video URL (Instagram, TikTok, Reels, direct MP4…)"
+            className="h-11 w-full rounded-md border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm outline-none transition focus:border-emerald-800 focus:bg-white"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={!trendUrl.trim() || isImporting}
+          className="inline-flex h-11 shrink-0 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
+        >
+          {isImporting ? <Loader2 className="size-4 animate-spin" /> : <Plus size={16} />}
+          Add
+        </button>
+      </form>
+
+      <div className="my-3 flex items-center gap-3">
+        <span className="h-px flex-1 bg-stone-200" />
+        <span className="text-[11px] uppercase tracking-wide text-stone-400">or drop a file</span>
+        <span className="h-px flex-1 bg-stone-200" />
+      </div>
+
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          onDragStateChange(true);
+        }}
+        onDragLeave={() => onDragStateChange(false)}
+        onDrop={onDrop}
+        className={cn(
+          "flex min-h-16 items-center justify-center gap-2 rounded-md border border-dashed px-4 text-sm transition",
+          isDragOver ? "border-emerald-800 bg-emerald-50" : "border-stone-300 bg-stone-50 hover:border-emerald-800 hover:bg-white",
+        )}
+      >
+        {isImporting ? (
+          <>
+            <Loader2 className="size-4 animate-spin text-emerald-800" />
+            <span className="text-stone-600">Importing…</span>
+          </>
+        ) : (
+          <>
+            <Upload className="size-4 text-emerald-800" />
+            <span className="text-stone-600">Drop video here ·</span>
+            <label className="cursor-pointer font-semibold text-emerald-800 hover:underline">
+              Browse files
+              <input
+                type="file"
+                accept="video/*"
+                multiple
+                className="sr-only"
+                onChange={(event) => {
+                  onFiles(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function StepSection({
+  step,
+  title,
+  icon: Icon,
+  hint,
+  children,
+}: {
+  step: number;
+  title: string;
+  icon: LucideIcon;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-stone-200 bg-stone-50/60 p-4">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className="flex size-7 items-center justify-center rounded-full bg-emerald-800 text-xs font-bold text-white">
+          {step}
+        </span>
+        <Icon className="text-emerald-800" size={16} />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-stone-950">{title}</p>
+          {hint ? <p className="text-[11px] leading-4 text-stone-500">{hint}</p> : null}
+        </div>
       </div>
       {children}
+    </section>
+  );
+}
+
+function MediaTile({
+  label,
+  width,
+  children,
+}: {
+  label: string;
+  width: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={cn("shrink-0", width)}>
+      <div className="aspect-[9/16] overflow-hidden rounded-md border border-stone-200 bg-stone-900">{children}</div>
+      <p className="mt-1.5 text-center text-[10px] font-medium text-stone-500">{label}</p>
     </div>
   );
 }
 
-function EmptyPreview({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+function FlowArrow() {
+  return <ArrowRight className="hidden shrink-0 text-stone-300 sm:block" size={16} />;
+}
+
+function TilePlaceholder({
+  icon: Icon,
+  label,
+  spin,
+}: {
+  icon: LucideIcon;
+  label: string;
+  spin?: boolean;
+}) {
   return (
-    <div className="flex h-full min-h-48 flex-col items-center justify-center rounded-md text-center text-xs text-stone-500">
-      <Icon className="mb-2 text-emerald-800" size={26} />
+    <div className="flex h-full min-h-24 flex-col items-center justify-center gap-1 p-2 text-center text-[10px] text-white/60">
+      <Icon size={18} className={cn(spin && "animate-spin")} />
       {label}
     </div>
   );
@@ -637,8 +955,8 @@ function EmptyPreview({ icon: Icon, label }: { icon: LucideIcon; label: string }
 
 function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="flex min-h-48 flex-col items-center justify-center rounded-md text-center text-xs text-stone-600">
-      <Loader2 className="mb-3 animate-spin text-emerald-800" size={24} />
+    <div className="flex min-h-32 flex-col items-center justify-center rounded-md text-center text-xs text-stone-600">
+      <Loader2 className="mb-2 animate-spin text-emerald-800" size={22} />
       {label}
     </div>
   );

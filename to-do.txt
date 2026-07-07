@@ -17,12 +17,12 @@
 82. Centralize telegram icon and correct link
 84. Put video to demo
 85. Change the way subcriptions work
-90. Change 1$ = 1000 tokens to 1$ = 100 tokens Maybe
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
 96. Make personas limited, depending on the subscription
 97. Download yt-dlp
 99. Think more on the name
+100. Delete Plan quota: 0/0 personas - upgrade or delete a persona to create another., but make sure to warn user that they can't create a persona via some another way
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

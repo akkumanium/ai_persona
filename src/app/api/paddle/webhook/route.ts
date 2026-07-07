@@ -117,7 +117,7 @@ function verifyPaddleSignature(signatureHeader: string, rawBody: string, secret:
 function getBillingEventDetails(eventType: string, data: Record<string, unknown>): BillingEventDetails {
   if (eventType === "transaction.completed") {
     const priceId = findPriceId(data);
-    const plan = getBillingOptionByPriceId(priceId) ?? getBillingOptionById(getCustomDataValue(data, "plan_id"));
+    const plan = getBillingOptionById(getCustomDataValue(data, "plan_id")) ?? getBillingOptionByPriceId(priceId);
     return {
       userId: getCustomDataValue(data, "app_user_id"),
       planId: plan?.id,
@@ -133,7 +133,7 @@ function getBillingEventDetails(eventType: string, data: Record<string, unknown>
 
   if (eventType.startsWith("subscription.")) {
     const priceId = findPriceId(data);
-    const plan = getBillingOptionByPriceId(priceId) ?? getBillingOptionById(getCustomDataValue(data, "plan_id"));
+    const plan = getBillingOptionById(getCustomDataValue(data, "plan_id")) ?? getBillingOptionByPriceId(priceId);
     return {
       userId: getCustomDataValue(data, "app_user_id"),
       planId: plan?.id,

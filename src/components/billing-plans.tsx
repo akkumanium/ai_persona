@@ -4,7 +4,7 @@ import { AlertCircle, Check, CreditCard, Loader2, RefreshCw } from "lucide-react
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import type { BillingPlan, BillingTopUp, PublicPaddleConfig } from "@/lib/billing";
+import { formatPersonaLimit, type BillingPlan, type BillingTopUp, type PublicPaddleConfig } from "@/lib/billing";
 import { cn, formatTokens } from "@/lib/utils";
 
 type CheckoutState = "idle" | "loading" | "waiting" | "success" | "error";
@@ -36,7 +36,7 @@ declare global {
 
 export function BillingPlans({
   title = "Choose studio access",
-  copy = "Subscribe to generate in Studio. Each successful subscription payment adds the same amount back to your generation balance.",
+  copy = "Subscribe to unlock persona management and generation tools. Each plan includes a one-time $3 welcome credit grant.",
   userId,
   userEmail,
   supabaseReady,
@@ -55,7 +55,7 @@ export function BillingPlans({
   compact?: boolean;
   theme?: "light" | "dark";
   actionLabel?: string;
-  onStatusResolved?: (status: { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number }) => void;
+  onStatusResolved?: (status: { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number; personaLimit?: number | null }) => void;
 }) {
   const router = useRouter();
   const [scriptReady, setScriptReady] = useState(false);
@@ -71,7 +71,7 @@ export function BillingPlans({
     const problems: string[] = [];
     if (!supabaseReady) problems.push("Supabase is not configured.");
     if (!config.clientToken) problems.push("NEXT_PUBLIC_PADDLE_CLIENT_TOKEN is missing.");
-    if (!hasPlanIds) problems.push("Both Paddle price IDs are required.");
+    if (!hasPlanIds) problems.push("Paddle price IDs are required for all subscription plans.");
     if (scriptReady && !paddleReady) problems.push("Paddle.js did not initialize.");
     return problems;
   }, [config.clientToken, hasPlanIds, paddleReady, scriptReady, supabaseReady]);
@@ -88,7 +88,7 @@ export function BillingPlans({
         setMessage("Payment may be complete, but the billing status could not be refreshed yet.");
         return false;
       }
-      const data = (await response.json()) as { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number };
+      const data = (await response.json()) as { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number; personaLimit?: number | null };
       onStatusResolved?.(data);
       if (data.hasActiveSubscription) {
         setCheckoutState("success");
@@ -243,7 +243,7 @@ export function BillingPlans({
         <p className={`mt-4 text-base leading-7 ${styles.copy}`}>{copy}</p>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+      <div className="mt-8 grid gap-4 md:grid-cols-3">
         {config.plans.map((plan) => {
           const isBusy = activePlanId === plan.id && (checkoutState === "loading" || checkoutState === "waiting");
           return (
@@ -265,11 +265,11 @@ export function BillingPlans({
               <div className={`mt-5 grid gap-2 text-sm ${styles.benefit}`}>
                 <div className="flex items-center gap-2">
                   <Check size={16} className={styles.check} />
-                  Adds {formatTokens(plan.creditCents)} to balance after successful payment
+                  {formatPersonaLimit(plan.personaLimit)}
                 </div>
                 <div className="flex items-center gap-2">
                   <Check size={16} className={styles.check} />
-                  Enables generation tools; Studio browsing stays free
+                  Includes {formatTokens(plan.creditCents)} in welcome credits once
                 </div>
                 <div className="flex items-center gap-2">
                   <Check size={16} className={styles.check} />

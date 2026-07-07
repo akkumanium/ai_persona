@@ -35,7 +35,7 @@ export function StudioPaywall({
           Studio access starts with an active plan.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#695c66]">
-          Choose a Paddle subscription to unlock the workspace. When the secure webhook confirms payment, your token balance is topped up and the studio opens.
+          Choose a Paddle subscription to unlock the workspace. Every plan includes one-time welcome credits and a persona management limit.
         </p>
       </section>
 
@@ -43,8 +43,8 @@ export function StudioPaywall({
         title={userId ? "Select your plan" : "Sign in, then select a plan"}
         copy={
           userId
-            ? "Pick the monthly token balance that fits your production pace."
-            : "Authentication connects the Paddle payment to your saved workspace and token balance."
+            ? "Pick the persona capacity that fits your production pace."
+            : "Authentication connects the Paddle payment to your saved workspace and welcome credits."
         }
         userId={userId}
         userEmail={userEmail}

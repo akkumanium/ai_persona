@@ -153,7 +153,7 @@ function GuideArticlePaywall({ access, slug }: { access: GuideViewerAccess; slug
                 Subscribe to read the full article.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[#d8cec3]">
-                Guide pages are included with active Persona Studio plans, alongside generation access and monthly tokens.
+                Guide pages are included with active Persona Studio plans, alongside generation access and persona management.
               </p>
             </div>
           </div>

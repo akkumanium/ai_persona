@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { modelsForCapability } from "@/lib/model-registry";
-import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "@/lib/pricing";
+import { estimateImageGenerationPricing, estimateVideoGenerationPricing, usdToTokens } from "@/lib/pricing";
 import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
 
 describe("model registry", () => {
@@ -40,6 +40,11 @@ describe("model registry", () => {
 });
 
 describe("token pricing", () => {
+  it("rounds USD charges up to cents before converting to tokens", () => {
+    expect(usdToTokens(0.001)).toBe(1);
+    expect(usdToTokens(0.231)).toBe(24);
+  });
+
   it("prices GPT Image 2 by quality, size, and count", () => {
     expect(
       estimateImageGenerationPricing({
@@ -51,7 +56,7 @@ describe("token pricing", () => {
         count: 2,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(422);
+    ).toBe(43);
 
     expect(
       estimateImageGenerationPricing({
@@ -63,7 +68,7 @@ describe("token pricing", () => {
         count: 1,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(41);
+    ).toBe(5);
   });
 
   it("prices Seedream 4.5 per generated image", () => {
@@ -76,7 +81,7 @@ describe("token pricing", () => {
         count: 1,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(40);
+    ).toBe(4);
   });
 
   it("prices Wan 2.7 image generation per output", () => {
@@ -89,7 +94,7 @@ describe("token pricing", () => {
         count: 2,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(60);
+    ).toBe(6);
 
     expect(
       estimateImageGenerationPricing({
@@ -101,7 +106,7 @@ describe("token pricing", () => {
         referenceImages: [{ name: "source", mimeType: "image/png", data: "x" }],
         generationType: "image_from_reference",
       }).tokens,
-    ).toBe(30);
+    ).toBe(3);
   });
 
   it("prices Wan 2.7 and Kling 3.0 per second without Fal pricing", () => {
@@ -114,7 +119,7 @@ describe("token pricing", () => {
         aspectRatio: "9:16",
         resolution: "1080p",
       }).tokens,
-    ).toBe(750);
+    ).toBe(75);
 
     expect(
       estimateVideoGenerationPricing({
@@ -126,7 +131,7 @@ describe("token pricing", () => {
         generateAudio: true,
         resolution: "1080p",
       }).tokens,
-    ).toBe(1680);
+    ).toBe(168);
   });
 });
 

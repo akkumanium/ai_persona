@@ -23,7 +23,7 @@ const pageMono = JetBrains_Mono({
 
 export const metadata = {
   title: "Pricing | Persona Studio",
-  description: "Choose a Persona Studio plan for saved personas, assets, and generation tokens.",
+  description: "Choose a Persona Studio plan for persona capacity, assets, and welcome credits.",
 };
 
 export const dynamic = "force-dynamic";
@@ -75,7 +75,7 @@ export default async function PricingPage() {
           title={initialUserId ? "Select your plan" : "Sign in, then select a plan"}
           copy={
             initialUserId
-              ? "Your subscription connects to your saved workspace and token balance."
+              ? "Your subscription connects to your saved workspace, persona capacity, and one-time welcome credits."
               : "Authentication connects the Paddle payment to your workspace before checkout."
           }
           userId={initialUserId}

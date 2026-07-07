@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { env, hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient, createServiceSupabaseClient } from "@/lib/supabase/server";
 
-type LedgerRow = { amount_cents: number; created_at: string };
+type LedgerRow = { amount_cents: number; created_at: string; description: string };
 type EventRow = { paddle_entity_id: string | null; payload: Record<string, unknown>; processed_at: string };
 
 export const dynamic = "force-dynamic";
@@ -76,11 +76,15 @@ async function getRefundContext() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { response: NextResponse.json({ error: "Authentication is required." }, { status: 401 }) };
 
-  const { data: credit } = await supabase.from("credit_ledger")
-    .select("amount_cents, created_at")
+  const { data: credits } = await supabase.from("credit_ledger")
+    .select("amount_cents, created_at, description")
     .eq("user_id", user.id)
-    .like("description", "Paddle subscription top-up:%")
-    .order("created_at", { ascending: false }).limit(1).maybeSingle<LedgerRow>();
+    .gt("amount_cents", 0)
+    .order("created_at", { ascending: false }).limit(20).returns<LedgerRow[]>();
+  const credit = (credits ?? []).find((row) =>
+    row.description.startsWith("Paddle welcome credits:") ||
+    row.description.startsWith("Paddle subscription top-up:"),
+  );
   if (!credit) return { userId: user.id, eligible: false, reason: "No refundable subscription payment was found." };
 
   const { count } = await supabase.from("credit_ledger").select("id", { count: "exact", head: true })
@@ -100,5 +104,5 @@ function isSubscriptionTransaction(payload: Record<string, unknown>) {
   if (!data || typeof data !== "object" || Array.isArray(data)) return false;
   const custom = (data as Record<string, unknown>).custom_data;
   if (!custom || typeof custom !== "object" || Array.isArray(custom)) return false;
-  return ["starter", "plus"].includes(String((custom as Record<string, unknown>).plan_id ?? ""));
+  return ["solo", "creator", "agency", "starter", "plus"].includes(String((custom as Record<string, unknown>).plan_id ?? ""));
 }

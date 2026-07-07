@@ -6,7 +6,9 @@ import type {
 } from "@/lib/providers/types";
 import { WAN_2_7_IMAGE_EDIT_MODEL_ID, WAN_2_7_IMAGE_MODEL_ID } from "@/lib/image-model-options";
 
-export const TOKENS_PER_USD = 1000;
+export const TOKENS_PER_USD = 100;
+const USD_CENTS_PER_DOLLAR = 100;
+const FLOATING_POINT_EPSILON = 1e-9;
 
 export type PricingBreakdown = {
   rawUsd: number;
@@ -15,7 +17,8 @@ export type PricingBreakdown = {
 };
 
 export function usdToTokens(rawUsd: number) {
-  return Math.max(1, Math.ceil(rawUsd * TOKENS_PER_USD - 1e-9));
+  const chargeCents = Math.ceil(Math.max(0, rawUsd) * USD_CENTS_PER_DOLLAR - FLOATING_POINT_EPSILON);
+  return Math.max(1, Math.ceil((chargeCents * TOKENS_PER_USD) / USD_CENTS_PER_DOLLAR - FLOATING_POINT_EPSILON));
 }
 
 export function estimateImageGenerationPricing(request: ImageGenerationRequest): PricingBreakdown {
