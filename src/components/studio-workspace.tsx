@@ -9,7 +9,7 @@ import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
-import { TrendVideoView, type LibraryItem } from "@/components/studio/trend-video-view";
+import { TrendVideoView, trendLibraryItemsFromAssets, type LibraryItem } from "@/components/studio/trend-video-view";
 import type { ReferenceSlotId, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -56,7 +56,9 @@ export function StudioWorkspace({
   const [personas, setPersonas] = useState<Persona[]>(initialData?.personas ?? demoPersonas);
   const [assets, setAssets] = useState<Asset[]>(initialData?.assets ?? demoAssets);
   const [jobs, setJobs] = useState<GenerationJob[]>(initialData?.jobs ?? demoJobs);
-  const [trendLibrary, setTrendLibrary] = useState<LibraryItem[]>([]);
+  const [trendLibrary, setTrendLibrary] = useState<LibraryItem[]>(() =>
+    trendLibraryItemsFromAssets(initialData?.assets ?? demoAssets),
+  );
   const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 500));
   const [userId, setUserId] = useState<string | undefined>(initialUserId);
   const [selectedPersonaId, setSelectedPersonaId] = useState(
@@ -239,6 +241,26 @@ export function StudioWorkspace({
           if (personaError) {
             setNotice(`Could not save default reference: ${personaError.message}`);
           }
+        }
+      })();
+    }
+  }
+
+  function addTrendSourceAssets(nextAssets: Asset[]) {
+    if (!nextAssets.length) return;
+    setAssets((current) => [...nextAssets, ...current]);
+    const client = supabaseClient();
+    if (client) {
+      void (async () => {
+        const context = await supabaseContext();
+        if (!context) return;
+        const { error } = await context.client
+          .from("assets")
+          .insert(nextAssets.map((asset) => assetToInsert(asset, context.userId)));
+        if (error) {
+          setAssets((current) => current.filter((asset) => !nextAssets.some((item) => item.id === asset.id)));
+          setTrendLibrary((current) => current.filter((item) => !nextAssets.some((asset) => asset.id === item.id)));
+          setNotice(`Could not save trend video: ${error.message}`);
         }
       })();
     }
@@ -461,6 +483,9 @@ export function StudioWorkspace({
                 addPersona(persona);
                 setNotice(`${persona.name} is ready for references.`);
               }}
+              onCreateLimitReached={() => {
+                setNotice("Your current plan cannot create another persona. Upgrade or delete a persona first.");
+              }}
               onDeletePersona={(personaId) => {
                 const personaName = personas.find((persona) => persona.id === personaId)?.name ?? "Persona";
                 deletePersona(personaId);
@@ -525,6 +550,10 @@ export function StudioWorkspace({
               supabaseReady={supabaseReady}
               library={trendLibrary}
               onLibraryChange={setTrendLibrary}
+              onSourceAssetsCreated={(nextAssets) => {
+                addTrendSourceAssets(nextAssets);
+                setNotice(`${nextAssets.length} trend source${nextAssets.length === 1 ? "" : "s"} saved.`);
+              }}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);
                 addJob(job);

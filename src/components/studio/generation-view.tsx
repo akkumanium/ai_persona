@@ -30,7 +30,12 @@ import {
   supportsImageReferences,
   supportsImageSize,
 } from "@/lib/image-model-options";
-import { modelsForCapability } from "@/lib/model-registry";
+import {
+  defaultModelForCapability,
+  modelsForCapability,
+  motionControlsForModel,
+  providerModeForVideoModel,
+} from "@/lib/model-registry";
 import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatTokens } from "@/lib/utils";
@@ -38,6 +43,7 @@ import { cn, formatTokens } from "@/lib/utils";
 const klingAspectRatios = ["16:9", "9:16", "1:1"];
 const seedanceAspectRatios = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
 const wanAspectRatios = ["16:9", "9:16", "1:1", "4:5", "3:4"];
+const DEFAULT_MOTION_MODEL = defaultModelForCapability("video-motion") ?? "kling-v3-0-motion-std";
 type PromptSuggestion = { title: string; prompt: string };
 export function GenerationView({
   mode,
@@ -70,7 +76,7 @@ export function GenerationView({
   const [imageQuality, setImageQuality] = useState("medium");
   const [uploadedImageReferences, setUploadedImageReferences] = useState<SourceImageInput[]>([]);
   const [videoModel, setVideoModel] = useState("wan-2.7");
-  const [motionVideoModel, setMotionVideoModel] = useState("wan-animate");
+  const [motionVideoModel, setMotionVideoModel] = useState(DEFAULT_MOTION_MODEL);
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
   const [videoStartFrameByPersona, setVideoStartFrameByPersona] = useState<Record<string, string>>({});
   const [videoEndFrameByPersona, setVideoEndFrameByPersona] = useState<Record<string, string | undefined>>({});
@@ -102,6 +108,7 @@ export function GenerationView({
   const imageModelOptions = modelsForCapability("image-prompt");
   const videoModelOptions = modelsForCapability("video-normal");
   const motionModelOptions = modelsForCapability("video-motion");
+  const motionControls = motionControlsForModel(motionVideoModel);
   const selectedReferenceAssets = useMemo(
     () =>
       assets.filter(
@@ -217,10 +224,11 @@ export function GenerationView({
       durationSeconds: 5,
       aspectRatio: "9:16",
       resolution: "720p",
-      motionReference,
-      motionMode,
-      characterOrientation: motionCharacterOrientation,
-      keepOriginalSound: motionKeepOriginalSound,
+      motionReference: motionControls.supportsMotionReference ? motionReference : "",
+      motionMode: motionControls.supportsMotionMode ? motionMode : "animate",
+      characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
+      keepOriginalSound: motionControls.supportsKeepOriginalSound ? motionKeepOriginalSound : false,
+      negativePrompt: motionControls.supportsNegativePrompt ? motionNegativePrompt : "",
     }).tokens,
   );
 
@@ -398,16 +406,20 @@ export function GenerationView({
         model: mode === "motion" ? motionVideoModel : videoModel,
         durationSeconds: mode === "normal" ? safeVideoDuration : 5,
         aspectRatio: mode === "normal" ? safeVideoAspectRatio : "9:16",
-        negativePrompt: mode === "normal" ? videoNegativePrompt : motionNegativePrompt,
+        negativePrompt: mode === "normal"
+          ? videoNegativePrompt
+          : motionControls.supportsNegativePrompt
+            ? motionNegativePrompt
+            : "",
         providerMode: mode === "normal" ? providerModeForVideoModel(videoModel, "std") : providerModeForVideoModel(motionVideoModel, "std"),
         cfgScale: mode === "normal" ? videoCfgScale : 0.5,
         generateAudio: mode === "normal" ? videoGenerateAudio : false,
         resolution: mode === "normal" ? safeVideoResolution : "720p",
         returnLastFrame: mode === "normal" ? videoReturnLastFrame : false,
-        motionReference: mode === "motion" ? motionReference : "",
-        motionMode: mode === "motion" ? motionMode : "animate",
-        characterOrientation: mode === "motion" ? motionCharacterOrientation : "video",
-        keepOriginalSound: mode === "motion" ? motionKeepOriginalSound : false,
+        motionReference: mode === "motion" && motionControls.supportsMotionReference ? motionReference : "",
+        motionMode: mode === "motion" && motionControls.supportsMotionMode ? motionMode : "animate",
+        characterOrientation: mode === "motion" && motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
+        keepOriginalSound: mode === "motion" && motionControls.supportsKeepOriginalSound ? motionKeepOriginalSound : false,
         motionReferenceVideo: mode === "motion" && motionReferenceVideo?.data ? motionReferenceVideo : undefined,
         motionReferenceVideoUrl: mode === "motion" ? motionReferenceVideo?.url : undefined,
         referenceVideo:
@@ -846,8 +858,7 @@ export function GenerationView({
               onChange={(files) => void captureMotionReferenceVideo(files)}
             />
             <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={4} />
-            {motionVideoModel === "wan-animate" ? (
-              <>
+            {motionControls.supportsMotionMode ? (
                 <ModeToggle
                   label="Wan mode"
                   value={motionMode}
@@ -857,10 +868,11 @@ export function GenerationView({
                   ]}
                   onChange={(value) => setMotionMode(value as "animate" | "replace")}
                 />
+            ) : null}
+            {motionControls.supportsMotionReference ? (
                 <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
-              </>
-            ) : (
-              <>
+            ) : null}
+            {motionControls.supportsCharacterOrientation ? (
                 <ModeToggle
                   label="Orientation"
                   value={motionCharacterOrientation}
@@ -870,10 +882,13 @@ export function GenerationView({
                   ]}
                   onChange={(value) => setMotionCharacterOrientation(value as "image" | "video")}
                 />
+            ) : null}
+            {motionControls.supportsKeepOriginalSound ? (
                 <CheckboxField label="Keep original sound" checked={motionKeepOriginalSound} onChange={setMotionKeepOriginalSound} />
+            ) : null}
+            {motionControls.supportsNegativePrompt ? (
                 <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
-              </>
-            )}
+            ) : null}
             {generationError ? (
               <p className="mt-2.5 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{generationError}</p>
             ) : null}
@@ -1070,12 +1085,6 @@ function supportsCfgScale(modelId: string) {
 
 function supportsGeneratedAudio(modelId: string) {
   return modelId === "kling-v2-6-pro" || (isKling30VideoModel(modelId) && !modelId.includes("motion")) || isSeedanceVideoModel(modelId);
-}
-
-function providerModeForVideoModel(modelId: string, fallback: "std" | "pro") {
-  if (modelId.endsWith("-pro")) return "pro";
-  if (modelId.endsWith("-std")) return "std";
-  return fallback;
 }
 
 function clampNumber(value: number, min: number, max: number) {

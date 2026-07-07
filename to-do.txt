@@ -18,6 +18,8 @@
 99. Think more on the name
 100. Delete Plan quota: 0/0 personas - upgrade or delete a persona to create another., but make sure to warn user that they can't create a persona via some another way
 101. The videos are not actually saved.
+102. Change the generator prompts
+103. Upload more voices
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
@@ -96,3 +98,12 @@ Match the lighting from the second image with perfect accuracy: same light direc
 Replicate the image quality of the second photo exactly: same resolution, sharpness, skin texture detail, noise level, lens characteristics, and photorealism. Do not enhance or degrade the quality.
 Ensure seamless integration with correct perspective, depth, and contact with the environment. Photorealistic result, natural skin, no stylization, no artistic interpretation, no body reshaping.
 Delete the tattoo on the hand. No text, no logos, no watermarks.
+
+Replace the woman in the first reference image with the woman from the second reference image. The second image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
+Use the exact outfit, clothing fit, styling, and details from the first reference image.
+Crucially important: Transfer the woman into the pose of the first reference image with absolute precision. Match the pose 100% exactly — every limb angle, joint position, hand placement, finger position, torso tilt, shoulder position, head angle, and body orientation must be copied perfectly from the first image. Do not change the pose in any way. Strongest possible pose adherence is required. The pose from reference photo 1 must remain completely unchanged.
+The first image defines the entire scene: keep the exact same background, environment, camera angle, framing, perspective, depth of field, and composition without any deviation.
+Match the lighting from the first image with perfect accuracy: same light direction, intensity, shadows, highlights, reflections, and color grading.
+Replicate the image quality of the first photo exactly: same resolution, sharpness, skin texture detail, noise level, lens characteristics, and photorealism. Do not enhance or degrade the quality.
+Ensure seamless integration with correct perspective, depth, and contact with the environment. Photorealistic result, natural skin, no stylization, no artistic interpretation, no body reshaping.
+Delete the tattoos. No text, no logos, no watermarks.

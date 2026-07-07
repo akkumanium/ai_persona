@@ -14,6 +14,14 @@ export type ModelRegistryEntry = {
   notes: string;
 };
 
+export type MotionModelControls = {
+  supportsMotionMode: boolean;
+  supportsMotionReference: boolean;
+  supportsCharacterOrientation: boolean;
+  supportsKeepOriginalSound: boolean;
+  supportsNegativePrompt: boolean;
+};
+
 import {
   CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
@@ -153,6 +161,56 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   },
 ];
 
+const DEFAULT_MODEL_BY_CAPABILITY: Partial<Record<ModelCapability, string>> = {
+  "video-motion": "kling-v3-0-motion-std",
+};
+
 export function modelsForCapability(capability: ModelCapability) {
   return MODEL_REGISTRY.filter((model) => model.enabled && model.capabilities.includes(capability));
+}
+
+export function defaultModelForCapability(capability: ModelCapability) {
+  const models = modelsForCapability(capability);
+  const configuredDefault = DEFAULT_MODEL_BY_CAPABILITY[capability];
+  return models.find((model) => model.id === configuredDefault)?.id ?? models[0]?.id;
+}
+
+export function motionControlsForModel(modelId: string): MotionModelControls {
+  if (modelId === "wan-animate") {
+    return {
+      supportsMotionMode: true,
+      supportsMotionReference: true,
+      supportsCharacterOrientation: false,
+      supportsKeepOriginalSound: false,
+      supportsNegativePrompt: false,
+    };
+  }
+
+  if (isKling30MotionModel(modelId)) {
+    return {
+      supportsMotionMode: false,
+      supportsMotionReference: false,
+      supportsCharacterOrientation: true,
+      supportsKeepOriginalSound: true,
+      supportsNegativePrompt: true,
+    };
+  }
+
+  return {
+    supportsMotionMode: false,
+    supportsMotionReference: false,
+    supportsCharacterOrientation: false,
+    supportsKeepOriginalSound: false,
+    supportsNegativePrompt: false,
+  };
+}
+
+export function providerModeForVideoModel(modelId: string, fallback: "std" | "pro") {
+  if (modelId.endsWith("-pro")) return "pro";
+  if (modelId.endsWith("-std")) return "std";
+  return fallback;
+}
+
+function isKling30MotionModel(modelId: string) {
+  return modelId.startsWith("kling-v3-0-motion");
 }

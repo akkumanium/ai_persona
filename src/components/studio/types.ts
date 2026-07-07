@@ -12,6 +12,8 @@ export type SourceVideoInput = {
   mimeType: string;
   data?: string;
   url?: string;
+  storageBucket?: string;
+  storagePath?: string;
 };
 
 export type SourceAudioInput = {

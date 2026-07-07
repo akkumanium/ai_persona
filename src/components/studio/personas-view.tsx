@@ -18,6 +18,7 @@ export function PersonasView({
   onSelect,
   onUpdatePersona,
   onCreatePersona,
+  onCreateLimitReached,
   onDeletePersona,
   onAddReferences,
   onToggleReferenceDefault,
@@ -33,6 +34,7 @@ export function PersonasView({
   onSelect: (id: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
   onCreatePersona: (persona: Persona) => void;
+  onCreateLimitReached?: () => void;
   onDeletePersona: (personaId: string) => void;
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
@@ -46,18 +48,29 @@ export function PersonasView({
   const [newDescription, setNewDescription] = useState("");
   const managedPersona = personas.find((persona) => persona.id === managedPersonaId);
   const canCreatePersona = personaLimit === null || personas.length < personaLimit;
-  const quotaLabel = personaLimit === null ? "Limitless personas" : `${personas.length}/${personaLimit} personas`;
 
   function openPersona(personaId: string) {
     onSelect(personaId);
     setManagedPersonaId(personaId);
   }
 
+  function beginCreatePersona() {
+    if (!canCreatePersona) {
+      onCreateLimitReached?.();
+      return;
+    }
+    setIsCreatingPersona(true);
+  }
+
   function createPersona(event: FormEvent) {
     event.preventDefault();
     const name = newPersonaName.trim();
     const description = newDescription.trim();
-    if (!name || !description || !canCreatePersona) return;
+    if (!canCreatePersona) {
+      onCreateLimitReached?.();
+      return;
+    }
+    if (!name || !description) return;
 
     const personaId = crypto.randomUUID();
     onCreatePersona({
@@ -102,18 +115,13 @@ export function PersonasView({
         <PanelTitle icon={UserRound} title="Personas" />
         <button
           type="button"
-          onClick={() => setIsCreatingPersona(true)}
-          disabled={!canCreatePersona}
-          className="inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-stone-300"
+          onClick={beginCreatePersona}
+          className="inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900"
         >
           <WandSparkles size={18} />
           Create persona
         </button>
       </div>
-      <p className="mb-5 text-sm font-medium text-stone-500">
-        Plan quota: {quotaLabel}
-        {!canCreatePersona ? " - upgrade or delete a persona to create another." : ""}
-      </p>
 
       {personas.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -160,9 +168,8 @@ export function PersonasView({
           <h2 className="mt-3 text-lg font-semibold text-stone-950">No personas yet</h2>
           <button
             type="button"
-            onClick={() => setIsCreatingPersona(true)}
-            disabled={!canCreatePersona}
-            className="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-stone-300"
+            onClick={beginCreatePersona}
+            className="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900"
           >
             <WandSparkles size={18} />
             Create persona

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
@@ -39,7 +39,12 @@ import {
   supportsImageReferences,
   supportsImageSize,
 } from "@/lib/image-model-options";
-import { modelsForCapability } from "@/lib/model-registry";
+import {
+  defaultModelForCapability,
+  modelsForCapability,
+  motionControlsForModel,
+  providerModeForVideoModel,
+} from "@/lib/model-registry";
 import { estimateImageGenerationPricing, estimateVideoGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatTokens } from "@/lib/utils";
@@ -63,6 +68,31 @@ export type LibraryItem = {
 };
 
 const motionResolutions = ["480p", "720p"] as const;
+const DEFAULT_MOTION_MODEL = defaultModelForCapability("video-motion") ?? "kling-v3-0-motion-std";
+const TREND_SOURCE_MODEL = "local-trend-upload";
+
+export function trendLibraryItemsFromAssets(assets: Asset[]): LibraryItem[] {
+  return assets
+    .filter(
+      (asset) =>
+        asset.kind === "video" &&
+        asset.generationType === "reference_upload" &&
+        asset.model === TREND_SOURCE_MODEL,
+    )
+    .map((asset) => ({
+      id: asset.id,
+      video: {
+        name: asset.title,
+        mimeType: asset.mimeType,
+        url: asset.url,
+        storageBucket: asset.storageBucket,
+        storagePath: asset.storagePath,
+      },
+      importState: "capturing",
+      candidates: [],
+      selectedCandidateId: "",
+    }));
+}
 
 export function TrendVideoView({
   personas,
@@ -73,6 +103,7 @@ export function TrendVideoView({
   onSelectPersona,
   library,
   onLibraryChange,
+  onSourceAssetsCreated,
 }: {
   personas: Persona[];
   assets: Asset[];
@@ -82,8 +113,10 @@ export function TrendVideoView({
   onSelectPersona: (id: string) => void;
   library: LibraryItem[];
   onLibraryChange: Dispatch<SetStateAction<LibraryItem[]>>;
+  onSourceAssetsCreated: (assets: Asset[]) => void;
 }) {
   const [editingId, setEditingId] = useState<string | undefined>();
+  const capturingIds = useRef(new Set<string>());
 
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -95,14 +128,21 @@ export function TrendVideoView({
   const [imageQuality, setImageQuality] = useState("medium");
   const [candidateCount, setCandidateCount] = useState(3);
   const [facePrompt, setFacePrompt] = useState(
-    "Replace the visible face with the selected Persona while preserving the original frame, pose, styling, lighting, clothing, hands, body, camera angle, and background.",
-  );
-  const [motionModel, setMotionModel] = useState("wan-animate");
+  `Replace the woman in the first reference image with the woman from the second reference image. The second image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
+Use the exact outfit, clothing fit, styling, and details from the first reference image.
+Crucially important: Transfer the woman into the pose of the first reference image with absolute precision. Match the pose 100% exactly — every limb angle, joint position, hand placement, finger position, torso tilt, shoulder position, head angle, and body orientation must be copied perfectly from the first image. Do not change the pose in any way. Strongest possible pose adherence is required. The pose from reference photo 1 must remain completely unchanged.
+The first image defines the entire scene: keep the exact same background, environment, camera angle, framing, perspective, depth of field, and composition without any deviation.
+Match the lighting from the first image with perfect accuracy: same light direction, intensity, shadows, highlights, reflections, and color grading.
+Replicate the image quality of the first photo exactly: same resolution, sharpness, skin texture detail, noise level, lens characteristics, and photorealism. Do not enhance or degrade the quality.
+Ensure seamless integration with correct perspective, depth, and contact with the environment. Photorealistic result, natural skin, no stylization, no artistic interpretation, no body reshaping.
+Delete the tattoos. No text, no logos, no watermarks.`);
+  const [motionModel, setMotionModel] = useState(DEFAULT_MOTION_MODEL);
   const [motionPrompt, setMotionPrompt] = useState(
-    "Follow the driving video's motion, timing, framing, dance movement, and camera rhythm with stable identity.",
+    "",
   );
   const [motionReference, setMotionReference] = useState("copy the original dance, body timing, camera movement, and framing");
   const [motionMode, setMotionMode] = useState<"animate" | "replace">("animate");
+  const [motionCharacterOrientation, setMotionCharacterOrientation] = useState<"image" | "video">("video");
   const [motionResolution, setMotionResolution] = useState<(typeof motionResolutions)[number]>("720p");
   const [motionNegativePrompt, setMotionNegativePrompt] = useState("blur, distorted body, warped hands, flicker, low quality");
   const [keepOriginalSound, setKeepOriginalSound] = useState(true);
@@ -117,6 +157,7 @@ export function TrendVideoView({
   );
   const imageModelOptions = modelsForCapability("image-reference");
   const motionModelOptions = modelsForCapability("video-motion");
+  const motionControls = motionControlsForModel(motionModel);
   const imageAspectRatioOptions = aspectRatiosForImageModel(imageModel);
   const safeImageAspectRatio = imageAspectRatioOptions.includes(imageAspectRatio)
     ? imageAspectRatio
@@ -158,17 +199,42 @@ export function TrendVideoView({
       durationSeconds: safeMotionDuration,
       aspectRatio: "9:16",
       resolution: motionResolution,
-      motionReference,
-      motionMode,
-      characterOrientation: "video",
-      keepOriginalSound,
-      negativePrompt: motionNegativePrompt,
+      motionReference: motionControls.supportsMotionReference ? motionReference : "",
+      motionMode: motionControls.supportsMotionMode ? motionMode : "animate",
+      characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
+      keepOriginalSound: motionControls.supportsKeepOriginalSound ? keepOriginalSound : false,
+      negativePrompt: motionControls.supportsNegativePrompt ? motionNegativePrompt : "",
     }).tokens,
   );
 
-  function updateLibraryItem(id: string, updates: Partial<LibraryItem>) {
+  const updateLibraryItem = useCallback((id: string, updates: Partial<LibraryItem>) => {
     onLibraryChange((current) => current.map((item) => (item.id === id ? { ...item, ...updates } : item)));
-  }
+  }, [onLibraryChange]);
+
+  useEffect(() => {
+    library
+      .filter((item) => item.importState === "capturing" && !capturingIds.current.has(item.id))
+      .forEach((item) => {
+        capturingIds.current.add(item.id);
+        void (async () => {
+          try {
+            const videoUrl = sourceVideoToUrl(item.video);
+            const captured = await captureFirstFrame(videoUrl, item.video.name);
+            updateLibraryItem(item.id, {
+              video: { ...item.video, durationSeconds: captured.durationSeconds },
+              firstFrame: captured.image,
+              firstFramePreview: sourceImageToDataUrl(captured.image),
+              importState: "ready",
+            });
+          } catch (captureError) {
+            updateLibraryItem(item.id, { importState: "ready" });
+            setError(captureError instanceof Error ? captureError.message : "Could not capture the first frame.");
+          } finally {
+            capturingIds.current.delete(item.id);
+          }
+        })();
+      });
+  }, [library, updateLibraryItem]);
 
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
@@ -182,8 +248,7 @@ export function TrendVideoView({
     }
   }
 
-  async function addImportedVideo(video: ImportedVideo) {
-    const id = crypto.randomUUID();
+  function addImportedVideo(video: ImportedVideo, id = crypto.randomUUID()) {
     onLibraryChange((current) => [
       {
         id,
@@ -194,19 +259,6 @@ export function TrendVideoView({
       },
       ...current,
     ]);
-    try {
-      const videoUrl = sourceVideoToUrl(video);
-      const captured = await captureFirstFrame(videoUrl, video.name);
-      updateLibraryItem(id, {
-        video: { ...video, durationSeconds: captured.durationSeconds },
-        firstFrame: captured.image,
-        firstFramePreview: sourceImageToDataUrl(captured.image),
-        importState: "ready",
-      });
-    } catch (captureError) {
-      updateLibraryItem(id, { importState: "ready" });
-      setError(captureError instanceof Error ? captureError.message : "Could not capture the first frame.");
-    }
   }
 
   async function importFromFiles(files: FileList | null) {
@@ -219,14 +271,34 @@ export function TrendVideoView({
         bucket: "uploads",
         folder: `trend-videos/${selectedPersona?.id ?? "unassigned"}`,
       });
-      for (const video of encoded) {
-        await addImportedVideo({
+      const createdAt = new Date().toISOString();
+      const sourceAssets: Asset[] = encoded.map((video) => ({
+        id: crypto.randomUUID(),
+        kind: "video",
+        title: video.name,
+        url: sourceVideoToUrl(video),
+        storageBucket: video.storageBucket,
+        storagePath: video.storagePath,
+        prompt: "Uploaded trend source video.",
+        personaId: selectedPersona?.id,
+        generationType: "reference_upload",
+        provider: "demo",
+        model: TREND_SOURCE_MODEL,
+        mimeType: video.mimeType,
+        createdAt,
+      }));
+      onSourceAssetsCreated(sourceAssets);
+      encoded.forEach((video, index) => {
+        const sourceAsset = sourceAssets[index];
+        addImportedVideo({
           name: video.name,
           mimeType: video.mimeType,
           data: video.data,
           url: video.url,
-        });
-      }
+          storageBucket: video.storageBucket,
+          storagePath: video.storagePath,
+        }, sourceAsset?.id);
+      });
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Video upload failed.");
     } finally {
@@ -234,7 +306,7 @@ export function TrendVideoView({
     }
   }
 
-  async function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+  async function handleDrop(event: React.DragEvent<HTMLElement>) {
     event.preventDefault();
     setIsDragOver(false);
     const files = Array.from(event.dataTransfer.files);
@@ -333,16 +405,16 @@ export function TrendVideoView({
           model: motionModel,
           durationSeconds: safeMotionDuration,
           aspectRatio: "9:16",
-          negativePrompt: motionNegativePrompt,
+          negativePrompt: motionControls.supportsNegativePrompt ? motionNegativePrompt : "",
           providerMode: providerModeForVideoModel(motionModel, "std"),
           cfgScale: 0.5,
           generateAudio: false,
           resolution: motionResolution,
           returnLastFrame: false,
-          motionReference,
-          motionMode,
-          characterOrientation: "video",
-          keepOriginalSound,
+          motionReference: motionControls.supportsMotionReference ? motionReference : "",
+          motionMode: motionControls.supportsMotionMode ? motionMode : "animate",
+          characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
+          keepOriginalSound: motionControls.supportsKeepOriginalSound ? keepOriginalSound : false,
           startFrameImage: candidateInput,
           motionReferenceVideoUrl: item.video.url,
           motionReferenceVideo: item.video.data
@@ -408,7 +480,7 @@ export function TrendVideoView({
             hint="Replace the target frame's face with your persona, then pick the best result"
           >
             <div className="flex flex-wrap items-center gap-3">
-              <MediaTile label="Source reel" width="w-[4.5rem]">
+              <MediaTile label="Source reel" width="w-32">
                 <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls muted />
               </MediaTile>
 
@@ -548,7 +620,7 @@ export function TrendVideoView({
             hint="Drive the selected identity frame with the reel's motion"
           >
             <div className="flex flex-wrap items-center gap-3">
-              <MediaTile label="Identity frame" width="w-[4.5rem]">
+              <MediaTile label="Identity frame" width="w-32">
                 {selectedCandidate ? (
                   <img src={selectedCandidate.url} alt={selectedCandidate.title} className="h-full w-full object-cover" />
                 ) : (
@@ -558,7 +630,7 @@ export function TrendVideoView({
 
               <FlowArrow />
 
-              <MediaTile label="Motion source" width="w-[4.5rem]">
+              <MediaTile label="Motion source" width="w-32">
                 <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls muted />
               </MediaTile>
 
@@ -593,33 +665,60 @@ export function TrendVideoView({
                       options={[...motionResolutions]}
                       onChange={(value) => setMotionResolution(value as (typeof motionResolutions)[number])}
                     />
-                    <div className="grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
-                      {(["animate", "replace"] as const).map((modeValue) => (
-                        <button
-                          type="button"
-                          key={modeValue}
-                          onClick={() => setMotionMode(modeValue)}
-                          className={cn(
-                            "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
-                            motionMode === modeValue ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
-                          )}
-                        >
-                          {modeValue}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="mt-1 flex h-9 cursor-pointer items-center gap-2.5 rounded-md border border-stone-200 bg-white px-3 text-xs font-medium text-stone-700 transition hover:border-emerald-800">
-                      <input
-                        type="checkbox"
-                        checked={keepOriginalSound}
-                        onChange={(event) => setKeepOriginalSound(event.target.checked)}
-                        className="size-4 accent-emerald-800"
-                      />
-                      Keep original sound
-                    </label>
+                    {motionControls.supportsMotionMode ? (
+                      <div className="grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
+                        {(["animate", "replace"] as const).map((modeValue) => (
+                          <button
+                            type="button"
+                            key={modeValue}
+                            onClick={() => setMotionMode(modeValue)}
+                            className={cn(
+                              "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
+                              motionMode === modeValue ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
+                            )}
+                          >
+                            {modeValue}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {motionControls.supportsCharacterOrientation ? (
+                      <div className="grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
+                        {(["video", "image"] as const).map((orientation) => (
+                          <button
+                            type="button"
+                            key={orientation}
+                            onClick={() => setMotionCharacterOrientation(orientation)}
+                            className={cn(
+                              "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
+                              motionCharacterOrientation === orientation
+                                ? "bg-white text-stone-950 shadow-sm"
+                                : "text-stone-600 hover:text-stone-950",
+                            )}
+                          >
+                            {orientation}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                    {motionControls.supportsKeepOriginalSound ? (
+                      <label className="mt-1 flex h-9 cursor-pointer items-center gap-2.5 rounded-md border border-stone-200 bg-white px-3 text-xs font-medium text-stone-700 transition hover:border-emerald-800">
+                        <input
+                          type="checkbox"
+                          checked={keepOriginalSound}
+                          onChange={(event) => setKeepOriginalSound(event.target.checked)}
+                          className="size-4 accent-emerald-800"
+                        />
+                        Keep original sound
+                      </label>
+                    ) : null}
                     <TextArea label="Video prompt" value={motionPrompt} onChange={setMotionPrompt} rows={3} />
-                    <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
-                    <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
+                    {motionControls.supportsMotionReference ? (
+                      <TextField label="Motion reference" value={motionReference} onChange={setMotionReference} />
+                    ) : null}
+                    {motionControls.supportsNegativePrompt ? (
+                      <TextArea label="Negative prompt" value={motionNegativePrompt} onChange={setMotionNegativePrompt} rows={2} />
+                    ) : null}
                   </div>
                 </details>
                 <SubmitButton
@@ -758,7 +857,7 @@ function SourceIngress({
   isUploading: boolean;
   isDragOver: boolean;
   onDragStateChange: (value: boolean) => void;
-  onDrop: (event: React.DragEvent<HTMLDivElement>) => void;
+  onDrop: (event: React.DragEvent<HTMLElement>) => void;
   onFiles: (files: FileList | null) => void;
 }) {
   return (
@@ -769,11 +868,11 @@ function SourceIngress({
         </div>
         <div>
           <h2 className="text-base font-semibold text-stone-950">Add a trend video</h2>
-          <p className="text-[11px] text-stone-500">Drop a file or browse from your device.</p>
+          <p className="text-[11px] text-stone-500">Drop a file or choose one from your device.</p>
         </div>
       </div>
 
-      <div
+      <label
         onDragOver={(event) => {
           event.preventDefault();
           onDragStateChange(true);
@@ -781,7 +880,7 @@ function SourceIngress({
         onDragLeave={() => onDragStateChange(false)}
         onDrop={onDrop}
         className={cn(
-          "flex min-h-16 items-center justify-center gap-2 rounded-md border border-dashed px-4 text-sm transition",
+          "flex min-h-16 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-4 text-sm transition",
           isDragOver ? "border-emerald-800 bg-emerald-50" : "border-stone-300 bg-stone-50 hover:border-emerald-800 hover:bg-white",
         )}
       >
@@ -793,23 +892,20 @@ function SourceIngress({
         ) : (
           <>
             <Upload className="size-4 text-emerald-800" />
-            <span className="text-stone-600">Drop video here ·</span>
-            <label className="cursor-pointer font-semibold text-emerald-800 hover:underline">
-              Browse files
-              <input
-                type="file"
-                accept="video/*"
-                multiple
-                className="sr-only"
-                onChange={(event) => {
-                  onFiles(event.target.files);
-                  event.target.value = "";
-                }}
-              />
-            </label>
+            <span className="font-medium text-stone-600">Drop video here or choose from device</span>
           </>
         )}
-      </div>
+        <input
+          type="file"
+          accept="video/*"
+          multiple
+          className="sr-only"
+          onChange={(event) => {
+            onFiles(event.target.files);
+            event.target.value = "";
+          }}
+        />
+      </label>
     </section>
   );
 }
@@ -964,10 +1060,4 @@ function blobToDataUrl(blob: Blob) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
-}
-
-function providerModeForVideoModel(modelId: string, fallback: "std" | "pro") {
-  if (modelId.endsWith("-pro")) return "pro";
-  if (modelId.endsWith("-std")) return "std";
-  return fallback;
 }

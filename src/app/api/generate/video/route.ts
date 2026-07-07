@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
+import { motionControlsForModel } from "@/lib/model-registry";
 import { mediaUrlToProviderInput } from "@/lib/providers/media-inputs";
 import { videoProvider } from "@/lib/providers";
 import { estimateVideoGenerationPricing } from "@/lib/pricing";
@@ -15,7 +16,18 @@ export async function POST(request: Request) {
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
 
-    const input = videoGenerationSchema.parse(await request.json());
+    const parsedInput = videoGenerationSchema.parse(await request.json());
+    const motionControls = motionControlsForModel(parsedInput.model);
+    const input = parsedInput.mode === "motion"
+      ? {
+          ...parsedInput,
+          negativePrompt: motionControls.supportsNegativePrompt ? parsedInput.negativePrompt : "",
+          motionReference: motionControls.supportsMotionReference ? parsedInput.motionReference : "",
+          motionMode: motionControls.supportsMotionMode ? parsedInput.motionMode : "animate",
+          characterOrientation: motionControls.supportsCharacterOrientation ? parsedInput.characterOrientation : "video",
+          keepOriginalSound: motionControls.supportsKeepOriginalSound ? parsedInput.keepOriginalSound : false,
+        }
+      : parsedInput;
     const generationType =
       input.mode === "motion"
         ? "video_motion"
