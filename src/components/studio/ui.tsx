@@ -1,7 +1,10 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
 
-import { Check, Loader2, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Asset, Persona } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -25,6 +28,7 @@ export function UploadBox({
   detail,
   onChange,
   compact = false,
+  loading = false,
 }: {
   accept: string;
   multiple?: boolean;
@@ -33,25 +37,36 @@ export function UploadBox({
   detail?: string;
   onChange: (files: FileList | null) => void;
   compact?: boolean;
+  loading?: boolean;
 }) {
   return (
     <label
       className={cn(
         "flex cursor-pointer items-center gap-2.5 rounded-md border border-dashed border-stone-300 bg-stone-50 px-3 text-left transition hover:border-emerald-800 hover:bg-white",
+        loading && "opacity-90",
         compact ? "mt-2.5 h-9" : "mt-3 min-h-11 px-4",
       )}
     >
-      <Icon className="size-4 shrink-0 text-emerald-800" />
+      {loading ? (
+        <Loader2 className="size-4 shrink-0 animate-spin text-emerald-800" />
+      ) : (
+        <Icon className="size-4 shrink-0 text-emerald-800" />
+      )}
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-xs font-semibold text-stone-950">{label}</span>
-        {detail ? <span className="truncate text-[11px] font-normal text-stone-500">{detail}</span> : null}
+        {loading || detail ? (
+          <span className="truncate text-[11px] font-normal text-stone-500">{loading ? "Uploading, you can add more." : detail}</span>
+        ) : null}
       </span>
       <input
         className="sr-only"
         type="file"
         accept={accept}
         multiple={multiple}
-        onChange={(event) => onChange(event.target.files)}
+        onChange={(event) => {
+          onChange(event.target.files);
+          event.target.value = "";
+        }}
       />
     </label>
   );
@@ -353,27 +368,7 @@ export function SelectField({
   onChange: (value: string) => void;
 }) {
   if (label.toLowerCase().includes("aspect ratio")) {
-    return (
-      <label className="mt-2.5 block">
-        <span className="text-xs font-medium text-stone-700">{label}</span>
-        <span className="relative mt-1.5 flex h-9 items-center rounded-md border border-stone-200 bg-white focus-within:border-emerald-800">
-          <span className="pointer-events-none absolute left-3 z-10 text-emerald-800">
-            <AspectRatioGlyph ratio={value} />
-          </span>
-          <select
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            className="aspect-ratio-select h-full w-full rounded-md border-0 bg-transparent px-9 text-sm outline-none"
-          >
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </span>
-      </label>
-    );
+    return <AspectRatioSelect label={label} value={value} options={options} onChange={onChange} />;
   }
 
   return (
@@ -394,6 +389,94 @@ export function SelectField({
   );
 }
 
+function AspectRatioSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative mt-2.5">
+      <span className="text-xs font-medium text-stone-700">{label}</span>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="mt-1.5 flex h-9 w-full items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-left text-sm text-stone-950 outline-none transition hover:border-emerald-800 focus:border-emerald-800"
+      >
+        <AspectRatioGlyph ratio={value} />
+        <span className="min-w-0 flex-1 truncate">{value}</span>
+        <ChevronDown size={14} className={cn("text-stone-500 transition", open && "rotate-180")} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="absolute left-0 right-0 top-full z-30 mt-1 grid max-h-64 gap-1 overflow-y-auto rounded-md border border-stone-200 bg-white p-1 shadow-lg"
+        >
+          {options.map((option) => {
+            const selected = option === value;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={cn(
+                  "flex h-9 items-center gap-2 rounded-[5px] px-2 text-left text-sm transition",
+                  selected
+                    ? "bg-emerald-50 text-stone-950 ring-1 ring-emerald-800"
+                    : "text-stone-600 hover:bg-stone-100 hover:text-stone-950",
+                )}
+              >
+                <AspectRatioGlyph ratio={option} />
+                <span className="min-w-0 flex-1 truncate">{option}</span>
+                {selected ? <Check size={14} className="text-emerald-800" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * Visible aspect-ratio glyph. Uses an explicit accent color (emerald) instead of
  * `border-current`/`bg-current`, which was rendering nearly invisibly under the
@@ -405,7 +488,7 @@ function AspectRatioGlyph({ ratio }: { ratio: string }) {
   const isSquare = width === height;
   const isHorizontal = width > height;
   const className = cn(
-    "aspect-ratio-glyph shrink-0 border border-emerald-800 bg-emerald-800/25",
+    "aspect-ratio-glyph block shrink-0 border border-emerald-800 bg-emerald-800/25",
     isAuto
       ? "h-3.5 w-4 border-dashed opacity-80"
       : isSquare

@@ -27,11 +27,11 @@ export function PublicHeader({
           <Link href="/pricing">Pricing</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/faq">FAQ</Link>
-        </div>
-        <div className="site-nav-actions">
           <a href={TELEGRAM_GROUP_URL} target="_blank" rel="noreferrer" className="site-telegram-link" aria-label="Telegram">
             <TelegramIcon />
           </a>
+        </div>
+        <div className="site-nav-actions">
           <AuthButton
             initialUserEmail={initialUserEmail}
             supabaseReady={supabaseReady}

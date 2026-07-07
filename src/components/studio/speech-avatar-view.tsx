@@ -255,6 +255,7 @@ export function AvatarView({
   const [isReadingDuration, setIsReadingDuration] = useState(false);
   const [prompt, setPrompt] = useState("Natural talking head, subtle expression, steady camera.");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const selectedImage = imageAssets.find((asset) => asset.id === imageAssetId) ?? imageAssets[0];
   const selectedAudio = audioAssets.find((asset) => asset.id === audioAssetId) ?? audioAssets[0];
@@ -302,14 +303,30 @@ export function AvatarView({
   }, [selectedAudioSource, uploadedAudio]);
 
   async function captureImage(files: FileList | null) {
-    const [image] = await encodeFiles(files, "image/png");
-    setUploadedImage(image);
+    setUploadingInputs((current) => ({ ...current, image: true }));
+    setError("");
+    try {
+      const [image] = await encodeFiles(files, "image/png");
+      setUploadedImage(image);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Image upload failed.");
+    } finally {
+      setUploadingInputs((current) => ({ ...current, image: false }));
+    }
   }
 
   async function captureAudio(files: FileList | null) {
-    const [audio] = await encodeFiles(files, "audio/mpeg");
-    setUploadedAudio(audio ? { name: audio.name, mimeType: audio.mimeType, data: audio.data, url: audio.url } : undefined);
-    setAudioAssetId("");
+    setUploadingInputs((current) => ({ ...current, audio: true }));
+    setError("");
+    try {
+      const [audio] = await encodeFiles(files, "audio/mpeg");
+      setUploadedAudio(audio ? { name: audio.name, mimeType: audio.mimeType, data: audio.data, url: audio.url } : undefined);
+      setAudioAssetId("");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Audio upload failed.");
+    } finally {
+      setUploadingInputs((current) => ({ ...current, audio: false }));
+    }
   }
 
   async function generateAvatar(event: FormEvent) {
@@ -412,6 +429,7 @@ export function AvatarView({
             icon={Upload}
             label={uploadedImage ? uploadedImage.name : "Upload image"}
             detail={uploadedImage ? "Uploaded image will be used instead of a generated image." : ""}
+            loading={Boolean(uploadingInputs.image)}
             onChange={(files) => void captureImage(files)}
           />
           <AssetSelect
@@ -428,6 +446,7 @@ export function AvatarView({
             icon={Upload}
             label={uploadedAudio ? uploadedAudio.name : "Upload audio"}
             detail={uploadedAudio ? "Uploaded audio will be used instead of saved audio." : ""}
+            loading={Boolean(uploadingInputs.audio)}
             onChange={(files) => void captureAudio(files)}
           />
           <ModelSelect label="Model" value={model} options={talkingAvatarModels} onChange={setModel} />

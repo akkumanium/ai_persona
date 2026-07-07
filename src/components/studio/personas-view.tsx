@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { ArrowLeft, Star, Trash2, Upload, UserRound, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, Loader2, Star, Trash2, Upload, UserRound, WandSparkles, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
@@ -203,6 +203,8 @@ function PersonaManagementView({
   const [personaNameDraft, setPersonaNameDraft] = useState(persona.name);
   const [personaDescriptionDraft, setPersonaDescriptionDraft] = useState(persona.description);
   const [previewAssetId, setPreviewAssetId] = useState<string | undefined>();
+  const [uploadingSlotId, setUploadingSlotId] = useState<ReferenceSlotId | undefined>();
+  const [uploadError, setUploadError] = useState("");
   const referenceAssets = assets.filter(
     (asset) => asset.personaId === persona.id && (asset.kind === "avatar" || asset.kind === "upload"),
   );
@@ -232,32 +234,40 @@ function PersonaManagementView({
   }
 
   async function captureSlotUpload(slot: (typeof referenceSlots)[number], files: FileList | null) {
-    const images = await encodeFiles(files, "image/png", {
-      enabled: supabaseReady,
-      bucket: "uploads",
-      folder: `references/${persona.id}/${slot.id}`,
-    });
-    if (!images.length) return;
-    const createdAt = new Date().toISOString();
-    const hasDefault = referenceAssets.some((asset) => asset.isDefaultReference);
-    const nextAssets: Asset[] = images.map((image, index) => ({
-      id: crypto.randomUUID(),
-      kind: "upload",
-      title: `${slot.label} reference ${assetsForSlot(slot.id).length + index + 1}`,
-      url: sourceImageToDataUrl(image),
-      storageBucket: image.storageBucket,
-      storagePath: image.storagePath,
-      prompt: "Uploaded local reference.",
-      personaId: persona.id,
-      referenceSlot: slot.id,
-      isDefaultReference: !hasDefault && index === 0,
-      generationType: "reference_upload",
-      provider: "demo",
-      model: "local-upload",
-      mimeType: image.mimeType,
-      createdAt,
-    }));
-    onAddReferences(persona.id, nextAssets);
+    setUploadingSlotId(slot.id);
+    setUploadError("");
+    try {
+      const images = await encodeFiles(files, "image/png", {
+        enabled: supabaseReady,
+        bucket: "uploads",
+        folder: `references/${persona.id}/${slot.id}`,
+      });
+      if (!images.length) return;
+      const createdAt = new Date().toISOString();
+      const hasDefault = referenceAssets.some((asset) => asset.isDefaultReference);
+      const nextAssets: Asset[] = images.map((image, index) => ({
+        id: crypto.randomUUID(),
+        kind: "upload",
+        title: `${slot.label} reference ${assetsForSlot(slot.id).length + index + 1}`,
+        url: sourceImageToDataUrl(image),
+        storageBucket: image.storageBucket,
+        storagePath: image.storagePath,
+        prompt: "Uploaded local reference.",
+        personaId: persona.id,
+        referenceSlot: slot.id,
+        isDefaultReference: !hasDefault && index === 0,
+        generationType: "reference_upload",
+        provider: "demo",
+        model: "local-upload",
+        mimeType: image.mimeType,
+        createdAt,
+      }));
+      onAddReferences(persona.id, nextAssets);
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Reference upload failed.");
+    } finally {
+      setUploadingSlotId(undefined);
+    }
   }
 
   function confirmPersonaDelete() {
@@ -351,6 +361,7 @@ function PersonaManagementView({
             previewAsset={previewAsset?.referenceSlot === slot.id ? previewAsset : undefined}
             onGenerate={() => onNavigateToGenerate(slot.id, persona.id)}
             onUpload={(files) => void captureSlotUpload(slot, files)}
+            uploading={uploadingSlotId === slot.id}
             onToggleReferenceDefault={onToggleReferenceDefault}
             onDeleteReference={(assetId) => onDeleteReference(persona.id, assetId)}
             onRenameReference={onRenameReference}
@@ -358,6 +369,7 @@ function PersonaManagementView({
           />
         ))}
       </div>
+      {uploadError ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{uploadError}</p> : null}
 
       <AssetSection title="Images" assets={imageAssets} />
       <AssetSection title="Videos" assets={videoAssets} />
@@ -371,6 +383,7 @@ function ReferenceSlotCard({
   previewAsset,
   onGenerate,
   onUpload,
+  uploading,
   onToggleReferenceDefault,
   onDeleteReference,
   onRenameReference,
@@ -381,6 +394,7 @@ function ReferenceSlotCard({
   previewAsset?: Asset;
   onGenerate: () => void;
   onUpload: (files: FileList | null) => void;
+  uploading?: boolean;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (assetId: string) => void;
   onRenameReference: (assetId: string, title: string) => void;
@@ -410,10 +424,23 @@ function ReferenceSlotCard({
           <WandSparkles size={16} />
           Generate
         </button>
-        <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950">
-          <Upload size={16} />
-          Upload
-          <input className="sr-only" type="file" accept="image/*" onChange={(event) => onUpload(event.target.files)} />
+        <label
+          className={cn(
+            "inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950",
+            uploading && "opacity-80",
+          )}
+        >
+          {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload size={16} />}
+          {uploading ? "Uploading" : "Upload"}
+          <input
+            className="sr-only"
+            type="file"
+            accept="image/*"
+            onChange={(event) => {
+              onUpload(event.target.files);
+              event.target.value = "";
+            }}
+          />
         </label>
       </div>
       {assets.length ? (

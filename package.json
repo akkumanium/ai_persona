@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run download:yt-dlp",
     "build": "next build",
+    "postinstall": "npm run download:yt-dlp",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "download:yt-dlp": "node node_modules/youtube-dl-exec/scripts/postinstall.js"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.52.0",

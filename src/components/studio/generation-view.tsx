@@ -96,6 +96,7 @@ export function GenerationView({
   const [motionReferenceVideo, setMotionReferenceVideo] = useState<SourceVideoInput | undefined>();
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
   const personaOptions = useMemo(() => personas, [personas]);
   const imageModelOptions = modelsForCapability("image-prompt");
@@ -271,6 +272,18 @@ export function GenerationView({
     if (!selectedPersona) return;
     setUploadedVideoEndFrame(undefined);
     setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: undefined }));
+  }
+
+  async function withUploadState(key: string, upload: () => Promise<void>) {
+    setUploadingInputs((current) => ({ ...current, [key]: true }));
+    setGenerationError("");
+    try {
+      await upload();
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setUploadingInputs((current) => ({ ...current, [key]: false }));
+    }
   }
 
   function changeVideoModel(modelId: string) {
@@ -450,17 +463,21 @@ export function GenerationView({
   }
 
   async function captureMotionReferenceImage(files: FileList | null) {
-    const [image] = await encodeFiles(files, "image/png");
-    setMotionReferenceImage(image);
+    await withUploadState("motionReferenceImage", async () => {
+      const [image] = await encodeFiles(files, "image/png");
+      setMotionReferenceImage(image);
+    });
   }
 
   async function captureUploadedImageReferences(files: FileList | null) {
-    const images = await encodeFiles(files, "image/png", {
-      enabled: supabaseReady,
-      bucket: "uploads",
-      folder: `image-references/${selectedPersona?.id ?? "unassigned"}`,
+    await withUploadState("imageReferences", async () => {
+      const images = await encodeFiles(files, "image/png", {
+        enabled: supabaseReady,
+        bucket: "uploads",
+        folder: `image-references/${selectedPersona?.id ?? "unassigned"}`,
+      });
+      setUploadedImageReferences((current) => [...current, ...images].slice(0, 8));
     });
-    setUploadedImageReferences((current) => [...current, ...images].slice(0, 8));
   }
 
   function removeUploadedImageReference(index: number) {
@@ -468,34 +485,42 @@ export function GenerationView({
   }
 
   async function captureVideoFrame(files: FileList | null, slot: VideoFrameSlot) {
-    const [image] = await encodeFiles(files, "image/png");
-    if (slot === "start") {
-      setUploadedVideoStartFrame(image);
-      return;
-    }
+    await withUploadState(slot === "start" ? "videoStartFrame" : "videoEndFrame", async () => {
+      const [image] = await encodeFiles(files, "image/png");
+      if (slot === "start") {
+        setUploadedVideoStartFrame(image);
+        return;
+      }
 
-    setUploadedVideoEndFrame(image);
+      setUploadedVideoEndFrame(image);
+    });
   }
 
   async function captureMotionReferenceVideo(files: FileList | null) {
-    const [video] = await encodeFiles(files, "video/mp4");
-    setMotionReferenceVideo(
-      video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
-    );
+    await withUploadState("motionReferenceVideo", async () => {
+      const [video] = await encodeFiles(files, "video/mp4");
+      setMotionReferenceVideo(
+        video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
+      );
+    });
   }
 
   async function captureSeedanceReferenceVideo(files: FileList | null) {
-    const [video] = await encodeFiles(files, "video/mp4");
-    setSeedanceReferenceVideo(
-      video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
-    );
+    await withUploadState("seedanceReferenceVideo", async () => {
+      const [video] = await encodeFiles(files, "video/mp4");
+      setSeedanceReferenceVideo(
+        video ? { name: video.name, mimeType: video.mimeType, data: video.data, url: video.url } : undefined,
+      );
+    });
   }
 
   async function captureSeedanceReferenceAudio(files: FileList | null) {
-    const [audio] = await encodeFiles(files, "audio/mpeg");
-    setSeedanceReferenceAudio(
-      audio ? { name: audio.name, mimeType: audio.mimeType, data: audio.data, url: audio.url } : undefined,
-    );
+    await withUploadState("seedanceReferenceAudio", async () => {
+      const [audio] = await encodeFiles(files, "audio/mpeg");
+      setSeedanceReferenceAudio(
+        audio ? { name: audio.name, mimeType: audio.mimeType, data: audio.data, url: audio.url } : undefined,
+      );
+    });
   }
 
   const PanelIcon = mode === "images" ? ImageIcon : mode === "videos" ? Clapperboard : Play;
@@ -596,6 +621,7 @@ export function GenerationView({
                   compact
                   icon={Upload}
                   label={uploadedImageReferences.length ? "Add more references" : "Upload references"}
+                  loading={Boolean(uploadingInputs.imageReferences)}
                   onChange={(files) => void captureUploadedImageReferences(files)}
                 />
                 <ImageThumbStrip images={uploadedImageReferences} onRemove={removeUploadedImageReference} />
@@ -701,6 +727,7 @@ export function GenerationView({
                 compact
                 icon={Upload}
                 label={uploadedVideoStartFrame ? uploadedVideoStartFrame.name : "Upload start frame"}
+                loading={Boolean(uploadingInputs.videoStartFrame)}
                 onChange={(files) => void captureVideoFrame(files, "start")}
               />
               {normalVideoSupportsEndFrame ? (
@@ -709,6 +736,7 @@ export function GenerationView({
                   compact
                   icon={Upload}
                   label={uploadedVideoEndFrame ? uploadedVideoEndFrame.name : "Upload end frame"}
+                  loading={Boolean(uploadingInputs.videoEndFrame)}
                   onChange={(files) => void captureVideoFrame(files, "end")}
                 />
               ) : null}
@@ -721,6 +749,7 @@ export function GenerationView({
                   icon={Clapperboard}
                   label={seedanceReferenceVideo?.name ?? "Reference video"}
                   detail={seedanceReferenceVideo ? "Ready" : "Optional; up to 15s"}
+                  loading={Boolean(uploadingInputs.seedanceReferenceVideo)}
                   onChange={(files) => void captureSeedanceReferenceVideo(files)}
                 />
                 <UploadBox
@@ -729,6 +758,7 @@ export function GenerationView({
                   icon={AudioLines}
                   label={seedanceReferenceAudio?.name ?? "Reference audio"}
                   detail={seedanceReferenceAudio ? "Ready" : "Optional; up to 15s"}
+                  loading={Boolean(uploadingInputs.seedanceReferenceAudio)}
                   onChange={(files) => void captureSeedanceReferenceAudio(files)}
                 />
               </div>
@@ -804,6 +834,7 @@ export function GenerationView({
               icon={Upload}
               label={motionReferenceImage ? motionReferenceImage.name : "Upload reference image"}
               detail={selectedReference && !motionReferenceImage ? `Using ${selectedReference.title}` : ""}
+              loading={Boolean(uploadingInputs.motionReferenceImage)}
               onChange={(files) => void captureMotionReferenceImage(files)}
             />
             <UploadBox
@@ -811,6 +842,7 @@ export function GenerationView({
               compact
               icon={Clapperboard}
               label={motionReferenceVideo ? motionReferenceVideo.name : "Upload motion video to imitate"}
+              loading={Boolean(uploadingInputs.motionReferenceVideo)}
               onChange={(files) => void captureMotionReferenceVideo(files)}
             />
             <TextArea label="Video prompt" value={videoPrompt} onChange={setVideoPrompt} rows={4} />
@@ -909,7 +941,7 @@ function VideoFramePicker({
           </button>
         ) : null}
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
+      <div className={cn("mt-2 grid gap-1 rounded-md bg-stone-100 p-1", supportsEndFrame ? "grid-cols-2" : "grid-cols-1")}>
         {(["start", ...(supportsEndFrame ? ["end"] : [])] as VideoFrameSlot[]).map((slot) => (
           <button
             key={slot}

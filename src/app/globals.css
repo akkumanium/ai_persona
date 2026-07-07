@@ -210,7 +210,13 @@ select option {
 .persona-dialog-panel {
   background-color: #111827 !important;
   background-image: none !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58) !important;
   opacity: 1 !important;
+}
+
+.persona-dialog-panel * {
+  opacity: 1;
 }
 
 .guide-admin-field {
@@ -333,12 +339,11 @@ label {
 }
 
 .site-telegram-link {
-  display: inline-flex;
+  display: inline-grid;
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
+  place-items: center;
   border: 1px solid rgba(241, 235, 227, 0.12);
   border-radius: 999px;
   color: #b3a9a0;
@@ -355,7 +360,6 @@ label {
   width: 18px;
   height: 18px;
   display: block;
-  transform: translateX(-1px);
 }
 
 .public-content {

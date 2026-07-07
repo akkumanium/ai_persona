@@ -1,6 +1,6 @@
 import { execFile } from "child_process";
 import { randomUUID } from "crypto";
-import { mkdir, readFile, stat, unlink } from "fs/promises";
+import { access, mkdir, readFile, stat, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { promisify } from "util";
@@ -19,6 +19,11 @@ type DownloadedVideo = {
   bytes: Uint8Array;
   mimeType: string;
   originalName: string;
+};
+
+type ExecFileError = Error & {
+  code?: string;
+  stderr?: string;
 };
 
 export async function POST(request: Request) {
@@ -130,6 +135,9 @@ async function downloadWithYtDlp(url: URL): Promise<DownloadedVideo> {
     let lastError: unknown;
     for (const ytdlpPath of ytdlpPaths) {
       try {
+        if (ytdlpPath !== "yt-dlp") {
+          await access(ytdlpPath);
+        }
         await execFileAsync(
           ytdlpPath,
           [
@@ -139,7 +147,7 @@ async function downloadWithYtDlp(url: URL): Promise<DownloadedVideo> {
             "--merge-output-format",
             "mp4",
             "-f",
-            "bv*+ba/best[ext=mp4]/best",
+            "best[ext=mp4][vcodec!=none][acodec!=none]/best[ext=mp4]/bv*+ba/best",
             "-o",
             outputPath,
             url.toString(),
@@ -165,9 +173,16 @@ async function downloadWithYtDlp(url: URL): Promise<DownloadedVideo> {
       originalName: `${socialVideoName(url)}.mp4`,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message.includes("not recognized") || message.includes("ENOENT") || message.includes("spawn")) {
+    const execError = error as ExecFileError;
+    const message = [execError.message, execError.stderr].filter(Boolean).join("\n");
+    if (message.includes("not recognized") || message.includes("ENOENT") || message.includes("spawn") || execError.code === "ENOENT") {
       throw new Error("That link did not resolve to a direct video. Install yt-dlp on the server or upload the clip.");
+    }
+    if (message.includes("File is larger than max-filesize")) {
+      throw new Error("Video links must be under 100 MB.");
+    }
+    if (message.includes("Requested format is not available") || message.includes("No video formats found")) {
+      throw new Error("That link does not expose a downloadable video.");
     }
     throw new Error("Could not download that video link.");
   } finally {

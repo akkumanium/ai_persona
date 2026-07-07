@@ -505,6 +505,7 @@ export function TrendVideoView({
               icon={Upload}
               label={importedVideo?.name ?? "Upload trend video"}
               detail={importedVideo?.durationSeconds ? `${Math.round(importedVideo.durationSeconds)}s detected` : "MP4, WebM, or MOV"}
+              loading={importState === "importing" || importState === "capturing"}
               onChange={(files) => void captureUploadedVideo(files)}
             />
           </div>

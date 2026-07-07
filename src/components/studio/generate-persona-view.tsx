@@ -68,6 +68,7 @@ export function GeneratePersonaView({
   const [confirmsRights, setConfirmsRights] = useState(false);
   const [confirmsAdultPersona, setConfirmsAdultPersona] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
 
@@ -196,22 +197,38 @@ export function GeneratePersonaView({
     });
   }
 
+  async function withUploadState(key: string, upload: () => Promise<void>) {
+    setUploadingInputs((current) => ({ ...current, [key]: true }));
+    setGenerationError("");
+    try {
+      await upload();
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setUploadingInputs((current) => ({ ...current, [key]: false }));
+    }
+  }
+
   async function captureHybridSources(files: FileList | null) {
-    const newImages = await encodeFiles(files, "image/png", {
-      enabled: supabaseReady,
-      bucket: "uploads",
-      folder: `hybrid-sources/${selectedPersona?.id ?? "unassigned"}`,
+    await withUploadState("hybridSources", async () => {
+      const newImages = await encodeFiles(files, "image/png", {
+        enabled: supabaseReady,
+        bucket: "uploads",
+        folder: `hybrid-sources/${selectedPersona?.id ?? "unassigned"}`,
+      });
+      setHybridSources((current) => [...current, ...newImages].slice(0, 8));
     });
-    setHybridSources((current) => [...current, ...newImages].slice(0, 8));
   }
 
   async function captureScratchSources(files: FileList | null) {
-    const newImages = await encodeFiles(files, "image/png", {
-      enabled: supabaseReady,
-      bucket: "uploads",
-      folder: `scratch-sources/${selectedPersona?.id ?? "unassigned"}`,
+    await withUploadState("scratchSources", async () => {
+      const newImages = await encodeFiles(files, "image/png", {
+        enabled: supabaseReady,
+        bucket: "uploads",
+        folder: `scratch-sources/${selectedPersona?.id ?? "unassigned"}`,
+      });
+      setScratchSources((current) => [...current, ...newImages].slice(0, 8));
     });
-    setScratchSources((current) => [...current, ...newImages].slice(0, 8));
   }
 
   function removeHybridSource(index: number) {
@@ -428,6 +445,7 @@ export function GeneratePersonaView({
                 icon={Upload}
                 label={hybridSources.length ? "Add more faces" : "Upload face images"}
                 detail={hybridSources.length ? `${hybridSources.length} face image${hybridSources.length === 1 ? "" : "s"} ready (min 2)` : "Add 2 or more faces to blend"}
+                loading={Boolean(uploadingInputs.hybridSources)}
                 onChange={(files) => void captureHybridSources(files)}
               />
               <ImageThumbStrip images={hybridSources} onRemove={removeHybridSource} />
@@ -464,6 +482,7 @@ export function GeneratePersonaView({
                       ? `${scratchSources.length} image${scratchSources.length === 1 ? "" : "s"} ready`
                       : "Use your own PC images as optional identity or style inputs."
                   }
+                  loading={Boolean(uploadingInputs.scratchSources)}
                   onChange={(files) => void captureScratchSources(files)}
                 />
               ) : null}
