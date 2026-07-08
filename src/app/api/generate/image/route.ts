@@ -7,7 +7,7 @@ import { estimateImageGenerationPricing } from "@/lib/pricing";
 import { promptForReferenceSlot } from "@/lib/reference-prompts";
 import { imageGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
-import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -77,6 +77,7 @@ export async function POST(request: Request) {
     }
 
     const finalPrompt = [basePrompt, input.additionalPrompt.trim()].filter(Boolean).join("\n");
+    const visiblePrompt = isReferenceAvatar ? input.additionalPrompt.trim() : input.prompt.trim();
 
     const providerRequest: ImageGenerationRequest = {
       prompt: [
@@ -96,6 +97,36 @@ export async function POST(request: Request) {
     };
     const estimatedPricing = estimateImageGenerationPricing(providerRequest);
     const jobId = crypto.randomUUID();
+    const createdAt = nowIso();
+    const inputParams = {
+      prompt: visiblePrompt,
+      additionalPrompt: input.additionalPrompt.trim(),
+      model: input.model,
+      aspectRatio: input.aspectRatio,
+      imageSize: input.imageSize,
+      imageQuality: input.imageQuality,
+      count: input.count,
+      assetKind: input.assetKind,
+      referenceSlot: input.referenceSlot,
+      referenceAssetIds: input.referenceAssetIds,
+      hiddenPromptUsed: isReferenceAvatar,
+    };
+    await persistPendingGenerationJob({
+      userId: auth.user?.id,
+      job: {
+        id: jobId,
+        status: "queued",
+        provider: imageProvider.name,
+        model: input.model,
+        generationType,
+        prompt: visiblePrompt,
+        personaId: input.personaId,
+        costEstimateCents: estimatedPricing.tokens,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      inputParams,
+    });
     await reserveTokens(
       auth.user?.id,
       estimatedPricing.tokens,
@@ -105,8 +136,7 @@ export async function POST(request: Request) {
 
     try {
       const result = await imageProvider.generate(providerRequest);
-      const createdAt = nowIso();
-      const visiblePrompt = isReferenceAvatar ? input.additionalPrompt.trim() : input.prompt.trim();
+      const updatedAt = nowIso();
       const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
         id: crypto.randomUUID(),
         kind: input.assetKind,
@@ -123,7 +153,7 @@ export async function POST(request: Request) {
         generationType,
         provider: result.provider,
         model: result.model,
-        createdAt,
+        createdAt: updatedAt,
         ...asset,
       }, auth.user?.id)));
       const job: GenerationJob = {
@@ -137,26 +167,14 @@ export async function POST(request: Request) {
         costEstimateCents: estimatedPricing.tokens,
         rawProviderResponse: sanitizeProviderPayload(result.raw),
         createdAt,
-        updatedAt: createdAt,
+        updatedAt,
       };
 
       await persistGenerationRecords({
         userId: auth.user?.id,
         assets,
         job,
-        inputParams: {
-          prompt: visiblePrompt,
-          additionalPrompt: input.additionalPrompt.trim(),
-          model: input.model,
-          aspectRatio: input.aspectRatio,
-          imageSize: input.imageSize,
-          imageQuality: input.imageQuality,
-          count: input.count,
-          assetKind: input.assetKind,
-          referenceSlot: input.referenceSlot,
-          referenceAssetIds: input.referenceAssetIds,
-          hiddenPromptUsed: isReferenceAvatar,
-        },
+        inputParams,
       });
 
       return NextResponse.json({

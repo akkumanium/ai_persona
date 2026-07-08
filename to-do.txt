@@ -17,7 +17,8 @@
 99. Think more on the name
 103. Upload more voices
 105. Delete uploaded video from generated videos
-110.
+110. Expose the prompt at reference section
+111. Check all the models again, NBP edit > NBP text-to-image
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

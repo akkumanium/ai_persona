@@ -5,8 +5,8 @@ import type { SpeechGenerationRequest } from "@/lib/providers/types";
 import { estimateSpeechGenerationPricing } from "@/lib/pricing";
 import { speechGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
-import { persistGenerationRecords } from "@/lib/server/studio-persistence";
-import { InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
@@ -30,12 +30,36 @@ export async function POST(request: Request) {
       languageCode: input.languageCode,
     };
     const estimatedPricing = estimateSpeechGenerationPricing(providerRequest);
+    await assertSufficientTokens(auth.user?.id, Math.max(1, estimatedPricing.tokens));
+
     const jobId = crypto.randomUUID();
+    const createdAt = nowIso();
+    const inputParams = {
+      ...input,
+      textLength: input.text.length,
+      text: input.text,
+    };
+    await persistPendingGenerationJob({
+      userId: auth.user?.id,
+      job: {
+        id: jobId,
+        status: "queued",
+        provider: speechProvider.name,
+        model: input.model,
+        generationType: "speech_text",
+        prompt: input.text,
+        personaId: input.personaId,
+        costEstimateCents: estimatedPricing.tokens,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      inputParams,
+    });
     await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
 
     try {
       const result = await speechProvider.generate(providerRequest);
-      const createdAt = nowIso();
+      const updatedAt = nowIso();
       const asset: Asset = await materializeGeneratedAsset({
         id: crypto.randomUUID(),
         kind: "audio",
@@ -45,7 +69,7 @@ export async function POST(request: Request) {
         generationType: "speech_text",
         provider: result.provider,
         model: result.model,
-        createdAt,
+        createdAt: updatedAt,
         ...result.asset,
       }, auth.user?.id);
       const job: GenerationJob = {
@@ -59,18 +83,14 @@ export async function POST(request: Request) {
         costEstimateCents: estimatedPricing.tokens,
         rawProviderResponse: sanitizeProviderPayload(result.raw),
         createdAt,
-        updatedAt: createdAt,
+        updatedAt,
       };
 
       await persistGenerationRecords({
         userId: auth.user?.id,
         assets: [asset],
         job,
-        inputParams: {
-          ...input,
-          textLength: input.text.length,
-          text: input.text,
-        },
+        inputParams,
       });
 
       return NextResponse.json({ asset, job });

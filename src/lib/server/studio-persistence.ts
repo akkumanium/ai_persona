@@ -10,6 +10,46 @@ type PersistGenerationInput = {
   inputParams: Record<string, unknown>;
 };
 
+type PersistPendingGenerationInput = {
+  userId?: string;
+  job: GenerationJob;
+  inputParams: Record<string, unknown>;
+};
+
+export async function persistPendingGenerationJob({
+  userId,
+  job,
+  inputParams,
+}: PersistPendingGenerationInput) {
+  if (!hasSupabaseEnv() || !userId) return;
+
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceSupabaseClient()
+    : await createServerSupabaseClient();
+
+  const { error } = await supabase.from("generation_jobs").insert({
+    id: job.id,
+    user_id: userId,
+    persona_id: job.personaId ?? null,
+    status: job.status,
+    provider: job.provider,
+    provider_job_id: job.providerJobId ?? null,
+    model: job.model,
+    generation_type: job.generationType,
+    input_params: inputParams,
+    output_asset_ids: [],
+    cost_estimate_cents: job.costEstimateCents,
+    raw_provider_response: sanitizeProviderPayload(job.rawProviderResponse ?? null),
+    error_message: job.errorMessage ?? null,
+    created_at: job.createdAt,
+    updated_at: job.updatedAt,
+  });
+
+  if (error) {
+    throw new Error(`Failed to persist pending generation job: ${error.message}`);
+  }
+}
+
 export async function persistGenerationRecords({
   userId,
   job,
@@ -23,7 +63,7 @@ export async function persistGenerationRecords({
     : await createServerSupabaseClient();
   const outputAssetIds = assets.map((asset) => asset.id);
 
-  const { error: jobError } = await supabase.from("generation_jobs").insert({
+  const { error: jobError } = await supabase.from("generation_jobs").upsert({
     id: job.id,
     user_id: userId,
     persona_id: job.personaId ?? null,
@@ -39,6 +79,8 @@ export async function persistGenerationRecords({
     error_message: job.errorMessage ?? null,
     created_at: job.createdAt,
     updated_at: job.updatedAt,
+  }, {
+    onConflict: "id",
   });
 
   if (jobError) {

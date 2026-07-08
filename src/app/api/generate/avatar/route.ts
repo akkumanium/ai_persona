@@ -8,7 +8,7 @@ import { estimateAvatarGenerationPricing, estimateImageGenerationPricing } from 
 import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
 import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
-import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -119,12 +119,43 @@ async function generateAvatarReference(body: unknown, userId?: string) {
   };
   const estimatedPricing = estimateImageGenerationPricing(providerRequest);
   const jobId = crypto.randomUUID();
+  const createdAt = nowIso();
+  const visiblePrompt = input.prompt.trim() || input.additionalPrompt.trim();
+  const inputParams = {
+    mode: input.mode,
+    personaId: input.personaId,
+    personaName: input.personaName,
+    prompt: visiblePrompt,
+    additionalPrompt: input.additionalPrompt.trim(),
+    model: input.model,
+    aspectRatio: input.aspectRatio,
+    imageSize: input.imageSize,
+    imageQuality: input.imageQuality,
+    count: input.count,
+    referenceSlot: input.referenceSlot,
+    sourceImageCount: referenceImages.length,
+  };
+  await persistPendingGenerationJob({
+    userId,
+    job: {
+      id: jobId,
+      status: "queued",
+      provider: imageProvider.name,
+      model: input.model,
+      generationType,
+      prompt: visiblePrompt,
+      personaId: input.personaId,
+      costEstimateCents: estimatedPricing.tokens,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    inputParams,
+  });
   await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
 
   try {
     const result = await imageProvider.generate(providerRequest);
-    const createdAt = nowIso();
-    const visiblePrompt = input.prompt.trim() || input.additionalPrompt.trim();
+    const updatedAt = nowIso();
     const assets: Asset[] = await Promise.all(
       result.assets.map(async (asset, index) =>
         materializeGeneratedAsset(
@@ -140,7 +171,7 @@ async function generateAvatarReference(body: unknown, userId?: string) {
             generationType,
             provider: result.provider,
             model: result.model,
-            createdAt,
+            createdAt: updatedAt,
             ...asset,
           },
           userId,
@@ -158,27 +189,14 @@ async function generateAvatarReference(body: unknown, userId?: string) {
       costEstimateCents: estimatedPricing.tokens,
       rawProviderResponse: sanitizeProviderPayload(result.raw),
       createdAt,
-      updatedAt: createdAt,
+      updatedAt,
     };
 
     await persistGenerationRecords({
       userId,
       assets,
       job,
-      inputParams: {
-        mode: input.mode,
-        personaId: input.personaId,
-        personaName: input.personaName,
-        prompt: visiblePrompt,
-        additionalPrompt: input.additionalPrompt.trim(),
-        model: input.model,
-        aspectRatio: input.aspectRatio,
-        imageSize: input.imageSize,
-        imageQuality: input.imageQuality,
-        count: input.count,
-        referenceSlot: input.referenceSlot,
-        sourceImageCount: referenceImages.length,
-      },
+      inputParams,
     });
 
     return NextResponse.json({ assets, job });
@@ -224,11 +242,34 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
   };
   const estimatedPricing = estimateAvatarGenerationPricing(providerRequest);
   const jobId = crypto.randomUUID();
+  const createdAt = nowIso();
+  const inputParams = {
+    ...input,
+    uploadedAudio: input.uploadedAudio
+      ? { name: input.uploadedAudio.name, mimeType: input.uploadedAudio.mimeType }
+      : undefined,
+  };
+  await persistPendingGenerationJob({
+    userId,
+    job: {
+      id: jobId,
+      status: "queued",
+      provider: avatarProvider.name,
+      model: input.model,
+      generationType: "avatar_talking",
+      prompt: input.prompt,
+      personaId: input.personaId,
+      costEstimateCents: estimatedPricing.tokens,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    inputParams,
+  });
   await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
 
   try {
     const result = await avatarProvider.submit(providerRequest);
-    const createdAt = nowIso();
+    const updatedAt = nowIso();
     const asset: Asset | undefined = result.asset
       ? await materializeGeneratedAsset(
           {
@@ -242,7 +283,7 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
             provider: result.provider,
             providerJobId: result.providerJobId,
             model: result.model,
-            createdAt,
+            createdAt: updatedAt,
             ...result.asset,
           },
           userId,
@@ -260,19 +301,14 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
       costEstimateCents: estimatedPricing.tokens,
       rawProviderResponse: sanitizeProviderPayload(result.raw),
       createdAt,
-      updatedAt: createdAt,
+      updatedAt,
     };
 
     await persistGenerationRecords({
       userId,
       assets: asset ? [asset] : [],
       job,
-      inputParams: {
-        ...input,
-        uploadedAudio: input.uploadedAudio
-          ? { name: input.uploadedAudio.name, mimeType: input.uploadedAudio.mimeType }
-          : undefined,
-      },
+      inputParams,
     });
 
     return NextResponse.json({ asset, job, providerJobId: result.providerJobId });

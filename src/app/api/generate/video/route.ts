@@ -6,7 +6,7 @@ import { videoProvider } from "@/lib/providers";
 import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
-import { persistGenerationRecords } from "@/lib/server/studio-persistence";
+import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -45,6 +45,23 @@ export async function POST(request: Request) {
         : undefined);
     const estimatedPricing = estimateVideoGenerationPricing(input);
     const jobId = crypto.randomUUID();
+    const createdAt = nowIso();
+    await persistPendingGenerationJob({
+      userId: auth.user?.id,
+      job: {
+        id: jobId,
+        status: "queued",
+        provider: videoProvider.name,
+        model: input.model,
+        generationType,
+        prompt: input.prompt,
+        personaId: input.personaId,
+        costEstimateCents: estimatedPricing.tokens,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      inputParams: input,
+    });
     await reserveTokens(
       auth.user?.id,
       estimatedPricing.tokens,
@@ -57,7 +74,7 @@ export async function POST(request: Request) {
         ...input,
         motionReferenceVideo,
       });
-      const createdAt = nowIso();
+      const updatedAt = nowIso();
       const asset: Asset | undefined = result.asset
         ? await materializeGeneratedAsset({
             id: crypto.randomUUID(),
@@ -69,7 +86,7 @@ export async function POST(request: Request) {
             provider: result.provider,
             providerJobId: result.providerJobId,
             model: result.model,
-            createdAt,
+            createdAt: updatedAt,
             ...result.asset,
           }, auth.user?.id)
         : undefined;
@@ -85,7 +102,7 @@ export async function POST(request: Request) {
         costEstimateCents: estimatedPricing.tokens,
         rawProviderResponse: sanitizeProviderPayload(result.raw),
         createdAt,
-        updatedAt: createdAt,
+        updatedAt,
       };
 
       await persistGenerationRecords({
