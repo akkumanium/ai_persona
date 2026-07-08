@@ -140,6 +140,7 @@ export function SettingsView({
   userId,
   userEmail,
   paddleConfig,
+  hasActiveSubscription,
   onBalanceRefresh,
   onBillingStatusRefresh,
 }: {
@@ -148,8 +149,9 @@ export function SettingsView({
   userId?: string;
   userEmail?: string;
   paddleConfig: PublicPaddleConfig;
+  hasActiveSubscription: boolean;
   onBalanceRefresh?: (balanceCents: number) => void;
-  onBillingStatusRefresh?: (status: { balanceCents?: number; personaLimit?: number | null }) => void;
+  onBillingStatusRefresh?: (status: { balanceCents?: number; personaLimit?: number | null; hasActiveSubscription?: boolean }) => void;
 }) {
   const [referralCode, setReferralCode] = useState("");
   const [pendingReferrals, setPendingReferrals] = useState(0);
@@ -208,18 +210,34 @@ export function SettingsView({
       </div>
 
       <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm xl:row-span-2">
-        <TokenTopUps
-          userId={userId}
-          userEmail={userEmail}
-          supabaseReady={supabaseReady}
-          config={paddleConfig}
-          onStatusResolved={(status) => {
-            onBillingStatusRefresh?.(status);
-            if (typeof status.balanceCents === "number") {
-              onBalanceRefresh?.(status.balanceCents);
-            }
-          }}
-        />
+        {hasActiveSubscription ? (
+          <TokenTopUps
+            userId={userId}
+            userEmail={userEmail}
+            supabaseReady={supabaseReady}
+            config={paddleConfig}
+            hasActiveSubscription={hasActiveSubscription}
+            onStatusResolved={(status) => {
+              onBillingStatusRefresh?.(status);
+              if (typeof status.balanceCents === "number") {
+                onBalanceRefresh?.(status.balanceCents);
+              }
+            }}
+          />
+        ) : (
+          <div>
+            <p className="text-lg font-semibold text-stone-950">Buy tokens</p>
+            <p className="mt-4 text-sm leading-6 text-stone-600">
+              Token top-ups are reserved for active subscribers. Subscribe first, then you will be able to add more tokens here.
+            </p>
+            <a
+              href="/pricing"
+              className="mt-4 inline-flex h-11 items-center justify-center rounded-md bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-stone-800"
+            >
+              View plans
+            </a>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">

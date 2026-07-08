@@ -11,6 +11,7 @@ type AccountProfileRow = {
 };
 
 type BillingSubscriptionRow = {
+  subscription_id: string | null;
   status: string | null;
   plan_id: string | null;
 };
@@ -33,9 +34,8 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
       .maybeSingle<AccountProfileRow>(),
     billingSupabase
       .from("billing_subscriptions")
-      .select("status, plan_id")
+      .select("subscription_id, status, plan_id")
       .eq("user_id", userId)
-      .in("status", Array.from(ACTIVE_SUBSCRIPTION_STATUSES))
       .returns<BillingSubscriptionRow[]>(),
   ]);
 
@@ -44,13 +44,22 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
 
   const balanceCents = Math.max(0, profile.data?.credit_balance_cents ?? 0);
   const metadataSubscription = getMetadataSubscription(profile.data?.account_metadata);
-  const hasActiveMetadataSubscription = ACTIVE_SUBSCRIPTION_STATUSES.has(metadataSubscription.status);
+  const subscriptionRows = subscriptions.data ?? [];
+  const activeSubscriptionRows = subscriptionRows.filter((row) =>
+    ACTIVE_SUBSCRIPTION_STATUSES.has(row.status ?? ""),
+  );
+  const metadataRow = metadataSubscription.subscriptionId
+    ? subscriptionRows.find((row) => row.subscription_id === metadataSubscription.subscriptionId)
+    : undefined;
+  const hasActiveMetadataSubscription =
+    ACTIVE_SUBSCRIPTION_STATUSES.has(metadataSubscription.status) &&
+    (!metadataRow || ACTIVE_SUBSCRIPTION_STATUSES.has(metadataRow.status ?? ""));
   const activePlanId = resolveActivePlanId(
-    subscriptions.data ?? [],
+    activeSubscriptionRows,
     hasActiveMetadataSubscription ? metadataSubscription.planId : undefined,
   );
   const hasActiveSubscription =
-    Boolean(subscriptions.data?.length) || hasActiveMetadataSubscription;
+    Boolean(activeSubscriptionRows.length) || hasActiveMetadataSubscription;
 
   return {
     balanceCents,
@@ -67,9 +76,11 @@ function getMetadataSubscription(metadata?: Record<string, unknown> | null) {
   if (!paddle || typeof paddle !== "object" || Array.isArray(paddle)) return { status: "", planId: undefined };
   const status = (paddle as { subscriptionStatus?: unknown }).subscriptionStatus;
   const planId = (paddle as { planId?: unknown }).planId;
+  const subscriptionId = (paddle as { subscriptionId?: unknown }).subscriptionId;
   return {
     status: typeof status === "string" ? status : "",
     planId: typeof planId === "string" ? planId : undefined,
+    subscriptionId: typeof subscriptionId === "string" ? subscriptionId : undefined,
   };
 }
 

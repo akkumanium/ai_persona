@@ -324,12 +324,14 @@ export function TokenTopUps({
   userEmail,
   supabaseReady,
   config,
+  hasActiveSubscription,
   onStatusResolved,
 }: {
   userId?: string;
   userEmail?: string;
   supabaseReady: boolean;
   config: PublicPaddleConfig;
+  hasActiveSubscription: boolean;
   onStatusResolved?: (status: { hasStudioAccess?: boolean; hasActiveSubscription?: boolean; balanceCents?: number }) => void;
 }) {
   const router = useRouter();
@@ -341,7 +343,7 @@ export function TokenTopUps({
 
   const selectedTopUp = config.topUps.find((topUp) => topUp.id === selectedTopUpId) ?? config.topUps[0];
   const hasAnyMissingPriceIds = config.topUps.some((topUp) => !topUp.priceId);
-  const checkoutReady = supabaseReady && Boolean(userId) && Boolean(config.clientToken) && paddleReady;
+  const checkoutReady = supabaseReady && Boolean(userId) && Boolean(config.clientToken) && paddleReady && hasActiveSubscription;
 
   const setupProblems = useMemo(() => {
     const problems: string[] = [];
@@ -421,6 +423,11 @@ export function TokenTopUps({
       setMessage("Sign in before buying tokens.");
       return;
     }
+    if (!hasActiveSubscription) {
+      setCheckoutState("error");
+      setMessage("Token top-ups are only available with an active subscription.");
+      return;
+    }
     if (!topUp.priceId || !checkoutReady || !window.Paddle) {
       setCheckoutState("error");
       setMessage(
@@ -477,6 +484,12 @@ export function TokenTopUps({
 
       <p className="text-lg font-semibold text-stone-950">Buy tokens</p>
 
+      {!hasActiveSubscription ? (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+          Token top-ups are available only after you have an active subscription.
+        </div>
+      ) : null}
+
       <div className="mt-4 grid grid-cols-3 gap-2">
         {config.topUps.map((topUp) => {
           const isSelected = topUp.id === selectedTopUp?.id;
@@ -501,7 +514,7 @@ export function TokenTopUps({
       <button
         type="button"
         onClick={() => selectedTopUp && openCheckout(selectedTopUp)}
-        disabled={!selectedTopUp || isBusy || !supabaseReady || !scriptReady || !selectedTopUp.priceId}
+        disabled={!selectedTopUp || isBusy || !supabaseReady || !scriptReady || !selectedTopUp.priceId || !hasActiveSubscription}
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
       >
         {isBusy ? <Loader2 size={17} className="animate-spin" /> : <CreditCard size={17} />}

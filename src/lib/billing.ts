@@ -4,6 +4,11 @@ export type BillingPlanId = "solo" | "creator" | "agency";
 export type BillingTopUpId = "topup_2" | "topup_5" | "topup_10" | "topup_20" | "topup_50" | "topup_100";
 export const WELCOME_CREDIT_CENTS = 300;
 export const UNLIMITED_PERSONAS = null;
+const legacyPlanAliases: Partial<Record<string, BillingPlanId>> = {
+  starter: "solo",
+  plus: "creator",
+  pro: "agency",
+};
 
 export type BillingPlan = {
   id: BillingPlanId;
@@ -134,8 +139,15 @@ export const billingTopUps: BillingTopUp[] = [
   },
 ];
 
+export function normalizeBillingPlanId(planId?: string | null): BillingPlanId | undefined {
+  if (!planId) return undefined;
+  if (planId === "solo" || planId === "creator" || planId === "agency") return planId;
+  return legacyPlanAliases[planId];
+}
+
 export function getPlanById(planId?: string | null) {
-  return billingPlans.find((plan) => plan.id === planId);
+  const normalizedPlanId = normalizeBillingPlanId(planId);
+  return billingPlans.find((plan) => plan.id === normalizedPlanId);
 }
 
 export function getPlanByPriceId(priceId?: string | null) {
@@ -143,6 +155,8 @@ export function getPlanByPriceId(priceId?: string | null) {
 }
 
 export function getBillingOptionById(optionId?: string | null) {
+  const plan = getPlanById(optionId);
+  if (plan) return plan;
   return [...billingPlans, ...billingTopUps].find((option) => option.id === optionId);
 }
 
@@ -151,7 +165,8 @@ export function getBillingOptionByPriceId(priceId?: string | null) {
 }
 
 export function getPersonaLimitForPlan(planId?: string | null) {
-  return getPlanById(planId)?.personaLimit ?? 0;
+  const plan = getPlanById(planId);
+  return plan ? plan.personaLimit : 0;
 }
 
 export function formatPersonaLimit(limit: number | null) {

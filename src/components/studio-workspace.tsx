@@ -61,6 +61,7 @@ export function StudioWorkspace({
   );
   const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 500));
   const [currentPersonaLimit, setCurrentPersonaLimit] = useState<number | null>(personaLimit);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(!previewMode);
   const [userId, setUserId] = useState<string | undefined>(initialUserId);
   const [selectedPersonaId, setSelectedPersonaId] = useState(
     initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
@@ -171,38 +172,53 @@ export function StudioWorkspace({
       });
   }
 
-  function addPersona(persona: Persona) {
+  async function addPersona(persona: Persona) {
     if (currentPersonaLimit !== null && personas.length >= currentPersonaLimit) {
-      showPersonaLimitWarning();
-      return;
-    }
-    setPersonas((current) => [persona, ...current]);
-    setSelectedPersonaId(persona.id);
-    void (async () => {
-      const context = await supabaseContext();
-      if (!context) return;
-      const { error } = await context.client.from("personas").insert({
-        id: persona.id,
-        user_id: context.userId,
-        name: persona.name,
-        description: persona.description,
-        style_notes: persona.styleNotes,
-        status: persona.status,
-        reference_asset_id: persona.referenceAssetId ?? null,
-        created_at: persona.createdAt,
-      });
-      if (error) {
-        setPersonas((current) => current.filter((item) => item.id !== persona.id));
-        setSelectedPersonaId((current) => (current === persona.id ? "" : current));
-        setNotice(`Could not save persona: ${error.message}`);
+      const status = await refreshBillingStatus();
+      const refreshedLimit = status && "personaLimit" in status ? status.personaLimit ?? null : currentPersonaLimit;
+      if (refreshedLimit !== null && personas.length >= refreshedLimit) {
+        showPersonaLimitWarning();
+        return false;
       }
-    })();
+    }
+
+    if (!supabaseReady) {
+      setPersonas((current) => [persona, ...current]);
+      setSelectedPersonaId(persona.id);
+      return true;
+    }
+
+    try {
+      const response = await fetch("/api/personas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(persona),
+      });
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Could not save persona (server returned ${response.status}).`);
+      }
+      const payload = (await response.json()) as { persona?: Persona; error?: string };
+      if (!response.ok || !payload.persona) {
+        throw new Error(payload.error ?? "Could not save persona.");
+      }
+      setPersonas((current) => [payload.persona ?? persona, ...current]);
+      setSelectedPersonaId(payload.persona.id);
+    } catch (error) {
+      setNotice(error instanceof Error ? `Could not save persona: ${error.message}` : "Could not save persona.");
+      return false;
+    }
+    return true;
   }
 
   async function refreshBillingStatus() {
     if (!supabaseReady) return undefined;
     try {
       const response = await fetch("/api/billing/status", { cache: "no-store" });
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error(`Could not refresh billing status (server returned ${response.status}).`);
+      }
       const status = (await response.json()) as {
         error?: string;
         balanceCents?: number;
@@ -540,9 +556,11 @@ export function StudioWorkspace({
               selectedPersonaId={selectedPersona?.id}
               onSelect={setSelectedPersonaId}
               onUpdatePersona={updatePersona}
-              onCreatePersona={(persona) => {
-                addPersona(persona);
+              onCreatePersona={async (persona) => {
+                const created = await addPersona(persona);
+                if (!created) return false;
                 setNotice(`${persona.name} is ready for references.`);
+                return true;
               }}
               onCreateLimitReached={handlePersonaLimitReached}
               onDeletePersona={(personaId) => {
@@ -666,13 +684,17 @@ export function StudioWorkspace({
                 setBalanceCents(nextBalance);
                 setNotice("Your balance was refreshed after checkout.");
               }}
-              onBillingStatusRefresh={(status) => {
-                if ("personaLimit" in status) {
-                  setCurrentPersonaLimit(status.personaLimit ?? null);
-                }
-              }}
-            />
-          )}
+      onBillingStatusRefresh={(status) => {
+        if ("hasActiveSubscription" in status) {
+          setHasActiveSubscription(Boolean(status.hasActiveSubscription));
+        }
+        if ("personaLimit" in status) {
+          setCurrentPersonaLimit(status.personaLimit ?? null);
+        }
+      }}
+      hasActiveSubscription={hasActiveSubscription}
+    />
+  )}
         </div>
       </main>
     </div>

@@ -33,7 +33,7 @@ export function PersonasView({
   selectedPersonaId?: string;
   onSelect: (id: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
-  onCreatePersona: (persona: Persona) => void;
+  onCreatePersona: (persona: Persona) => boolean | Promise<boolean>;
   onCreateLimitReached?: () => boolean | Promise<boolean>;
   onDeletePersona: (personaId: string) => void;
   onAddReferences: (personaId: string, assets: Asset[]) => void;
@@ -73,7 +73,7 @@ export function PersonasView({
     if (!name || !description) return;
 
     const personaId = crypto.randomUUID();
-    onCreatePersona({
+    const created = await onCreatePersona({
       id: personaId,
       name,
       description,
@@ -81,6 +81,7 @@ export function PersonasView({
       status: "active",
       createdAt: new Date().toISOString(),
     });
+    if (!created) return;
     setManagedPersonaId(personaId);
     setNewPersonaName("");
     setNewDescription("");

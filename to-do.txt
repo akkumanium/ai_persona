@@ -16,12 +16,8 @@
 92. Generate terms and privacy
 99. Think more on the name
 103. Upload more voices
-104. Full screen of the frame
 105. Delete uploaded video from generated videos
-106. Change the warning
-107. How is the first frame captured
-108. Is the sound turned off by default?
-109. Aspect ratio seems invisible
+110.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
