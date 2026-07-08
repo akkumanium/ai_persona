@@ -53,7 +53,7 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
     : undefined;
   const hasActiveMetadataSubscription =
     ACTIVE_SUBSCRIPTION_STATUSES.has(metadataSubscription.status) &&
-    (!metadataRow || ACTIVE_SUBSCRIPTION_STATUSES.has(metadataRow.status ?? ""));
+    Boolean(metadataRow && ACTIVE_SUBSCRIPTION_STATUSES.has(metadataRow.status ?? ""));
   const activePlanId = resolveActivePlanId(
     activeSubscriptionRows,
     hasActiveMetadataSubscription ? metadataSubscription.planId : undefined,

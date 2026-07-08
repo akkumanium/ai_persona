@@ -53,21 +53,27 @@ export async function POST() {
       reason: "Unused subscription credits",
     }),
   });
-  const paddlePayload = await paddleResponse.json().catch(() => ({})) as { data?: { id?: string }; error?: { detail?: string } };
+  const paddlePayload = await paddleResponse.json().catch(() => ({})) as {
+    data?: { id?: string; status?: string };
+    error?: { detail?: string };
+  };
   if (!paddleResponse.ok || !paddlePayload.data?.id) {
     const message = paddlePayload.error?.detail ?? "Paddle rejected the refund request.";
     await service.from("billing_refund_requests").update({ status: "failed", failure_message: message }).eq("id", requestRow.id);
     return NextResponse.json({ error: message }, { status: 502 });
   }
 
-  const { data: profile } = await service.from("account_profiles").select("credit_balance_cents").eq("user_id", context.userId).single<{ credit_balance_cents: number }>();
-  const nextBalance = Math.max(0, (profile?.credit_balance_cents ?? 0) - context.credit.amount_cents);
-  await Promise.all([
-    service.from("account_profiles").update({ credit_balance_cents: nextBalance }).eq("user_id", context.userId),
-    service.from("credit_ledger").insert({ user_id: context.userId, amount_cents: -context.credit.amount_cents, description: "Unused subscription refund" }),
-    service.from("billing_refund_requests").update({ status: "submitted", paddle_adjustment_id: paddlePayload.data.id }).eq("id", requestRow.id),
-  ]);
-  return NextResponse.json({ submitted: true, message: "Your full refund was submitted to Paddle." });
+  await service
+    .from("billing_refund_requests")
+    .update({
+      status: paddlePayload.data.status === "rejected" ? "rejected" : "submitted",
+      paddle_adjustment_id: paddlePayload.data.id,
+    })
+    .eq("id", requestRow.id);
+  return NextResponse.json({
+    submitted: true,
+    message: "Your full refund was submitted to Paddle. Credits will be removed when Paddle confirms the refund.",
+  });
 }
 
 async function getRefundContext() {

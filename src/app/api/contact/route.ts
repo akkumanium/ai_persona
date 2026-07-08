@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { env, hasSupabaseEnv } from "@/lib/env";
+import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { createServerSupabaseClient, createServiceSupabaseClient } from "@/lib/supabase/server";
 
 const contactSchema = z.object({
@@ -17,7 +18,17 @@ const contactSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => null);
+  const rateLimited = rateLimitRequest(request, { key: "contact", limit: 5, windowMs: 10 * 60 * 1000 });
+  if (rateLimited) return rateLimited;
+
+  let body: unknown;
+  try {
+    body = await readJsonRequest(request, 32 * 1024);
+  } catch (error) {
+    const response = requestBodyErrorResponse(error);
+    if (response) return response;
+    throw error;
+  }
   const parsed = contactSchema.safeParse(body);
 
   if (!parsed.success) {
@@ -33,7 +44,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (!hasSupabaseEnv() && !env.supabaseServiceRoleKey) {
+  if (!hasSupabaseEnv()) {
     return NextResponse.json(
       { error: "Contact storage is not configured yet." },
       { status: 503 },

@@ -1,4 +1,10 @@
 import type { SourceImageInput } from "@/components/studio/types";
+import {
+  ALLOWED_MEDIA_MIME_TYPES,
+  MAX_DIRECT_UPLOAD_BYTES,
+  formatBytes,
+  isAllowedMimeType,
+} from "@/lib/media-limits";
 import { buildStorageObjectUrl } from "@/lib/media-urls";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -23,21 +29,33 @@ export async function encodeFiles(
   storage?: StorageUploadOptions,
 ) {
   const inputFiles = Array.from(files ?? []);
-  const storageContext = storage?.enabled ? await getStorageContext() : undefined;
+  const storageOptions: StorageUploadOptions = storage ?? {
+    enabled: true,
+    bucket: "uploads",
+    folder: "temporary",
+  };
+  const storageContext = storageOptions.enabled ? await getStorageContext() : undefined;
 
   return Promise.all(
     inputFiles.map(async (file) => {
-      if (storageContext && storage) {
-        const mimeType = file.type || fallbackMimeType;
+      const mimeType = file.type || fallbackMimeType;
+      if (!isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES)) {
+        throw new Error("Unsupported media type.");
+      }
+      if (file.size > MAX_DIRECT_UPLOAD_BYTES) {
+        throw new Error(`Media uploads must be ${formatBytes(MAX_DIRECT_UPLOAD_BYTES)} or smaller.`);
+      }
+
+      if (storageContext) {
         const storagePath = [
           storageContext.userId,
-          storage.folder?.replace(/^\/+|\/+$/g, ""),
+          storageOptions.folder?.replace(/^\/+|\/+$/g, ""),
           `${crypto.randomUUID()}-${safeFileName(file.name)}`,
         ]
           .filter(Boolean)
           .join("/");
         const { error: uploadError } = await storageContext.client.storage
-          .from(storage.bucket)
+          .from(storageOptions.bucket)
           .upload(storagePath, file, {
             contentType: mimeType,
             upsert: false,
@@ -50,8 +68,8 @@ export async function encodeFiles(
         return {
           name: file.name,
           mimeType,
-          url: buildStorageObjectUrl(storage.bucket, storagePath),
-          storageBucket: storage.bucket,
+          url: buildStorageObjectUrl(storageOptions.bucket, storagePath),
+          storageBucket: storageOptions.bucket,
           storagePath,
         };
       }
@@ -67,17 +85,21 @@ export function sourceImageToDataUrl(image: SourceImageInput) {
 }
 
 async function getStorageContext() {
-  const client = createBrowserSupabaseClient();
-  const {
-    data: { user },
-    error,
-  } = await client.auth.getUser();
+  try {
+    const client = createBrowserSupabaseClient();
+    const {
+      data: { user },
+      error,
+    } = await client.auth.getUser();
 
-  if (error || !user) {
+    if (error || !user) {
+      return undefined;
+    }
+
+    return { client, userId: user.id };
+  } catch {
     return undefined;
   }
-
-  return { client, userId: user.id };
 }
 
 async function uploadFileToTemp(file: File, fallbackMimeType: string): Promise<SourceImageInput> {

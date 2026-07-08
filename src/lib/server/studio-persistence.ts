@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasSupabaseEnv } from "@/lib/env";
 import { sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { createServerSupabaseClient, createServiceSupabaseClient } from "@/lib/supabase/server";
@@ -26,6 +27,7 @@ export async function persistPendingGenerationJob({
   const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createServiceSupabaseClient()
     : await createServerSupabaseClient();
+  await assertOwnedReferences(supabase, userId, [job.personaId], []);
 
   const { error } = await supabase.from("generation_jobs").insert({
     id: job.id,
@@ -62,6 +64,12 @@ export async function persistGenerationRecords({
     ? createServiceSupabaseClient()
     : await createServerSupabaseClient();
   const outputAssetIds = assets.map((asset) => asset.id);
+  await assertOwnedReferences(
+    supabase,
+    userId,
+    [job.personaId, ...assets.map((asset) => asset.personaId)],
+    assets.flatMap((asset) => asset.referenceAssetIds ?? []),
+  );
 
   const { error: jobError } = await supabase.from("generation_jobs").upsert({
     id: job.id,
@@ -114,6 +122,40 @@ export async function persistGenerationRecords({
 
     if (assetsError) {
       throw new Error(`Failed to persist generated assets: ${assetsError.message}`);
+    }
+  }
+}
+
+async function assertOwnedReferences(
+  supabase: SupabaseClient,
+  userId: string,
+  personaIds: Array<string | undefined>,
+  assetIds: string[],
+) {
+  const uniquePersonaIds = [...new Set(personaIds.filter((id): id is string => Boolean(id)))];
+  const uniqueAssetIds = [...new Set(assetIds.filter(Boolean))];
+
+  if (uniquePersonaIds.length) {
+    const { data, error } = await supabase
+      .from("personas")
+      .select("id")
+      .eq("user_id", userId)
+      .in("id", uniquePersonaIds)
+      .returns<Array<{ id: string }>>();
+    if (error || (data?.length ?? 0) !== uniquePersonaIds.length) {
+      throw new Error("Persona reference is outside the current user scope.");
+    }
+  }
+
+  if (uniqueAssetIds.length) {
+    const { data, error } = await supabase
+      .from("assets")
+      .select("id")
+      .eq("user_id", userId)
+      .in("id", uniqueAssetIds)
+      .returns<Array<{ id: string }>>();
+    if (error || (data?.length ?? 0) !== uniqueAssetIds.length) {
+      throw new Error("Asset reference is outside the current user scope.");
     }
   }
 }

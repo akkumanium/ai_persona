@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { mapPersona } from "@/lib/studio-records";
 import { createServerSupabaseClient, createServiceSupabaseClient } from "@/lib/supabase/server";
 import type { Persona } from "@/lib/types";
@@ -26,13 +27,24 @@ type PersonaRow = {
 };
 
 export async function POST(request: Request) {
+  const rateLimited = rateLimitRequest(request, { key: "personas", limit: 30, windowMs: 10 * 60 * 1000 });
+  if (rateLimited) return rateLimited;
+
   const auth = await requireUserWhenSupabaseIsConfigured();
   if (auth.response) return auth.response;
   if (!auth.user) {
     return NextResponse.json({ error: "Supabase is not configured." }, { status: 503 });
   }
 
-  const input = validatePersonaPayload(await request.json());
+  let payload: unknown;
+  try {
+    payload = await readJsonRequest(request, 64 * 1024);
+  } catch (error) {
+    const response = requestBodyErrorResponse(error);
+    if (response) return response;
+    throw error;
+  }
+  const input = validatePersonaPayload(payload as PersonaInsertPayload);
   if ("error" in input) {
     return NextResponse.json({ error: input.error }, { status: 400 });
   }
@@ -40,6 +52,19 @@ export async function POST(request: Request) {
   const supabase = env.supabaseServiceRoleKey
     ? createServiceSupabaseClient()
     : await createServerSupabaseClient();
+
+  if (input.persona.referenceAssetId) {
+    const { data: referenceAsset } = await supabase
+      .from("assets")
+      .select("id")
+      .eq("id", input.persona.referenceAssetId)
+      .eq("user_id", auth.user.id)
+      .maybeSingle<{ id: string }>();
+    if (!referenceAsset) {
+      return NextResponse.json({ error: "Reference asset is outside the current user scope." }, { status: 403 });
+    }
+  }
+
   const { data, error } = await supabase
     .from("personas")
     .insert({

@@ -6,6 +6,7 @@ import { videoProvider } from "@/lib/providers";
 import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
+import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
@@ -13,10 +14,13 @@ import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
+    const rateLimited = rateLimitRequest(request, { key: "generate-video", limit: 12, windowMs: 60 * 1000 });
+    if (rateLimited) return rateLimited;
+
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
 
-    const parsedInput = videoGenerationSchema.parse(await request.json());
+    const parsedInput = videoGenerationSchema.parse(await readJsonRequest(request));
     const motionControls = motionControlsForModel(parsedInput.model);
     const input = parsedInput.mode === "motion"
       ? {
@@ -128,6 +132,8 @@ export async function POST(request: Request) {
       throw error;
     }
   } catch (error) {
+    const requestErrorResponse = requestBodyErrorResponse(error);
+    if (requestErrorResponse) return requestErrorResponse;
     if (error instanceof InsufficientTokensError) {
       return NextResponse.json({ error: error.message }, { status: 402 });
     }

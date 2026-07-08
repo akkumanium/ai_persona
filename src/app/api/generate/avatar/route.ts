@@ -8,6 +8,7 @@ import { estimateAvatarGenerationPricing, estimateImageGenerationPricing } from 
 import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
 import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
+import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
@@ -15,16 +16,21 @@ import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
+    const rateLimited = rateLimitRequest(request, { key: "generate-avatar", limit: 20, windowMs: 60 * 1000 });
+    if (rateLimited) return rateLimited;
+
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
 
-    const body = await request.json();
+    const body = await readJsonRequest(request);
     if (body && typeof body === "object" && "mode" in body) {
       return await generateAvatarReference(body, auth.user?.id);
     }
 
     return await generateTalkingAvatar(body, auth.user?.id);
   } catch (error) {
+    const requestErrorResponse = requestBodyErrorResponse(error);
+    if (requestErrorResponse) return requestErrorResponse;
     if (error instanceof InsufficientTokensError) {
       return NextResponse.json({ error: error.message }, { status: 402 });
     }
@@ -215,6 +221,13 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
     return NextResponse.json({ error: "Choose or upload audio for the avatar." }, { status: 400 });
   }
 
+  const estimatedPricing = estimateAvatarGenerationPricing({
+    model: input.model,
+    resolution: input.resolution,
+    durationSeconds: input.durationSeconds,
+  });
+  await assertSufficientTokens(userId, Math.max(1, estimatedPricing.tokens));
+
   const [image, audio] = await Promise.all([
     imageUrlToProviderInput(input.imageAssetUrl, `${input.personaName}-avatar-image`, userId),
       input.uploadedAudio
@@ -240,7 +253,6 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
     durationSeconds: input.durationSeconds,
     seed: input.seed,
   };
-  const estimatedPricing = estimateAvatarGenerationPricing(providerRequest);
   const jobId = crypto.randomUUID();
   const createdAt = nowIso();
   const inputParams = {

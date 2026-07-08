@@ -49,7 +49,7 @@ export const billingPlans: BillingPlan[] = [
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: 1,
-    priceId: env.paddleTenDollarPriceId,
+    priceId: env.paddleSoloSubscriptionPriceId,
     description: "For one creator persona with the full generation workspace.",
   },
   {
@@ -60,7 +60,7 @@ export const billingPlans: BillingPlan[] = [
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: 5,
-    priceId: env.paddleFiftyDollarPriceId,
+    priceId: env.paddleCreatorSubscriptionPriceId,
     description: "For managing a small portfolio of up to five personas.",
   },
   {
@@ -71,7 +71,7 @@ export const billingPlans: BillingPlan[] = [
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: UNLIMITED_PERSONAS,
-    priceId: env.paddleHundredDollarPriceId,
+    priceId: env.paddleAgencySubscriptionPriceId,
     description: "For teams and operators who need limitless personas.",
   },
 ];
@@ -104,7 +104,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$10",
     tokenLabel: "1,000 tokens",
     creditCents: 1000,
-    priceId: env.paddleTenDollarPriceId,
+    priceId: env.paddleTenDollarTopUpPriceId,
     description: "A comfortable refill for daily generation.",
   },
   {
@@ -124,7 +124,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$50",
     tokenLabel: "5,000 tokens",
     creditCents: 5000,
-    priceId: env.paddleFiftyDollarPriceId,
+    priceId: env.paddleFiftyDollarTopUpPriceId,
     description: "For larger batches and production weeks.",
   },
   {
@@ -134,7 +134,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$100",
     tokenLabel: "10,000 tokens",
     creditCents: 10000,
-    priceId: env.paddleHundredDollarPriceId,
+    priceId: env.paddleHundredDollarTopUpPriceId,
     description: "Best for sustained video and campaign output.",
   },
 ];

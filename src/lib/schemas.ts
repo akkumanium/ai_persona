@@ -1,4 +1,13 @@
 import { z } from "zod";
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_MEDIA_MIME_TYPES,
+  MAX_INLINE_IMAGE_BYTES,
+  MAX_INLINE_MEDIA_BYTES,
+  estimateBase64DecodedBytes,
+  formatBytes,
+  isAllowedMimeType,
+} from "@/lib/media-limits";
 
 export const aspectRatioSchema = z.enum(["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"]);
 export const videoAspectRatioSchema = z.enum(["auto", "1:1", "3:4", "4:3", "4:5", "9:16", "16:9", "21:9"]);
@@ -8,14 +17,26 @@ export const referenceSlotSchema = z.enum(["face", "chest-up", "face-grid", "bod
 
 export const providerImageInputSchema = z.object({
   name: z.string().max(200).optional(),
-  mimeType: z.string().min(3).max(80),
-  data: z.string().min(1),
+  mimeType: z.string().min(3).max(80).refine(
+    (mimeType) => isAllowedMimeType(mimeType, ALLOWED_IMAGE_MIME_TYPES),
+    "Unsupported image type.",
+  ),
+  data: z.string().min(1).refine(
+    (data) => estimateBase64DecodedBytes(data) <= MAX_INLINE_IMAGE_BYTES,
+    `Image uploads must be ${formatBytes(MAX_INLINE_IMAGE_BYTES)} or smaller.`,
+  ),
 });
 
 export const providerMediaInputSchema = z.object({
   name: z.string().max(200).optional(),
-  mimeType: z.string().min(3).max(120),
-  data: z.string().min(1),
+  mimeType: z.string().min(3).max(120).refine(
+    (mimeType) => isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES),
+    "Unsupported media type.",
+  ),
+  data: z.string().min(1).refine(
+    (data) => estimateBase64DecodedBytes(data) <= MAX_INLINE_MEDIA_BYTES,
+    `Media uploads must be ${formatBytes(MAX_INLINE_MEDIA_BYTES)} or smaller.`,
+  ),
 });
 
 export const avatarGenerationSchema = z.object({
@@ -121,8 +142,14 @@ export const talkingAvatarGenerationSchema = z.object({
   audioAssetId: z.string().min(1).optional(),
   uploadedAudio: z.object({
     name: z.string().max(200).optional(),
-    mimeType: z.string().min(3).max(120),
-    data: z.string().min(1).optional(),
+    mimeType: z.string().min(3).max(120).refine(
+      (mimeType) => isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES),
+      "Unsupported audio type.",
+    ),
+    data: z.string().min(1).refine(
+      (data) => estimateBase64DecodedBytes(data) <= MAX_INLINE_MEDIA_BYTES,
+      `Audio uploads must be ${formatBytes(MAX_INLINE_MEDIA_BYTES)} or smaller.`,
+    ).optional(),
     url: z.string().min(1).optional(),
   }).optional(),
   model: z.string().min(1).default("wavespeed-ai/longcat-avatar"),

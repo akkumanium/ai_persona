@@ -4,7 +4,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function requireUserWhenSupabaseIsConfigured() {
   if (!hasSupabaseEnv()) {
-    return { user: null, response: null };
+    return {
+      user: null,
+      response: NextResponse.json({ error: "Supabase authentication is not configured." }, { status: 503 }),
+    };
   }
 
   const supabase = await createServerSupabaseClient();

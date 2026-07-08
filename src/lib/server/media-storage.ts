@@ -1,6 +1,15 @@
 import { lookup } from "dns/promises";
 import { isIP } from "net";
 import { env, hasSupabaseEnv } from "@/lib/env";
+import {
+  ALLOWED_MEDIA_MIME_TYPES,
+  MAX_REMOTE_MEDIA_BYTES,
+  estimateBase64DecodedBytes,
+  formatBytes,
+  isAllowedMimeType,
+  isAllowedStorageBucket,
+  normalizeMimeType,
+} from "@/lib/media-limits";
 import { buildStorageObjectUrl } from "@/lib/media-urls";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import { readTempMedia, saveTempMedia } from "@/lib/server/temp-media";
@@ -91,8 +100,9 @@ export function sanitizeProviderPayload(value: unknown): unknown {
 export async function resolveAssetContent(url: string, userId?: string) {
   const dataUrlMatch = url.match(/^data:([^;,]+);base64,(.+)$/);
   if (dataUrlMatch) {
+    assertAllowedMedia(dataUrlMatch[1], estimateBase64DecodedBytes(dataUrlMatch[2]));
     return {
-      mimeType: dataUrlMatch[1],
+      mimeType: normalizeMimeType(dataUrlMatch[1]),
       bytes: Uint8Array.from(Buffer.from(dataUrlMatch[2], "base64")),
     };
   }
@@ -104,6 +114,9 @@ export async function resolveAssetContent(url: string, userId?: string) {
     const storagePath = parsed.searchParams.get("path");
     if (!bucket || !storagePath) {
       throw new Error("Media URL is missing storage details.");
+    }
+    if (!isAllowedStorageBucket(bucket)) {
+      throw new Error("Storage bucket is not allowed.");
     }
     if (userId && !storagePath.startsWith(`${userId}/`)) {
       throw new Error("Media URL is outside the current user scope.");
@@ -117,9 +130,10 @@ export async function resolveAssetContent(url: string, userId?: string) {
     if (error || !data) {
       throw error ?? new Error("Could not download storage media.");
     }
+    assertAllowedMedia(data.type || "application/octet-stream", data.size);
 
     return {
-      mimeType: data.type || "application/octet-stream",
+      mimeType: normalizeMimeType(data.type || "application/octet-stream"),
       bytes: new Uint8Array(await data.arrayBuffer()),
     };
   }
@@ -141,11 +155,55 @@ export async function resolveAssetContent(url: string, userId?: string) {
   if (!response.ok) {
     throw new Error("Could not download remote media.");
   }
+  const mimeType = normalizeMimeType(response.headers.get("content-type") ?? "application/octet-stream");
+  const contentLength = response.headers.get("content-length");
+  if (contentLength && Number(contentLength) > MAX_REMOTE_MEDIA_BYTES) {
+    throw new Error(`Remote media must be ${formatBytes(MAX_REMOTE_MEDIA_BYTES)} or smaller.`);
+  }
+  if (!isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES)) {
+    throw new Error("Unsupported remote media type.");
+  }
+  const bytes = await readResponseBytes(response, MAX_REMOTE_MEDIA_BYTES);
 
   return {
-    mimeType: response.headers.get("content-type")?.split(";")[0] ?? "application/octet-stream",
-    bytes: new Uint8Array(await response.arrayBuffer()),
+    mimeType,
+    bytes,
   };
+}
+
+function assertAllowedMedia(mimeType: string, sizeBytes: number) {
+  if (!isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES)) {
+    throw new Error("Unsupported media type.");
+  }
+  if (sizeBytes > MAX_REMOTE_MEDIA_BYTES) {
+    throw new Error(`Media must be ${formatBytes(MAX_REMOTE_MEDIA_BYTES)} or smaller.`);
+  }
+}
+
+async function readResponseBytes(response: Response, maxBytes: number) {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength > maxBytes) {
+      throw new Error(`Remote media must be ${formatBytes(maxBytes)} or smaller.`);
+    }
+    return new Uint8Array(buffer);
+  }
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      throw new Error(`Remote media must be ${formatBytes(maxBytes)} or smaller.`);
+    }
+    chunks.push(value);
+  }
+
+  return new Uint8Array(Buffer.concat(chunks));
 }
 
 export async function assertSafeRemoteMediaUrl(url: URL) {
