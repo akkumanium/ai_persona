@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const generationType = referenceImages.length ? "image_from_reference" : "image_from_prompt";
     const isReferenceAvatar = input.assetKind === "avatar" && Boolean(input.referenceSlot);
     const basePrompt = isReferenceAvatar && input.referenceSlot
-      ? promptForReferenceSlot(input.referenceSlot)
+      ? input.prompt.trim() || promptForReferenceSlot(input.referenceSlot)
       : input.prompt.trim();
 
     if (basePrompt.length < 10) {
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     }
 
     const finalPrompt = [basePrompt, input.additionalPrompt.trim()].filter(Boolean).join("\n");
-    const visiblePrompt = isReferenceAvatar ? input.additionalPrompt.trim() : input.prompt.trim();
+    const visiblePrompt = basePrompt;
 
     const providerRequest: ImageGenerationRequest = {
       prompt: [
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       assetKind: input.assetKind,
       referenceSlot: input.referenceSlot,
       referenceAssetIds: input.referenceAssetIds,
-      hiddenPromptUsed: isReferenceAvatar,
+      hiddenPromptUsed: false,
     };
     await persistPendingGenerationJob({
       userId: auth.user?.id,

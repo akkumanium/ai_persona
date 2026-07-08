@@ -354,17 +354,19 @@ export function SubmitButton({
   label,
   costLabel,
   disabled,
+  disableWhileLoading = true,
 }: {
   loading: boolean;
   icon: LucideIcon;
   label: string;
   costLabel?: string;
   disabled?: boolean;
+  disableWhileLoading?: boolean;
 }) {
   return (
     <button
       type="submit"
-      disabled={loading || disabled}
+      disabled={disabled || (disableWhileLoading && loading)}
       className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
     >
       {loading ? <Loader2 className="size-4 animate-spin" /> : <Icon size={16} />}

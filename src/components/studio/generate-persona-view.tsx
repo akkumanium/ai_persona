@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ImageIcon, Loader2, Upload, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
-import { referenceSlots } from "@/components/studio/constants";
+import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
 import { encodeFiles } from "@/components/studio/media";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
@@ -58,7 +58,9 @@ export function GeneratePersonaView({
   const [selectedSlotId, setSelectedSlotId] = useState<ReferenceSlotId>(initialSlot.id);
   const [generationMode, setGenerationMode] = useState<FaceGenerationMode>("hybrid");
   const [scratchPrompt, setScratchPrompt] = useState("");
-  const [additionalPrompt, setAdditionalPrompt] = useState("");
+  const [referencePrompt, setReferencePrompt] = useState(
+    initialSlot.id === "face" ? DEFAULT_PROMPTS.hybrid : initialSlot.prompt,
+  );
   const [scratchSources, setScratchSources] = useState<SourceImageInput[]>([]);
   const [hybridSources, setHybridSources] = useState<SourceImageInput[]>([]);
   const [selectedModel, setSelectedModel] = useState(NANO_BANANA_PRO_MODEL_ID);
@@ -67,7 +69,7 @@ export function GeneratePersonaView({
   const [imageQuality, setImageQuality] = useState("medium");
   const [confirmsRights, setConfirmsRights] = useState(false);
   const [confirmsAdultPersona, setConfirmsAdultPersona] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [activeGenerations, setActiveGenerations] = useState(0);
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
@@ -129,6 +131,7 @@ export function GeneratePersonaView({
   const imageModelSupportsQuality = supportsImageQuality(safeSelectedModel);
   const imageModelSupportsReferences = supportsImageReferences(safeSelectedModel);
   const imageModelRequiresReferences = requiresImageReferences(safeSelectedModel);
+  const isGenerating = activeGenerations > 0;
   const referenceInputCount = isHybridFace
     ? hybridSources.length
     : isScratchFace
@@ -140,7 +143,7 @@ export function GeneratePersonaView({
       : selectedReferenceSelection.length;
   const referenceCostLabel = formatTokens(
     estimateImageGenerationPricing({
-      prompt: isScratchFace ? scratchPrompt : additionalPrompt || activeSlot.prompt,
+      prompt: isScratchFace ? scratchPrompt : referencePrompt,
       model: safeSelectedModel,
       aspectRatio: safeAspectRatio,
       imageSize: imageModelSupportsSize ? imageSize : "2K",
@@ -167,7 +170,7 @@ export function GeneratePersonaView({
     setHybridSources([]);
     setScratchSources([]);
     setScratchPrompt("");
-    setAdditionalPrompt("");
+    setReferencePrompt(slotId === "face" ? DEFAULT_PROMPTS.hybrid : nextSlot.prompt);
     setGenerationError("");
   }
 
@@ -244,11 +247,12 @@ export function GeneratePersonaView({
     if (!selectedPersona) return;
     if (!confirmsRights || !confirmsAdultPersona) return;
     if (isScratchFace && scratchPrompt.trim().length < 10) return;
+    if (!isScratchFace && referencePrompt.trim().length < 10) return;
     if (isScratchFace && imageModelRequiresReferences && scratchSources.length === 0) return;
     if (isHybridFace && hybridSources.length < 2) return;
     if (selectedSlotId !== "face" && selectedReferenceSelection.length === 0) return;
 
-    setIsGenerating(true);
+    setActiveGenerations((current) => current + 1);
     setGenerationError("");
     try {
       const hasDefault = selectedReferenceAssets.some((asset) => asset.isDefaultReference);
@@ -265,8 +269,8 @@ export function GeneratePersonaView({
             description: selectedPersona.description,
             styleNotes: selectedPersona.styleNotes,
             model: safeSelectedModel,
-            prompt: isScratchFace ? scratchPrompt.trim() : undefined,
-            additionalPrompt: isScratchFace ? "" : additionalPrompt.trim(),
+            prompt: isScratchFace ? scratchPrompt.trim() : referencePrompt.trim(),
+            additionalPrompt: "",
             aspectRatio: safeAspectRatio,
             imageSize: imageModelSupportsSize ? imageSize : "2K",
             imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
@@ -304,7 +308,8 @@ export function GeneratePersonaView({
             personaId: selectedPersona.id,
             personaName: selectedPersona.name,
             model: safeSelectedModel,
-            additionalPrompt: additionalPrompt.trim(),
+            prompt: referencePrompt.trim(),
+            additionalPrompt: "",
             styleNotes: selectedPersona.styleNotes,
             aspectRatio: safeAspectRatio,
             imageSize: imageModelSupportsSize ? imageSize : "2K",
@@ -325,13 +330,12 @@ export function GeneratePersonaView({
 
       setHybridSources([]);
       setScratchSources([]);
-      setAdditionalPrompt("");
       setConfirmsRights(false);
       setConfirmsAdultPersona(false);
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Reference generation failed.");
     } finally {
-      setIsGenerating(false);
+      setActiveGenerations((current) => Math.max(0, current - 1));
     }
   }
 
@@ -354,11 +358,12 @@ export function GeneratePersonaView({
 
         <div className="mt-4 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
           {isGenerating ? (
-            <div className="flex min-h-[24rem] flex-col items-center justify-center text-center text-sm text-stone-600">
-              <Loader2 className="mb-3 animate-spin text-emerald-800" size={28} />
-              Creating the reference.
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-emerald-800/20 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
+              <Loader2 className="size-4 animate-spin" />
+              {activeGenerations} reference generation{activeGenerations === 1 ? "" : "s"} running.
             </div>
-          ) : slotAssets.length ? (
+          ) : null}
+          {slotAssets.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {slotAssets.slice(0, 6).map((asset) => (
                 <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
@@ -372,7 +377,7 @@ export function GeneratePersonaView({
                 </article>
               ))}
             </div>
-          ) : (
+          ) : !isGenerating ? (
             <div className="flex min-h-[24rem] flex-col items-center justify-center text-center">
               <ImageIcon className="text-emerald-800" size={34} />
               <p className="mt-3 text-base font-semibold text-stone-950">No {activeSlot.label.toLowerCase()} reference yet</p>
@@ -380,7 +385,7 @@ export function GeneratePersonaView({
                 Generated references will appear here for review and reuse.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -422,6 +427,7 @@ export function GeneratePersonaView({
                 setGenerationMode(value as FaceGenerationMode);
                 setHybridSources([]);
                 setScratchSources([]);
+                setReferencePrompt(value === "hybrid" ? DEFAULT_PROMPTS.hybrid : activeSlot.prompt);
                 setGenerationError("");
               }}
             />
@@ -490,7 +496,7 @@ export function GeneratePersonaView({
               <TextArea label="Prompt" value={scratchPrompt} onChange={setScratchPrompt} rows={6} />
             </>
           ) : (
-            <TextArea label="Additional prompt" value={additionalPrompt} onChange={setAdditionalPrompt} rows={4} />
+            <TextArea label="Prompt" value={referencePrompt} onChange={setReferencePrompt} rows={6} />
           )}
 
           <CheckboxField
@@ -513,11 +519,13 @@ export function GeneratePersonaView({
             icon={WandSparkles}
             label="Generate reference"
             costLabel={referenceCostLabel}
+            disableWhileLoading={false}
             disabled={
               !selectedPersona ||
               !confirmsRights ||
               !confirmsAdultPersona ||
               (isScratchFace && scratchPrompt.trim().length < 10) ||
+              (!isScratchFace && referencePrompt.trim().length < 10) ||
               (isScratchFace && imageModelRequiresReferences && scratchSources.length === 0) ||
               (isHybridFace && hybridSources.length < 2) ||
               (selectedSlotId !== "face" && selectedReferenceSelection.length === 0)

@@ -18,7 +18,9 @@
 103. Upload more voices
 105. Delete uploaded video from generated videos
 110. Expose the prompt at reference section
-111. Check all the models again, NBP edit > NBP text-to-image
+112. Stop naming images
+113. Merge Wan and Wan edit
+114. Add resolution for GPT Image 2
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

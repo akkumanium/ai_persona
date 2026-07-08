@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { AudioLines, Check, Clapperboard, ImageIcon, Loader2, Play, Search, Trash2, Upload, WandSparkles } from "lucide-react";
+import { AudioLines, Check, Clapperboard, ImageIcon, Loader2, Pencil, Play, Search, Trash2, Upload, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles } from "@/components/studio/media";
 import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
@@ -102,8 +102,8 @@ export function GenerationView({
   const [motionKeepOriginalSound, setMotionKeepOriginalSound] = useState(true);
   const [motionReferenceImage, setMotionReferenceImage] = useState<SourceImageInput | undefined>();
   const [motionReferenceVideo, setMotionReferenceVideo] = useState<SourceVideoInput | undefined>();
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [activeImageGenerations, setActiveImageGenerations] = useState(0);
+  const [activeVideoGenerations, setActiveVideoGenerations] = useState(0);
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
   const personaOptions = useMemo(() => personas, [personas]);
@@ -168,10 +168,12 @@ export function GenerationView({
       assets.filter((asset) => {
         if (asset.personaId !== selectedPersona?.id) return false;
         if (mode === "images") return asset.kind === "image";
-        return asset.kind === "video";
+        return asset.kind === "video" && asset.generationType !== "reference_upload";
       }),
     [assets, mode, selectedPersona?.id],
   );
+  const isGeneratingImage = activeImageGenerations > 0;
+  const isGeneratingVideo = activeVideoGenerations > 0;
   const isGenerating = mode === "images" ? isGeneratingImage : isGeneratingVideo;
   const imageModelSupportsSize = supportsImageSize(imageModel);
   const imageModelSupportsQuality = supportsImageQuality(imageModel);
@@ -329,7 +331,7 @@ export function GenerationView({
       .filter((image) => image.data)
       .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }));
     const referenceImageUrls = [...referenceAssets.map((asset) => asset.url), ...uploadedReferenceUrls];
-    setIsGeneratingImage(true);
+    setActiveImageGenerations((current) => current + 1);
     setGenerationError("");
     try {
       const requestBody = {
@@ -362,11 +364,10 @@ export function GenerationView({
         referenceAssetIds,
       }));
       onAssetsCreated(nextAssets, payload.job);
-      setUploadedImageReferences([]);
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Generation failed.");
     } finally {
-      setIsGeneratingImage(false);
+      setActiveImageGenerations((current) => Math.max(0, current - 1));
     }
   }
 
@@ -397,7 +398,7 @@ export function GenerationView({
         : uploadedStartFrameUrl ?? startFrameAsset?.url;
     const requestReferenceImageUrl = uploadedStartFrameInput ? undefined : referenceImageUrl;
     if (mode === "motion" && !referenceImageUrl) return;
-    setIsGeneratingVideo(true);
+    setActiveVideoGenerations((current) => current + 1);
     setGenerationError("");
     try {
       const requestBody = {
@@ -472,7 +473,7 @@ export function GenerationView({
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Generation failed.");
     } finally {
-      setIsGeneratingVideo(false);
+      setActiveVideoGenerations((current) => Math.max(0, current - 1));
     }
   }
 
@@ -496,6 +497,20 @@ export function GenerationView({
 
   function removeUploadedImageReference(index: number) {
     setUploadedImageReferences((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function addGeneratedImageReference(asset: Asset) {
+    setUploadedImageReferences((current) => {
+      if (current.some((image) => image.url === asset.url)) return current;
+      return [
+        ...current,
+        {
+          name: asset.title,
+          mimeType: asset.mimeType || "image/png",
+          url: asset.url,
+        },
+      ].slice(0, 8);
+    });
   }
 
   async function captureVideoFrame(files: FileList | null, slot: VideoFrameSlot) {
@@ -561,11 +576,13 @@ export function GenerationView({
 
         <div className="mt-4 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
           {isGenerating ? (
-            <div className="flex min-h-[24rem] flex-col items-center justify-center text-center text-sm text-stone-600">
-              <Loader2 className="mb-3 animate-spin text-emerald-800" size={28} />
-              Waiting for the provider result.
+            <div className="mb-3 flex items-center gap-2 rounded-md border border-emerald-800/20 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
+              <Loader2 className="size-4 animate-spin" />
+              {mode === "images" ? activeImageGenerations : activeVideoGenerations} generation
+              {(mode === "images" ? activeImageGenerations : activeVideoGenerations) === 1 ? "" : "s"} running.
             </div>
-          ) : latestAssets.length ? (
+          ) : null}
+          {latestAssets.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {latestAssets.slice(0, 6).map((asset) => (
                 <article key={asset.id} className="group overflow-hidden rounded-lg border border-stone-200 bg-white">
@@ -590,6 +607,17 @@ export function GenerationView({
                     >
                       <Trash2 size={15} />
                     </button>
+                    {asset.kind === "image" ? (
+                      <button
+                        type="button"
+                        onClick={() => addGeneratedImageReference(asset)}
+                        className="absolute left-2 top-2 flex h-8 items-center gap-1.5 rounded-md bg-black/50 px-2 text-xs font-semibold text-white opacity-0 transition hover:bg-emerald-800 group-hover:opacity-100"
+                        aria-label={`Use ${asset.title} as an image reference`}
+                      >
+                        <Pencil size={14} />
+                        Edit
+                      </button>
+                    ) : null}
                   </div>
                   <div className="p-3">
                     <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
@@ -601,13 +629,13 @@ export function GenerationView({
                 </article>
               ))}
             </div>
-          ) : (
+          ) : !isGenerating ? (
             <div className="flex min-h-[24rem] flex-col items-center justify-center text-center">
               <PanelIcon className="text-emerald-800" size={34} />
               <p className="mt-3 text-base font-semibold text-stone-950">Ready when you are</p>
               <p className="mt-2 max-w-md text-sm leading-6 text-stone-600">{emptyCopy}</p>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -728,6 +756,7 @@ export function GenerationView({
               icon={ImageIcon}
               label="Generate images"
               costLabel={imageCostLabel}
+              disableWhileLoading={false}
               disabled={!selectedPersona || imagePrompt.trim().length < 10 || (imageModelRequiresReferences && totalReferenceCount === 0)}
             />
           </form>
@@ -842,6 +871,7 @@ export function GenerationView({
               icon={Play}
               label="Generate video"
               costLabel={normalVideoCostLabel}
+              disableWhileLoading={false}
               disabled={!selectedPersona || (normalVideoRequiresStartFrame && !selectedVideoStartFrame && !uploadedVideoStartFrame)}
             />
           </form>
@@ -914,6 +944,7 @@ export function GenerationView({
               icon={Play}
               label="Generate video"
               costLabel={motionVideoCostLabel}
+              disableWhileLoading={false}
               disabled={!selectedPersona || (!selectedReference && !motionReferenceImage) || !motionReferenceVideo}
             />
           </form>

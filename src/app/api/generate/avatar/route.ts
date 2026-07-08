@@ -59,7 +59,7 @@ async function generateAvatarReference(body: unknown, userId?: string) {
         : "avatar_prompt";
   const basePrompt =
     input.mode === "blend"
-      ? DEFAULT_PROMPTS.hybrid
+      ? input.prompt.trim() || DEFAULT_PROMPTS.hybrid
       : input.prompt.trim() || promptForReferenceSlot(input.referenceSlot);
   const finalPrompt = [
     basePrompt,
@@ -120,7 +120,7 @@ async function generateAvatarReference(body: unknown, userId?: string) {
   const estimatedPricing = estimateImageGenerationPricing(providerRequest);
   const jobId = crypto.randomUUID();
   const createdAt = nowIso();
-  const visiblePrompt = input.prompt.trim() || input.additionalPrompt.trim();
+  const visiblePrompt = basePrompt;
   const inputParams = {
     mode: input.mode,
     personaId: input.personaId,

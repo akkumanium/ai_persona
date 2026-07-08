@@ -128,7 +128,9 @@ export function PersonasView({
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {personas.map((persona) => {
             const reference = assets.find((asset) => asset.id === persona.referenceAssetId);
-            const personaAssets = assets.filter((asset) => asset.personaId === persona.id);
+            const personaAssets = assets.filter(
+              (asset) => asset.personaId === persona.id && !isUploadedVideoSource(asset),
+            );
             return (
               <button
                 key={persona.id}
@@ -227,7 +229,9 @@ function PersonaManagementView({
     (asset) => asset.personaId === persona.id && (asset.kind === "avatar" || asset.kind === "upload"),
   );
   const imageAssets = assets.filter((asset) => asset.personaId === persona.id && asset.kind === "image");
-  const videoAssets = assets.filter((asset) => asset.personaId === persona.id && asset.kind === "video");
+  const videoAssets = assets.filter(
+    (asset) => asset.personaId === persona.id && asset.kind === "video" && !isUploadedVideoSource(asset),
+  );
   const previewAsset = assets.find((asset) => asset.id === previewAssetId);
 
   function assetsForSlot(slotId: ReferenceSlotId) {
@@ -653,4 +657,8 @@ function CreatePersonaDialog({
       </form>
     </div>
   );
+}
+
+function isUploadedVideoSource(asset: Asset) {
+  return asset.kind === "video" && asset.generationType === "reference_upload";
 }

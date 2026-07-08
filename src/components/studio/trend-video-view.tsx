@@ -128,7 +128,7 @@ export function TrendVideoView({
   const [imageAspectRatio, setImageAspectRatio] = useState("9:16");
   const [imageSize, setImageSize] = useState("2K");
   const [imageQuality, setImageQuality] = useState("medium");
-  const [candidateCount, setCandidateCount] = useState(3);
+  const [candidateCount, setCandidateCount] = useState(2);
   const [facePrompt, setFacePrompt] = useState(
   `Replace the woman in the first reference image with the woman from the second reference image. The second image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
 Use the exact outfit, clothing fit, styling, and details from the first reference image.
@@ -573,6 +573,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   icon={Wand2}
                   label="Generate"
                   costLabel={faceCostLabel}
+                  disableWhileLoading={false}
                   disabled={
                     !selectedPersona ||
                     !editingItem.firstFrame ||
@@ -749,6 +750,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   icon={Film}
                   label="Generate"
                   costLabel={motionCostLabel}
+                  disableWhileLoading={false}
                   disabled={!selectedPersona || !selectedCandidate}
                 />
               </form>
