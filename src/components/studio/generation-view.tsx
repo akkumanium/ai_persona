@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { AudioLines, Check, Clapperboard, ImageIcon, Loader2, Pencil, Play, Search, Trash2, Upload, WandSparkles } from "lucide-react";
+import { AudioLines, Check, Clapperboard, Film, ImageIcon, Loader2, Pencil, Play, Trash2, Upload, Video, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
-import { encodeFiles } from "@/components/studio/media";
-import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput, VideoFrameSlot } from "@/components/studio/types";
+import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   CheckboxField,
   ImageThumbStrip,
@@ -15,6 +15,7 @@ import {
   PersonaSelect,
   RangeField,
   SelectField,
+  SourceImageField,
   SubmitButton,
   TextArea,
   TextField,
@@ -50,9 +51,13 @@ export function GenerationView({
   personas,
   assets,
   selectedPersona,
-  selectedReference,
   supabaseReady,
   imagePromptSuggestions = [],
+  initialVideoStartFrame,
+  initialMotionImage,
+  onGenerateVideoFromImage,
+  onGenerateMotionFromImage,
+  onGenerateAvatarFromImage,
   onAssetsCreated,
   onSelectPersona,
   onDeleteAsset,
@@ -61,9 +66,13 @@ export function GenerationView({
   personas: Persona[];
   assets: Asset[];
   selectedPersona?: Persona;
-  selectedReference?: Asset;
   supabaseReady?: boolean;
   imagePromptSuggestions?: PromptSuggestion[];
+  initialVideoStartFrame?: { id: string; nonce: number };
+  initialMotionImage?: { image: SourceImageInput; nonce: number };
+  onGenerateVideoFromImage?: (asset: Asset) => void;
+  onGenerateMotionFromImage?: (asset: Asset) => void;
+  onGenerateAvatarFromImage?: (asset: Asset) => void;
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onDeleteAsset: (assetId: string) => void;
@@ -78,15 +87,12 @@ export function GenerationView({
   const [videoModel, setVideoModel] = useState("wan-2.7");
   const [motionVideoModel, setMotionVideoModel] = useState(DEFAULT_MOTION_MODEL);
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
-  const [videoStartFrameByPersona, setVideoStartFrameByPersona] = useState<Record<string, string>>({});
-  const [videoEndFrameByPersona, setVideoEndFrameByPersona] = useState<Record<string, string | undefined>>({});
+  const [videoStartFrameByPersona, setVideoStartFrameByPersona] = useState<Record<string, string | undefined>>({});
   const [uploadedVideoStartFrame, setUploadedVideoStartFrame] = useState<SourceImageInput | undefined>();
   const [uploadedVideoEndFrame, setUploadedVideoEndFrame] = useState<SourceImageInput | undefined>();
   const [seedanceReferenceVideo, setSeedanceReferenceVideo] = useState<SourceVideoInput | undefined>();
   const [seedanceReferenceAudio, setSeedanceReferenceAudio] = useState<SourceAudioInput | undefined>();
   const [previewAsset, setPreviewAsset] = useState<Asset | undefined>();
-  const [videoFrameSlot, setVideoFrameSlot] = useState<VideoFrameSlot>("start");
-  const [videoImageSearch, setVideoImageSearch] = useState("");
   const [videoDurationSeconds, setVideoDurationSeconds] = useState(5);
   const [videoAspectRatio, setVideoAspectRatio] = useState("9:16");
   const [videoNegativePrompt, setVideoNegativePrompt] = useState("blur, distortions, warped hands, low quality");
@@ -138,14 +144,17 @@ export function GenerationView({
     () => assets.filter((asset) => asset.personaId === selectedPersona?.id && asset.kind === "image"),
     [assets, selectedPersona?.id],
   );
-  const selectedVideoStartFrame =
-    generatedImageAssets.find((asset) => asset.id === (selectedPersona ? videoStartFrameByPersona[selectedPersona.id] : "")) ??
-    generatedImageAssets[0];
+  const selectedVideoStartFrame = selectedPersona
+    ? generatedImageAssets.find((asset) => asset.id === videoStartFrameByPersona[selectedPersona.id])
+    : undefined;
   const normalVideoSupportsEndFrame = supportsEndFrame(videoModel);
-  const selectedVideoEndFrame = normalVideoSupportsEndFrame
-    ? generatedImageAssets.find(
-        (asset) => asset.id === (selectedPersona ? videoEndFrameByPersona[selectedPersona.id] : ""),
-      )
+  const startFrameImage = uploadedVideoStartFrame
+    ? { url: sourceImageToDataUrl(uploadedVideoStartFrame), name: uploadedVideoStartFrame.name }
+    : selectedVideoStartFrame
+      ? { url: selectedVideoStartFrame.url, name: selectedVideoStartFrame.title }
+      : undefined;
+  const endFrameImage = uploadedVideoEndFrame
+    ? { url: sourceImageToDataUrl(uploadedVideoEndFrame), name: uploadedVideoEndFrame.name }
     : undefined;
   const videoAspectRatioOptions = aspectRatiosForVideoModel(videoModel);
   const imageAspectRatioOptions = aspectRatiosForImageModel(imageModel);
@@ -214,9 +223,7 @@ export function GenerationView({
       generateAudio: videoGenerateAudio,
       resolution: safeVideoResolution,
       returnLastFrame: videoReturnLastFrame,
-      endFrameImageUrl: normalVideoSupportsEndFrame
-        ? uploadedVideoEndFrame?.url ?? selectedVideoEndFrame?.url
-        : undefined,
+      endFrameImageUrl: normalVideoSupportsEndFrame ? uploadedVideoEndFrame?.url : undefined,
     }).tokens,
   );
   const motionVideoCostLabel = formatTokens(
@@ -234,6 +241,24 @@ export function GenerationView({
       negativePrompt: motionControls.supportsNegativePrompt ? motionNegativePrompt : "",
     }).tokens,
   );
+
+  const [appliedVideoStartFrameNonce, setAppliedVideoStartFrameNonce] = useState<number | undefined>();
+  if (initialVideoStartFrame && initialVideoStartFrame.nonce !== appliedVideoStartFrameNonce) {
+    setAppliedVideoStartFrameNonce(initialVideoStartFrame.nonce);
+    setUploadedVideoStartFrame(undefined);
+    if (selectedPersona) {
+      setVideoStartFrameByPersona((current) => ({
+        ...current,
+        [selectedPersona.id]: initialVideoStartFrame.id,
+      }));
+    }
+  }
+
+  const [appliedMotionImageNonce, setAppliedMotionImageNonce] = useState<number | undefined>();
+  if (initialMotionImage && initialMotionImage.nonce !== appliedMotionImageNonce) {
+    setAppliedMotionImageNonce(initialMotionImage.nonce);
+    setMotionReferenceImage(initialMotionImage.image);
+  }
 
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
@@ -264,22 +289,15 @@ export function GenerationView({
     });
   }
 
-  function selectVideoFrame(assetId: string) {
-    if (!selectedPersona) return;
-    if (videoFrameSlot === "start") {
-      setUploadedVideoStartFrame(undefined);
-      setVideoStartFrameByPersona((current) => ({ ...current, [selectedPersona.id]: assetId }));
-      return;
+  function clearVideoStartFrame() {
+    setUploadedVideoStartFrame(undefined);
+    if (selectedPersona) {
+      setVideoStartFrameByPersona((current) => ({ ...current, [selectedPersona.id]: undefined }));
     }
-
-    setUploadedVideoEndFrame(undefined);
-    setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: assetId }));
   }
 
   function clearVideoEndFrame() {
-    if (!selectedPersona) return;
     setUploadedVideoEndFrame(undefined);
-    setVideoEndFrameByPersona((current) => ({ ...current, [selectedPersona.id]: undefined }));
   }
 
   async function withUploadState(key: string, upload: () => Promise<void>) {
@@ -312,7 +330,6 @@ export function GenerationView({
     }
     if (!supportsEndFrame(modelId)) {
       setUploadedVideoEndFrame(undefined);
-      setVideoFrameSlot("start");
     }
   }
 
@@ -371,7 +388,6 @@ export function GenerationView({
     event.preventDefault();
     if (!selectedPersona) return;
     const startFrameAsset = mode === "normal" ? selectedVideoStartFrame : undefined;
-    const endFrameAsset = mode === "normal" && normalVideoSupportsEndFrame ? selectedVideoEndFrame : undefined;
     const uploadedStartFrameUrl = mode === "normal" && uploadedVideoStartFrame ? uploadedVideoStartFrame.url : undefined;
     const uploadedEndFrameUrl =
       mode === "normal" && normalVideoSupportsEndFrame && uploadedVideoEndFrame
@@ -387,11 +403,7 @@ export function GenerationView({
         : undefined;
     if (mode === "normal" && normalVideoRequiresStartFrame && !startFrameAsset && !uploadedStartFrameUrl) return;
     const referenceImageUrl =
-      mode === "motion"
-        ? motionReferenceImage
-          ? motionReferenceImage.url
-          : selectedReference?.url
-        : uploadedStartFrameUrl ?? startFrameAsset?.url;
+      mode === "motion" ? motionReferenceImage?.url : uploadedStartFrameUrl ?? startFrameAsset?.url;
     const requestReferenceImageUrl = uploadedStartFrameInput ? undefined : referenceImageUrl;
     if (mode === "motion" && !referenceImageUrl) return;
     setActiveVideoGenerations((current) => current + 1);
@@ -435,8 +447,8 @@ export function GenerationView({
           mode === "normal" && isSeedanceVideoModel(videoModel) ? seedanceReferenceAudio?.url : undefined,
         ...(requestReferenceImageUrl ? { referenceImageUrl: requestReferenceImageUrl, startFrameImageUrl: requestReferenceImageUrl } : {}),
         ...(uploadedStartFrameInput ? { startFrameImage: uploadedStartFrameInput } : {}),
-        ...(mode === "normal" && (uploadedEndFrameUrl || endFrameAsset?.url)
-          ? { endFrameImageUrl: uploadedEndFrameInput ? undefined : uploadedEndFrameUrl ?? endFrameAsset?.url }
+        ...(mode === "normal" && normalVideoSupportsEndFrame && uploadedEndFrameUrl
+          ? { endFrameImageUrl: uploadedEndFrameInput ? undefined : uploadedEndFrameUrl }
           : {}),
         ...(uploadedEndFrameInput ? { endFrameImage: uploadedEndFrameInput } : {}),
       };
@@ -451,12 +463,8 @@ export function GenerationView({
       }
       const referenceAssetIds =
         mode === "normal"
-          ? [uploadedStartFrameUrl ? undefined : startFrameAsset?.id, uploadedEndFrameUrl ? undefined : endFrameAsset?.id].filter((id): id is string => Boolean(id))
-          : motionReferenceImage
-            ? []
-            : selectedReference
-              ? [selectedReference.id]
-              : [];
+          ? [uploadedStartFrameUrl ? undefined : startFrameAsset?.id].filter((id): id is string => Boolean(id))
+          : [];
       const nextAssets = payload.asset
         ? [
             {
@@ -501,7 +509,7 @@ export function GenerationView({
       return [
         ...current,
         {
-          name: asset.title,
+          name: "Reference image",
           mimeType: asset.mimeType || "image/png",
           url: asset.url,
         },
@@ -509,7 +517,7 @@ export function GenerationView({
     });
   }
 
-  async function captureVideoFrame(files: FileList | null, slot: VideoFrameSlot) {
+  async function captureVideoFrame(files: FileList | null, slot: "start" | "end") {
     await withUploadState(slot === "start" ? "videoStartFrame" : "videoEndFrame", async () => {
       const [image] = await encodeFiles(files, "image/png");
       if (slot === "start") {
@@ -558,7 +566,7 @@ export function GenerationView({
         : "Motion-control videos will appear here.";
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
       {previewAsset ? (
         <MediaLightbox
           src={previewAsset.url}
@@ -590,16 +598,16 @@ export function GenerationView({
                         type="button"
                         onClick={() => setPreviewAsset(asset)}
                         className="block h-full w-full"
-                        aria-label={`Open ${asset.title} fullscreen`}
+                        aria-label="Open image fullscreen"
                       >
-                        <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                        <img src={asset.url} alt="" className="h-full w-full object-cover" />
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => onDeleteAsset(asset.id)}
                       className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-md bg-black/50 text-white opacity-0 transition hover:bg-red-700 group-hover:opacity-100"
-                      aria-label={`Delete ${asset.title}`}
+                      aria-label={`Delete ${asset.kind}`}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -608,7 +616,7 @@ export function GenerationView({
                         type="button"
                         onClick={() => addGeneratedImageReference(asset)}
                         className="absolute left-2 top-2 flex h-8 items-center gap-1.5 rounded-md bg-black/50 px-2 text-xs font-semibold text-white opacity-0 transition hover:bg-emerald-800 group-hover:opacity-100"
-                        aria-label={`Use ${asset.title} as an image reference`}
+                        aria-label="Use image as a reference"
                       >
                         <Pencil size={14} />
                         Edit
@@ -616,10 +624,43 @@ export function GenerationView({
                     ) : null}
                   </div>
                   <div className="p-3">
-                    <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
+                    {asset.kind !== "image" ? (
+                      <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
+                    ) : null}
                     <p className="mt-0.5 text-xs text-stone-500">{asset.model}</p>
                     {asset.prompt ? (
                       <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-stone-600">{asset.prompt}</p>
+                    ) : null}
+                    {mode === "images" ? (
+                      <div className="mt-3 grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onGenerateVideoFromImage?.(asset)}
+                          className="flex h-8 items-center justify-center gap-1 rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
+                          aria-label="Generate a video from this image"
+                        >
+                          <Clapperboard size={13} />
+                          Video
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onGenerateMotionFromImage?.(asset)}
+                          className="flex h-8 items-center justify-center gap-1 rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
+                          aria-label="Generate motion control from this image"
+                        >
+                          <Film size={13} />
+                          Motion
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onGenerateAvatarFromImage?.(asset)}
+                          className="flex h-8 items-center justify-center gap-1 rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950"
+                          aria-label="Generate a talking avatar from this image"
+                        >
+                          <Video size={13} />
+                          Avatar
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 </article>
@@ -635,7 +676,7 @@ export function GenerationView({
         </div>
       </section>
 
-      <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
+      <aside className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
         {mode === "images" ? (
           <form onSubmit={generateImage}>
             <PanelTitle icon={ImageIcon} title="Image Options" />
@@ -687,7 +728,7 @@ export function GenerationView({
                           type="button"
                           key={asset.id}
                           onClick={() => toggleReferenceSelection(asset.id)}
-                          title={asset.title}
+                          title="Reference image"
                           className={cn(
                             "group relative aspect-square overflow-hidden rounded-md border bg-stone-100 transition",
                             isSelected
@@ -695,7 +736,7 @@ export function GenerationView({
                               : "border-stone-200 opacity-55 hover:opacity-100 hover:border-emerald-800",
                           )}
                         >
-                          <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                          <img src={asset.url} alt="" className="h-full w-full object-cover" />
                           <span
                             className={cn(
                               "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
@@ -763,38 +804,28 @@ export function GenerationView({
             <PanelTitle icon={Clapperboard} title="Video Options" />
             <PersonaSelect personas={personaOptions} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
             <ModelSelect label="Model" value={videoModel} options={videoModelOptions} onChange={changeVideoModel} />
-            <VideoFramePicker
-              images={generatedImageAssets}
-              activeSlot={videoFrameSlot}
-              supportsEndFrame={normalVideoSupportsEndFrame}
-              search={videoImageSearch}
-              selectedStartId={selectedVideoStartFrame?.id}
-              selectedEndId={selectedVideoEndFrame?.id}
-              onActiveSlotChange={setVideoFrameSlot}
-              onSearchChange={setVideoImageSearch}
-              onSelect={selectVideoFrame}
-              onClearEnd={clearVideoEndFrame}
+            <SourceImageField
+              label="Start frame"
+              image={startFrameImage}
+              onClear={clearVideoStartFrame}
+              onUpload={(files) => void captureVideoFrame(files, "start")}
+              loading={Boolean(uploadingInputs.videoStartFrame)}
+              hint={
+                normalVideoRequiresStartFrame
+                  ? "Required for this model — pick one from Images or upload."
+                  : "Optional first frame — pick one from Images or upload."
+              }
             />
-            <div className={cn("mt-2.5 grid gap-2", normalVideoSupportsEndFrame ? "grid-cols-2" : "grid-cols-1")}>
-              <UploadBox
-                accept="image/*"
-                compact
-                icon={Upload}
-                label={uploadedVideoStartFrame ? uploadedVideoStartFrame.name : "Upload start frame"}
-                loading={Boolean(uploadingInputs.videoStartFrame)}
-                onChange={(files) => void captureVideoFrame(files, "start")}
+            {normalVideoSupportsEndFrame ? (
+              <SourceImageField
+                label="End frame"
+                image={endFrameImage}
+                onClear={clearVideoEndFrame}
+                onUpload={(files) => void captureVideoFrame(files, "end")}
+                loading={Boolean(uploadingInputs.videoEndFrame)}
+                hint="Optional last frame."
               />
-              {normalVideoSupportsEndFrame ? (
-                <UploadBox
-                  accept="image/*"
-                  compact
-                  icon={Upload}
-                  label={uploadedVideoEndFrame ? uploadedVideoEndFrame.name : "Upload end frame"}
-                  loading={Boolean(uploadingInputs.videoEndFrame)}
-                  onChange={(files) => void captureVideoFrame(files, "end")}
-                />
-              ) : null}
-            </div>
+            ) : null}
             {isSeedanceVideoModel(videoModel) ? (
               <div className="mt-2.5 grid grid-cols-2 gap-2">
                 <UploadBox
@@ -868,7 +899,7 @@ export function GenerationView({
               label="Generate video"
               costLabel={normalVideoCostLabel}
               disableWhileLoading={false}
-              disabled={!selectedPersona || (normalVideoRequiresStartFrame && !selectedVideoStartFrame && !uploadedVideoStartFrame)}
+              disabled={!selectedPersona || (normalVideoRequiresStartFrame && !startFrameImage)}
             />
           </form>
         ) : null}
@@ -883,14 +914,17 @@ export function GenerationView({
               options={motionModelOptions}
               onChange={setMotionVideoModel}
             />
-            <UploadBox
-              accept="image/*"
-              compact
-              icon={Upload}
-              label={motionReferenceImage ? motionReferenceImage.name : "Upload reference image"}
-              detail={selectedReference && !motionReferenceImage ? `Using ${selectedReference.title}` : ""}
+            <SourceImageField
+              label="Character image"
+              image={
+                motionReferenceImage
+                  ? { url: sourceImageToDataUrl(motionReferenceImage), name: motionReferenceImage.name }
+                  : undefined
+              }
+              onClear={() => setMotionReferenceImage(undefined)}
+              onUpload={(files) => void captureMotionReferenceImage(files)}
               loading={Boolean(uploadingInputs.motionReferenceImage)}
-              onChange={(files) => void captureMotionReferenceImage(files)}
+              hint="The identity to animate — pick one from Images or upload."
             />
             <UploadBox
               accept="video/*"
@@ -941,131 +975,11 @@ export function GenerationView({
               label="Generate video"
               costLabel={motionVideoCostLabel}
               disableWhileLoading={false}
-              disabled={!selectedPersona || (!selectedReference && !motionReferenceImage) || !motionReferenceVideo}
+              disabled={!selectedPersona || !motionReferenceImage || !motionReferenceVideo}
             />
           </form>
         ) : null}
       </aside>
-    </div>
-  );
-}
-
-/**
- * Redesigned video frame picker: a compact search box + a tight responsive grid
- * of image thumbnails. Selected thumbnails get an accent ring + corner badge
- * showing which slot (Start/End) they belong to.
- */
-function VideoFramePicker({
-  images,
-  activeSlot,
-  supportsEndFrame,
-  search,
-  selectedStartId,
-  selectedEndId,
-  onActiveSlotChange,
-  onSearchChange,
-  onSelect,
-  onClearEnd,
-}: {
-  images: Asset[];
-  activeSlot: VideoFrameSlot;
-  supportsEndFrame: boolean;
-  search: string;
-  selectedStartId?: string;
-  selectedEndId?: string;
-  onActiveSlotChange: (slot: VideoFrameSlot) => void;
-  onSearchChange: (value: string) => void;
-  onSelect: (assetId: string) => void;
-  onClearEnd: () => void;
-}) {
-  const normalizedSearch = search.trim().toLowerCase();
-  const visibleImages = images.filter((image) => {
-    if (!normalizedSearch) return true;
-    return [image.title, image.prompt, image.model]
-      .filter(Boolean)
-      .some((value) => value.toLowerCase().includes(normalizedSearch));
-  });
-
-  return (
-    <div className="mt-2.5 rounded-md border border-stone-200 bg-stone-50 p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-stone-700">Video frames</p>
-        {supportsEndFrame && selectedEndId ? (
-          <button
-            type="button"
-            onClick={onClearEnd}
-            className="inline-flex h-7 items-center gap-1 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-stone-950"
-          >
-            Clear end
-          </button>
-        ) : null}
-      </div>
-      <div className={cn("mt-2 grid gap-1 rounded-md bg-stone-100 p-1", supportsEndFrame ? "grid-cols-2" : "grid-cols-1")}>
-        {(["start", ...(supportsEndFrame ? ["end"] : [])] as VideoFrameSlot[]).map((slot) => (
-          <button
-            key={slot}
-            type="button"
-            onClick={() => onActiveSlotChange(slot)}
-            className={cn(
-              "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
-              activeSlot === slot ? "bg-white text-stone-950 shadow-sm" : "text-stone-600 hover:text-stone-950",
-            )}
-          >
-            {slot} frame
-          </button>
-        ))}
-      </div>
-      <label className="mt-2 flex h-9 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-xs text-stone-600 focus-within:border-emerald-800">
-        <Search size={14} />
-        <input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search generated images"
-          className="h-full min-w-0 flex-1 bg-transparent outline-none"
-        />
-      </label>
-      {visibleImages.length ? (
-        <div className="mt-2 grid max-h-72 grid-cols-3 gap-1.5 overflow-y-auto pr-1">
-          {visibleImages.map((image) => {
-            const isStart = image.id === selectedStartId;
-            const isEnd = image.id === selectedEndId;
-            const isActive = (activeSlot === "start" && isStart) || (activeSlot === "end" && isEnd);
-            return (
-              <button
-                key={image.id}
-                type="button"
-                onClick={() => onSelect(image.id)}
-                title={image.title}
-                className={cn(
-                  "group relative overflow-hidden rounded-md border bg-white text-left transition hover:border-emerald-800",
-                  isActive ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200",
-                )}
-              >
-                <img src={image.url} alt={image.title} className="aspect-square w-full object-cover" />
-                {isStart ? (
-                  <span className="absolute left-1 top-1 rounded-sm bg-emerald-800 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                    Start
-                  </span>
-                ) : null}
-                {isEnd ? (
-                  <span className="absolute right-1 top-1 rounded-sm bg-emerald-800 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                    End
-                  </span>
-                ) : null}
-                {isActive ? (
-                  <span className="absolute right-1 bottom-1 flex size-5 items-center justify-center rounded-full bg-emerald-800 text-white">
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="mt-2 rounded-md border border-dashed border-stone-300 bg-white px-3 py-3 text-xs text-stone-500">
-          Generate still images first, then choose one as the video start frame.
-        </div>
-      )}
     </div>
   );
 }

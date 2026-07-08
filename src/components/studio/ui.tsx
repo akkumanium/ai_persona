@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Check, ChevronDown, Loader2, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, Upload, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -16,6 +16,82 @@ export function PanelTitle({ icon: Icon, title }: { icon: LucideIcon; title: str
         <Icon size={16} />
       </div>
       <h2 className="text-base font-semibold text-stone-950">{title}</h2>
+    </div>
+  );
+}
+
+/**
+ * Consistent source-image input used by Videos, Motion Control, and Avatar.
+ * When an image is present it shows a preview thumbnail with Replace/Clear
+ * actions; otherwise it falls back to a dashed upload box. This replaces the
+ * old mix of dropdowns, search pickers, and persona-reference fallbacks so
+ * every generation surface loads an image the same way.
+ */
+export function SourceImageField({
+  label,
+  image,
+  onClear,
+  onUpload,
+  loading = false,
+  accept = "image/*",
+  hint,
+}: {
+  label: string;
+  image?: { url: string; name: string };
+  onClear: () => void;
+  onUpload: (files: FileList | null) => void;
+  loading?: boolean;
+  accept?: string;
+  hint?: string;
+}) {
+  if (!image) {
+    return (
+      <UploadBox
+        accept={accept}
+        icon={Upload}
+        label={`Upload ${label.toLowerCase()}`}
+        detail={hint}
+        loading={loading}
+        onChange={onUpload}
+      />
+    );
+  }
+
+  return (
+    <div className="mt-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-stone-700">{label}</span>
+        <button
+          type="button"
+          onClick={onClear}
+          className="inline-flex h-6 items-center gap-1 rounded-md border border-stone-200 px-2 text-[11px] font-semibold text-stone-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+        >
+          <X size={11} strokeWidth={2.5} />
+          Clear
+        </button>
+      </div>
+      <div className="mt-1.5 flex items-center gap-3 rounded-md border border-stone-200 bg-stone-50 p-2">
+        <div className="size-14 shrink-0 overflow-hidden rounded-md border border-stone-200 bg-stone-100">
+          <img src={image.url} alt="" className="h-full w-full object-cover" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-semibold text-stone-950">{image.name}</p>
+          {hint ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-stone-500">{hint}</p> : null}
+          <label className="mt-1.5 inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 transition hover:border-emerald-800 hover:text-stone-950">
+            {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload size={12} />}
+            Replace
+            <input
+              className="sr-only"
+              type="file"
+              accept={accept}
+              onChange={(event) => {
+                onUpload(event.target.files);
+                event.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+      </div>
     </div>
   );
 }
@@ -159,13 +235,13 @@ export function ReferencePicker({
             type="button"
             key={asset.id}
             onClick={() => onToggle(asset.id)}
-            title={asset.title}
+            title="Reference image"
             className={cn(
               "group relative aspect-square overflow-hidden rounded-md border bg-stone-100 transition",
               isSelected ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
             )}
           >
-            <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+            <img src={asset.url} alt="" className="h-full w-full object-cover" />
             <span
               className={cn(
                 "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",

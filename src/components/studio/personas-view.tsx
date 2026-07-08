@@ -23,7 +23,6 @@ export function PersonasView({
   onAddReferences,
   onToggleReferenceDefault,
   onDeleteReference,
-  onRenameReference,
   onNavigateToGenerate,
 }: {
   personas: Persona[];
@@ -39,7 +38,6 @@ export function PersonasView({
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
-  onRenameReference: (assetId: string, title: string) => void;
   onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [managedPersonaId, setManagedPersonaId] = useState<string | undefined>();
@@ -104,7 +102,6 @@ export function PersonasView({
         onAddReferences={onAddReferences}
         onToggleReferenceDefault={onToggleReferenceDefault}
         onDeleteReference={onDeleteReference}
-        onRenameReference={onRenameReference}
         onNavigateToGenerate={onNavigateToGenerate}
       />
     );
@@ -204,7 +201,6 @@ function PersonaManagementView({
   onAddReferences,
   onToggleReferenceDefault,
   onDeleteReference,
-  onRenameReference,
   onNavigateToGenerate,
 }: {
   persona: Persona;
@@ -216,7 +212,6 @@ function PersonaManagementView({
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
-  onRenameReference: (assetId: string, title: string) => void;
   onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [isEditingPersona, setIsEditingPersona] = useState(false);
@@ -386,7 +381,6 @@ function PersonaManagementView({
             uploading={uploadingSlotId === slot.id}
             onToggleReferenceDefault={onToggleReferenceDefault}
             onDeleteReference={(assetId) => onDeleteReference(persona.id, assetId)}
-            onRenameReference={onRenameReference}
             onPreviewReference={(asset) => setPreviewAssetId(asset.id)}
           />
         ))}
@@ -408,7 +402,6 @@ function ReferenceSlotCard({
   uploading,
   onToggleReferenceDefault,
   onDeleteReference,
-  onRenameReference,
   onPreviewReference,
 }: {
   slot: (typeof referenceSlots)[number];
@@ -419,7 +412,6 @@ function ReferenceSlotCard({
   uploading?: boolean;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (assetId: string) => void;
-  onRenameReference: (assetId: string, title: string) => void;
   onPreviewReference: (asset: Asset) => void;
 }) {
   const latestAsset = assets[0];
@@ -473,7 +465,6 @@ function ReferenceSlotCard({
               asset={asset}
               onToggleReferenceDefault={onToggleReferenceDefault}
               onDeleteReference={onDeleteReference}
-              onRenameReference={onRenameReference}
               onPreviewReference={onPreviewReference}
               isPreviewed={previewAsset?.id === asset.id}
             />
@@ -499,11 +490,13 @@ function AssetSection({ title, assets }: { title: string; assets: Asset[] }) {
                 {asset.kind === "video" ? (
                   <video src={asset.url} className="h-full w-full object-cover" controls />
                 ) : (
-                  <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                  <img src={asset.url} alt="" className="h-full w-full object-cover" />
                 )}
               </div>
               <div className="p-3">
-                <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
+                {asset.kind !== "image" ? (
+                  <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
+                ) : null}
                 <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
               </div>
             </article>
@@ -522,59 +515,18 @@ function ReferenceAssetRow({
   asset,
   onToggleReferenceDefault,
   onDeleteReference,
-  onRenameReference,
   onPreviewReference,
   isPreviewed = false,
 }: {
   asset: Asset;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (assetId: string) => void;
-  onRenameReference: (assetId: string, title: string) => void;
   onPreviewReference: (asset: Asset) => void;
   isPreviewed?: boolean;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(asset.title);
-
-  function saveTitle(event: FormEvent) {
-    event.preventDefault();
-    const nextTitle = draftTitle.trim();
-    if (!nextTitle) return;
-    onRenameReference(asset.id, nextTitle);
-    setIsEditing(false);
-  }
-
   return (
     <div className="rounded-md border border-stone-200 bg-white p-2">
-      {isEditing ? (
-        <form onSubmit={saveTitle} className="grid gap-2">
-          <input
-            value={draftTitle}
-            onChange={(event) => setDraftTitle(event.target.value)}
-            className="h-9 w-full rounded-md border border-stone-200 px-2 text-xs font-semibold text-stone-900 outline-none transition focus:border-emerald-800"
-            autoFocus
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              className="rounded-md border border-emerald-800 px-2 py-1 text-xs font-semibold text-emerald-800"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDraftTitle(asset.title);
-                setIsEditing(false);
-              }}
-              className="rounded-md border border-stone-200 px-2 py-1 text-xs font-semibold text-stone-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <>
+      <>
           <button
             type="button"
             onClick={() => onPreviewReference(asset)}
@@ -583,20 +535,10 @@ function ReferenceAssetRow({
               isPreviewed ? "text-emerald-800" : "text-stone-900",
             )}
           >
-            {asset.title}
+            Preview image
           </button>
           <p className="mt-1 text-[11px] text-stone-500"></p>
           <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setDraftTitle(asset.title);
-              setIsEditing(true);
-            }}
-            className="rounded-md border border-stone-200 px-2 py-1 text-xs font-semibold text-stone-600"
-          >
-            Rename
-            </button>
             <button
               type="button"
               onClick={() => onToggleReferenceDefault(asset.id)}
@@ -618,7 +560,6 @@ function ReferenceAssetRow({
             </button>
           </div>
         </>
-      )}
     </div>
   );
 }

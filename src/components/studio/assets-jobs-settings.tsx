@@ -57,11 +57,13 @@ export function AssetsView({
                   ) : asset.kind === "video" ? (
                     <video src={asset.url} className="h-full w-full object-cover" controls />
                   ) : (
-                    <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                    <img src={asset.url} alt="" className="h-full w-full object-cover" />
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-sm font-semibold text-stone-950">{asset.title}</p>
+                  {asset.kind !== "image" ? (
+                    <p className="text-sm font-semibold text-stone-950">{asset.title}</p>
+                  ) : null}
                   <p className="mt-1 text-xs text-stone-500">
                     {persona?.name ?? "Unassigned"} / {asset.kind}
                   </p>

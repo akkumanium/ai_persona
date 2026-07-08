@@ -3,15 +3,12 @@
 import {
   ArrowDown,
   ArrowLeft,
-  ArrowRight,
   Check,
   Clapperboard,
   Film,
   ImageIcon,
   Loader2,
   Play,
-  Plus,
-  ScanFace,
   Settings2,
   Upload,
   Wand2,
@@ -513,66 +510,79 @@ Delete the tattoos. No text, no logos, no watermarks.`);
             step={1}
             title="Face Swap"
             icon={Wand2}
-            hint="Replace the target frame's face with your persona, then pick the best result"
+            hint="Swap the target frame's face with your persona, then pick the best result"
           >
-            <div className="flex flex-wrap items-center gap-3">
-              <MediaTile label="Source reel" width="w-32">
-                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
-              </MediaTile>
-
-              <FlowArrow />
-
-              <div className="relative shrink-0">
-                <span className="absolute -top-2.5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-emerald-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  <ScanFace size={11} />
-                  Target
-                </span>
-                <div className="w-32 overflow-hidden rounded-lg border-2 border-emerald-800 bg-stone-900 shadow-sm">
-                  {editingItem.firstFramePreview ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPreviewMedia({
-                          src: editingItem.firstFramePreview ?? "",
-                          title: `${editingItem.video.name} first frame`,
-                        })
-                      }
-                      className="block h-full w-full"
-                      aria-label="Open first frame fullscreen"
-                    >
-                      <img
-                        src={editingItem.firstFramePreview}
-                        alt="Face-swap target"
-                        className="aspect-[9/16] h-full w-full object-cover"
-                      />
-                    </button>
-                  ) : (
-                    <TilePlaceholder icon={Loader2} label="Capturing…" spin />
-                  )}
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_18rem]">
+              {/* Sources */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
+                    <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
+                  </div>
+                  <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Source reel</p>
                 </div>
-                <p className="mt-1.5 text-center text-[10px] font-medium text-emerald-800">First frame</p>
+                <div>
+                  <div className="aspect-[9/16] overflow-hidden rounded-lg border-2 border-emerald-800 bg-stone-900">
+                    {editingItem.firstFramePreview ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewMedia({
+                            src: editingItem.firstFramePreview ?? "",
+                            title: `${editingItem.video.name} first frame`,
+                          })
+                        }
+                        className="block h-full w-full"
+                        aria-label="Open first frame fullscreen"
+                      >
+                        <img
+                          src={editingItem.firstFramePreview}
+                          alt="Face-swap target"
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <TilePlaceholder icon={Loader2} label="Capturing…" spin />
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-center text-[11px] font-medium text-emerald-800">First frame</p>
+                </div>
               </div>
 
-              <FlowPlus />
-
-              <div className="w-32 shrink-0">
+              {/* Persona references — the center column, now substantial */}
+              <div className="rounded-lg border border-stone-200 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-stone-700">Persona references</p>
+                  <span className="text-[10px] text-stone-500">
+                    {personaReferences.length} ref{personaReferences.length === 1 ? "" : "s"}
+                  </span>
+                </div>
                 {personaReferences.length ? (
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="mt-2 grid grid-cols-3 gap-2">
                     {personaReferences.slice(0, 6).map((ref) => (
-                      <div key={ref.id} className="aspect-square overflow-hidden rounded border border-stone-200">
+                      <button
+                        key={ref.id}
+                        type="button"
+                        onClick={() => setPreviewMedia({ src: ref.url, title: ref.title, kind: "image" })}
+                        className="aspect-square overflow-hidden rounded-md border border-stone-200 transition hover:border-emerald-800"
+                        aria-label={`Preview ${ref.title}`}
+                      >
                         <img src={ref.url} alt={ref.title} className="h-full w-full object-cover" />
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="grid aspect-square place-items-center rounded border border-dashed border-stone-200 bg-stone-50 text-[11px] text-stone-400">
-                    None
+                  <div className="mt-2 grid aspect-[3/2] place-items-center rounded-md border border-dashed border-stone-300 text-[11px] text-stone-400">
+                    No persona references yet
                   </div>
                 )}
-                <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Persona refs</p>
+                <p className="mt-2 text-[10px] leading-4 text-stone-500">
+                  Persona reference images are combined with the target frame to rebuild the face.
+                </p>
               </div>
 
-              <form onSubmit={(event) => void generateFaceCandidates(event)} className="ml-auto w-full max-w-[15rem]">
+              {/* Settings */}
+              <form onSubmit={(event) => void generateFaceCandidates(event)} className="flex flex-col">
                 <details className="rounded-md border border-stone-200 bg-stone-50">
                   <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-xs font-semibold text-stone-700">
                     Face settings
@@ -598,7 +608,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 <SubmitButton
                   loading={Boolean(editingItem.isGeneratingFaces)}
                   icon={Wand2}
-                  label="Generate"
+                  label="Generate faces"
                   costLabel={faceCostLabel}
                   disableWhileLoading={false}
                   disabled={
@@ -612,7 +622,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
             </div>
 
             {editingItem.isGeneratingFaces || editingItem.candidates.length ? (
-              <div className="mt-3 border-t border-stone-100 pt-3">
+              <div className="mt-4 border-t border-stone-100 pt-3">
                 <p className="mb-2 text-[11px] font-semibold text-stone-700">
                   {editingItem.isGeneratingFaces
                     ? "Generating face-swapped frames"
@@ -628,7 +638,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                         onClick={() => selectCandidate(asset.id)}
                         title={asset.title}
                         className={cn(
-                          "group relative w-20 shrink-0 overflow-hidden rounded-md border bg-white text-left transition",
+                          "group relative w-24 shrink-0 overflow-hidden rounded-md border bg-white text-left transition",
                           isPicked ? "border-emerald-800 ring-2 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
                         )}
                       >
@@ -673,28 +683,41 @@ Delete the tattoos. No text, no logos, no watermarks.`);
             icon={Film}
             hint="Drive the selected identity frame with the reel's motion"
           >
-            <div className="flex flex-wrap items-center gap-3">
-              <MediaTile label="Identity frame" width="w-32">
-                {selectedCandidate ? (
-                  <img src={selectedCandidate.url} alt={selectedCandidate.title} className="h-full w-full object-cover" />
-                ) : (
-                  <TilePlaceholder icon={ImageIcon} label="From step 1" />
-                )}
-              </MediaTile>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_18rem]">
+              {/* Inputs */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
+                    {selectedCandidate ? (
+                      <img src={selectedCandidate.url} alt={selectedCandidate.title} className="h-full w-full object-cover" />
+                    ) : (
+                      <TilePlaceholder icon={ImageIcon} label="From step 1" />
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Identity frame</p>
+                </div>
+                <div>
+                  <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
+                    <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
+                  </div>
+                  <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Motion source</p>
+                </div>
+              </div>
 
-              <FlowPlus />
-
-              <MediaTile label="Motion source" width="w-32">
-                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
-              </MediaTile>
-
-              <FlowArrow />
-
-              <div className="w-32 shrink-0">
-                <div className="aspect-[9/16] overflow-hidden rounded-lg border-2 border-emerald-800/30 bg-stone-900">
+              {/* Output — the center climax */}
+              <div className="rounded-lg border border-stone-200 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-stone-700">Final video</p>
+                  {editingItem.finalVideo ? (
+                    <span className="rounded-sm bg-emerald-800 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                      Done
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-2 aspect-[9/16] overflow-hidden rounded-lg border-2 border-emerald-800/30 bg-stone-900">
                   {editingItem.isGeneratingVideo ? (
                     <div className="flex h-full items-center justify-center">
-                      <Loader2 className="size-5 animate-spin text-white/80" />
+                      <Loader2 className="size-6 animate-spin text-white/80" />
                     </div>
                   ) : editingItem.finalVideo ? (
                     <video src={editingItem.finalVideo.url} className="h-full w-full object-cover" controls />
@@ -702,10 +725,10 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     <TilePlaceholder icon={Play} label="Output" />
                   )}
                 </div>
-                <p className="mt-1.5 text-center text-[10px] font-medium text-stone-500">Final video</p>
               </div>
 
-              <form onSubmit={(event) => void generateTrendVideo(event)} className="ml-auto w-full max-w-[15rem]">
+              {/* Settings */}
+              <form onSubmit={(event) => void generateTrendVideo(event)} className="flex flex-col">
                 <details className="rounded-md border border-stone-200 bg-stone-50">
                   <summary className="flex h-9 cursor-pointer list-none items-center justify-between px-3 text-xs font-semibold text-stone-700">
                     Motion settings
@@ -771,7 +794,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 <SubmitButton
                   loading={Boolean(editingItem.isGeneratingVideo)}
                   icon={Film}
-                  label="Generate"
+                  label="Generate reel"
                   costLabel={motionCostLabel}
                   disableWhileLoading={false}
                   disabled={!selectedPersona || !selectedCandidate}
@@ -903,7 +926,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
             <div className="flex size-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">
               <Clapperboard size={26} />
             </div>
-            <p className="mt-3 text-sm font-semibold text-stone-950">No trend videos yet</p>
+            <p className="mt-3 text-sm font-semibold text-stone-950">No reels yet</p>
             <p className="mt-1 max-w-sm text-xs leading-5 text-stone-500">
               Upload a video above. Your sources are saved here as a library you can edit anytime.
             </p>
@@ -936,7 +959,7 @@ function SourceIngress({
           <Upload size={16} />
         </div>
         <div>
-          <h2 className="text-base font-semibold text-stone-950">Add a trend video</h2>
+          <h2 className="text-base font-semibold text-stone-950">Add a reel</h2>
           <p className="text-[11px] text-stone-500">Drop a file or choose one from your device.</p>
         </div>
       </div>
@@ -1009,31 +1032,6 @@ function StepSection({
   );
 }
 
-function MediaTile({
-  label,
-  width,
-  children,
-}: {
-  label: string;
-  width: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={cn("shrink-0", width)}>
-      <div className="aspect-[9/16] overflow-hidden rounded-md border border-stone-200 bg-stone-900">{children}</div>
-      <p className="mt-1.5 text-center text-[10px] font-medium text-stone-500">{label}</p>
-    </div>
-  );
-}
-
-function FlowArrow() {
-  return <ArrowRight className="hidden shrink-0 text-stone-300 sm:block" size={16} />;
-}
-
-function FlowPlus() {
-  return <Plus className="hidden shrink-0 text-stone-300 sm:block" size={16} />;
-}
-
 function TilePlaceholder({
   icon: Icon,
   label,
@@ -1074,6 +1072,9 @@ async function captureFirstFrame(videoUrl: string, name: string) {
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
+    // This must be set before src. Otherwise frames loaded from storage on
+    // another origin taint the canvas and prevent exporting the thumbnail.
+    video.crossOrigin = "anonymous";
     video.src = videoUrl;
 
     const cleanup = () => {
@@ -1093,18 +1094,23 @@ async function captureFirstFrame(videoUrl: string, name: string) {
         reject(new Error("Could not capture the first frame."));
         return;
       }
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-      const durationSeconds = Number.isFinite(video.duration) ? video.duration : undefined;
-      cleanup();
-      resolve({
-        image: {
-          name: `${name.replace(/\.[^.]+$/, "") || "trend-video"} first frame.jpg`,
-          mimeType: "image/jpeg",
-          data: dataUrl.split(",")[1] ?? "",
-        },
-        durationSeconds,
-      });
+      try {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const durationSeconds = Number.isFinite(video.duration) ? video.duration : undefined;
+        cleanup();
+        resolve({
+          image: {
+            name: `${name.replace(/\.[^.]+$/, "") || "trend-video"} first frame.jpg`,
+            mimeType: "image/jpeg",
+            data: dataUrl.split(",")[1] ?? "",
+          },
+          durationSeconds,
+        });
+      } catch {
+        cleanup();
+        reject(new Error("Could not capture the first frame. The video host does not allow cross-origin access."));
+      }
     }, { once: true });
 
     video.addEventListener("error", () => {

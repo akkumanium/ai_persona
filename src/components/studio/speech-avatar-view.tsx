@@ -9,6 +9,7 @@ import {
   PersonaSelect,
   RangeField,
   SelectField,
+  SourceImageField,
   SubmitButton,
   TextArea,
   TextField,
@@ -101,7 +102,7 @@ export function SpeechView({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_410px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={AudioLines} title="Speech Assets" />
         <div className="mt-5 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
@@ -217,6 +218,7 @@ export function AvatarView({
   personas,
   assets,
   selectedPersona,
+  initialImage,
   onAssetsCreated,
   onSelectPersona,
   onDeleteAsset,
@@ -224,6 +226,7 @@ export function AvatarView({
   personas: Persona[];
   assets: Asset[];
   selectedPersona?: Persona;
+  initialImage?: { id: string; nonce: number };
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onDeleteAsset: (assetId: string) => void;
@@ -257,14 +260,26 @@ export function AvatarView({
   const [isGenerating, setIsGenerating] = useState(false);
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
-  const selectedImage = imageAssets.find((asset) => asset.id === imageAssetId) ?? imageAssets[0];
+  const selectedImage = imageAssets.find((asset) => asset.id === imageAssetId);
   const selectedAudio = audioAssets.find((asset) => asset.id === audioAssetId) ?? audioAssets[0];
   const selectedImageUrl = uploadedImage ? sourceImageToDataUrl(uploadedImage) : selectedImage?.url;
+  const avatarImageField = uploadedImage
+    ? { url: sourceImageToDataUrl(uploadedImage), name: uploadedImage.name }
+    : selectedImage
+      ? { url: selectedImage.url, name: selectedImage.title }
+      : undefined;
   const selectedAudioSource = uploadedAudio?.url ?? (uploadedAudio?.data ? `data:${uploadedAudio.mimeType};base64,${uploadedAudio.data}` : selectedAudio?.url);
   const effectiveDurationSeconds = audioDurationSeconds ? Math.max(1, Math.ceil(audioDurationSeconds)) : 0;
   const costLabel = audioDurationSeconds
     ? formatTokens(estimateAvatarGenerationPricing({ model, resolution, durationSeconds: effectiveDurationSeconds }).tokens)
     : undefined;
+
+  const [appliedInitialImageNonce, setAppliedInitialImageNonce] = useState<number | undefined>();
+  if (initialImage && initialImage.nonce !== appliedInitialImageNonce) {
+    setAppliedInitialImageNonce(initialImage.nonce);
+    setUploadedImage(undefined);
+    setImageAssetId(initialImage.id);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -366,7 +381,7 @@ export function AvatarView({
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_410px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={Video} title="Avatar Results" />
         <div className="mt-5 min-h-[26rem] rounded-lg border border-dashed border-stone-300 bg-stone-50 p-4">
@@ -415,22 +430,16 @@ export function AvatarView({
         <form onSubmit={generateAvatar}>
           <PanelTitle icon={Clapperboard} title="Avatar Options" />
           <PersonaSelect personas={personas} value={selectedPersona?.id ?? ""} onChange={onSelectPersona} />
-          <AssetSelect
-            label="Generated image"
-            assets={imageAssets}
-            value={uploadedImage ? "" : selectedImage?.id ?? ""}
-            onChange={(id) => {
+          <SourceImageField
+            label="Portrait image"
+            image={avatarImageField}
+            onClear={() => {
               setUploadedImage(undefined);
-              setImageAssetId(id);
+              setImageAssetId("");
             }}
-          />
-          <UploadBox
-            accept="image/*"
-            icon={Upload}
-            label={uploadedImage ? uploadedImage.name : "Upload image"}
-            detail={uploadedImage ? "Uploaded image will be used instead of a generated image." : ""}
+            onUpload={(files) => void captureImage(files)}
             loading={Boolean(uploadingInputs.image)}
-            onChange={(files) => void captureImage(files)}
+            hint="Pick a portrait from Images or upload."
           />
           <AssetSelect
             label="Saved audio"

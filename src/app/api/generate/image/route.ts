@@ -146,11 +146,7 @@ export async function POST(request: Request) {
       const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
         id: crypto.randomUUID(),
         kind: input.assetKind,
-        title:
-          input.titlePrefix ??
-          (input.assetKind === "avatar"
-            ? `${input.personaName} reference ${index + 1}`
-            : generatedImageTitle(visiblePrompt, index, result.assets.length)),
+        title: "",
         prompt: visiblePrompt,
         personaId: input.personaId,
         referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
@@ -208,14 +204,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-}
-
-function generatedImageTitle(prompt: string, index: number, count: number) {
-  const normalizedPrompt = prompt.replace(/\s+/g, " ").trim();
-  const title = normalizedPrompt
-    ? normalizedPrompt.length > 48
-      ? `${normalizedPrompt.slice(0, 45).trim()}...`
-      : normalizedPrompt
-    : "Generated image";
-  return count > 1 ? `${title} ${index + 1}` : title;
 }

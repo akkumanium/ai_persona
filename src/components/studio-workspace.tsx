@@ -3,14 +3,14 @@
 import { Activity, AudioLines, Clapperboard, Flame, Home, ImageIcon, Mail, Play, Settings, UserRound, Video, X, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AssetsView, JobsView, SettingsView } from "@/components/studio/assets-jobs-settings";
 import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
 import { TrendVideoView, trendLibraryItemsFromAssets, type LibraryItem } from "@/components/studio/trend-video-view";
-import type { ReferenceSlotId, View } from "@/components/studio/types";
+import type { ReferenceSlotId, SourceImageInput, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
 import type { StudioInitialData } from "@/lib/studio-records";
@@ -24,7 +24,7 @@ const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: bo
   { id: "personas", label: "Personas", icon: UserRound },
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "videos", label: "Videos", icon: Clapperboard },
-  { id: "trends", label: "Trend Videos", icon: Flame },
+  { id: "trends", label: "Reel Maker", icon: Flame },
   { id: "motion", label: "Motion Control", icon: Play },
   { id: "speech", label: "Speech", icon: AudioLines },
   { id: "avatar", label: "Avatar", icon: Video },
@@ -67,20 +67,16 @@ export function StudioWorkspace({
     initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
   );
   const [generateInitialSlotId, setGenerateInitialSlotId] = useState<ReferenceSlotId | undefined>();
+  const launchNonce = useRef(0);
+  const [initialVideoStartFrame, setInitialVideoStartFrame] = useState<{ id: string; nonce: number } | undefined>();
+  const [initialMotionImage, setInitialMotionImage] = useState<{ image: SourceImageInput; nonce: number } | undefined>();
+  const [initialAvatarImage, setInitialAvatarImage] = useState<{ id: string; nonce: number } | undefined>();
   const [notice, setNotice] = useState(
     supabaseReady ? "Your workspace is saved." : "Demo workspace is active until Supabase is set.",
   );
   const [transientAlert, setTransientAlert] = useState("");
 
   const selectedPersona = personas.find((persona) => persona.id === selectedPersonaId) ?? personas[0];
-  const personaReferenceAssets = assets.filter(
-    (asset) =>
-      asset.personaId === selectedPersona?.id && (asset.kind === "avatar" || asset.kind === "upload"),
-  );
-  const selectedReference =
-    personaReferenceAssets.find((asset) => asset.isDefaultReference) ??
-    assets.find((asset) => asset.id === selectedPersona?.referenceAssetId) ??
-    personaReferenceAssets[0];
   const displayedBalanceCents = Math.max(0, balanceCents);
 
   useEffect(() => {
@@ -154,21 +150,6 @@ export function StudioWorkspace({
       .eq("id", personaId)
       .then(({ error }) => {
         if (error) setNotice(`Could not save persona changes: ${error.message}`);
-      });
-  }
-
-  function renameReferenceAsset(assetId: string, title: string) {
-    const nextTitle = title.trim();
-    if (!nextTitle) return;
-    setAssets((current) =>
-      current.map((asset) => (asset.id === assetId ? { ...asset, title: nextTitle } : asset)),
-    );
-    void supabaseClient()
-      ?.from("assets")
-      .update({ title: nextTitle })
-      .eq("id", assetId)
-      .then(({ error }) => {
-        if (error) setNotice(`Could not save asset name: ${error.message}`);
       });
   }
 
@@ -322,7 +303,7 @@ export function StudioWorkspace({
         if (error) {
           setAssets((current) => current.filter((asset) => !nextAssets.some((item) => item.id === asset.id)));
           setTrendLibrary((current) => current.filter((item) => !nextAssets.some((asset) => asset.id === item.id)));
-          setNotice(`Could not save trend video: ${error.message}`);
+          setNotice(`Could not save reel video: ${error.message}`);
         }
       })();
     }
@@ -400,6 +381,27 @@ export function StudioWorkspace({
 
   function deleteReferenceAsset(_personaId: string, assetId: string) {
     deleteAsset(assetId);
+  }
+
+  function launchVideoFromImage(asset: Asset) {
+    launchNonce.current += 1;
+    setInitialVideoStartFrame({ id: asset.id, nonce: launchNonce.current });
+    setView("videos");
+  }
+
+  function launchMotionFromImage(asset: Asset) {
+    launchNonce.current += 1;
+    setInitialMotionImage({
+      image: { name: asset.title, mimeType: asset.mimeType || "image/png", url: asset.url },
+      nonce: launchNonce.current,
+    });
+    setView("motion");
+  }
+
+  function launchAvatarFromImage(asset: Asset) {
+    launchNonce.current += 1;
+    setInitialAvatarImage({ id: asset.id, nonce: launchNonce.current });
+    setView("avatar");
   }
 
   return (
@@ -574,7 +576,6 @@ export function StudioWorkspace({
               }}
               onToggleReferenceDefault={toggleReferenceDefault}
               onDeleteReference={deleteReferenceAsset}
-              onRenameReference={renameReferenceAsset}
               onNavigateToGenerate={(slotId, personaId) => {
                 if (personaId) setSelectedPersonaId(personaId);
                 setGenerateInitialSlotId(slotId);
@@ -607,9 +608,13 @@ export function StudioWorkspace({
               personas={personas}
               assets={assets}
               selectedPersona={selectedPersona}
-              selectedReference={selectedReference}
               supabaseReady={supabaseReady}
               imagePromptSuggestions={imagePromptSuggestions}
+              initialVideoStartFrame={initialVideoStartFrame}
+              initialMotionImage={initialMotionImage}
+              onGenerateVideoFromImage={launchVideoFromImage}
+              onGenerateMotionFromImage={launchMotionFromImage}
+              onGenerateAvatarFromImage={launchAvatarFromImage}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);
                 addJob(job);
@@ -629,14 +634,14 @@ export function StudioWorkspace({
               onLibraryChange={setTrendLibrary}
               onSourceAssetsCreated={(nextAssets) => {
                 addTrendSourceAssets(nextAssets);
-                setNotice(`${nextAssets.length} trend source${nextAssets.length === 1 ? "" : "s"} saved.`);
+                setNotice(`${nextAssets.length} reel source${nextAssets.length === 1 ? "" : "s"} saved.`);
               }}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);
                 addJob(job);
                 setNotice(
                   nextAssets.some((asset) => asset.kind === "video")
-                    ? "Trend video generated."
+                    ? "Reel generated."
                     : `${nextAssets.length} face frame${nextAssets.length === 1 ? "" : "s"} generated.`,
                 );
               }}
@@ -662,6 +667,7 @@ export function StudioWorkspace({
               personas={personas}
               assets={assets}
               selectedPersona={selectedPersona}
+              initialImage={initialAvatarImage}
               onAssetsCreated={(nextAssets, job) => {
                 addAssets(nextAssets, job);
                 addJob(job);

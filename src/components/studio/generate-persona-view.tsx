@@ -364,10 +364,9 @@ export function GeneratePersonaView({
               {slotAssets.slice(0, 6).map((asset) => (
                 <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
                   <div className="aspect-[4/5] bg-stone-100">
-                    <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                    <img src={asset.url} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="p-3">
-                    <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
                     <p className="mt-1 text-xs text-stone-500">{asset.isDefaultReference ? "Default" : asset.model}</p>
                   </div>
                 </article>
