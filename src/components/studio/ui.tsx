@@ -72,6 +72,62 @@ export function UploadBox({
   );
 }
 
+export function MediaLightbox({
+  src,
+  title,
+  kind = "image",
+  onClose,
+}: {
+  src: string;
+  title: string;
+  kind?: "image" | "video";
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 flex size-10 items-center justify-center rounded-md bg-white text-stone-950 transition hover:bg-stone-100"
+        aria-label="Close fullscreen preview"
+      >
+        <X size={18} />
+      </button>
+      {kind === "video" ? (
+        <video
+          src={src}
+          className="max-h-[92vh] max-w-[94vw] rounded-md object-contain"
+          controls
+          autoPlay
+          onClick={(event) => event.stopPropagation()}
+        />
+      ) : (
+        <img
+          src={src}
+          alt={title}
+          className="max-h-[92vh] max-w-[94vw] rounded-md object-contain"
+          onClick={(event) => event.stopPropagation()}
+        />
+      )}
+    </div>
+  );
+}
+
 /**
  * Compact, image-led reference picker. Each reference is a square thumbnail tile;
  * selected tiles show a check badge. Clicking a selected tile deselects it.
@@ -367,7 +423,7 @@ export function SelectField({
   options: string[];
   onChange: (value: string) => void;
 }) {
-  if (label.toLowerCase().includes("aspect ratio")) {
+  if (["aspect", "aspect ratio"].includes(label.toLowerCase())) {
     return <AspectRatioSelect label={label} value={value} options={options} onChange={onChange} />;
   }
 
@@ -444,7 +500,7 @@ function AspectRatioSelect({
         <div
           role="listbox"
           aria-label={label}
-          className="absolute left-0 right-0 top-full z-30 mt-1 grid max-h-64 gap-1 overflow-y-auto rounded-md border border-stone-200 bg-white p-1 shadow-lg"
+          className="aspect-ratio-menu absolute left-0 right-0 top-full z-30 mt-1 grid max-h-64 gap-1 overflow-y-auto rounded-md border border-stone-200 bg-white p-1 shadow-lg"
         >
           {options.map((option) => {
             const selected = option === value;

@@ -141,6 +141,7 @@ export function SettingsView({
   userEmail,
   paddleConfig,
   onBalanceRefresh,
+  onBillingStatusRefresh,
 }: {
   balanceCents: number;
   supabaseReady: boolean;
@@ -148,6 +149,7 @@ export function SettingsView({
   userEmail?: string;
   paddleConfig: PublicPaddleConfig;
   onBalanceRefresh?: (balanceCents: number) => void;
+  onBillingStatusRefresh?: (status: { balanceCents?: number; personaLimit?: number | null }) => void;
 }) {
   const [referralCode, setReferralCode] = useState("");
   const [pendingReferrals, setPendingReferrals] = useState(0);
@@ -212,6 +214,7 @@ export function SettingsView({
           supabaseReady={supabaseReady}
           config={paddleConfig}
           onStatusResolved={(status) => {
+            onBillingStatusRefresh?.(status);
             if (typeof status.balanceCents === "number") {
               onBalanceRefresh?.(status.balanceCents);
             }

@@ -7,6 +7,7 @@ import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInp
 import {
   CheckboxField,
   ImageThumbStrip,
+  MediaLightbox,
   ModelSelect,
   ModeToggle,
   NumberField,
@@ -84,6 +85,7 @@ export function GenerationView({
   const [uploadedVideoEndFrame, setUploadedVideoEndFrame] = useState<SourceImageInput | undefined>();
   const [seedanceReferenceVideo, setSeedanceReferenceVideo] = useState<SourceVideoInput | undefined>();
   const [seedanceReferenceAudio, setSeedanceReferenceAudio] = useState<SourceAudioInput | undefined>();
+  const [previewAsset, setPreviewAsset] = useState<Asset | undefined>();
   const [videoFrameSlot, setVideoFrameSlot] = useState<VideoFrameSlot>("start");
   const [videoImageSearch, setVideoImageSearch] = useState("");
   const [videoDurationSeconds, setVideoDurationSeconds] = useState(5);
@@ -546,6 +548,14 @@ export function GenerationView({
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      {previewAsset ? (
+        <MediaLightbox
+          src={previewAsset.url}
+          title={previewAsset.title}
+          kind={previewAsset.kind === "video" ? "video" : "image"}
+          onClose={() => setPreviewAsset(undefined)}
+        />
+      ) : null}
       <section className="min-h-[calc(100vh-9.5rem)] rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <PanelTitle icon={PanelIcon} title={`${panelTitle} Result`} />
 
@@ -563,7 +573,14 @@ export function GenerationView({
                     {asset.kind === "video" ? (
                       <video src={asset.url} className="h-full w-full object-cover" controls />
                     ) : (
-                      <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewAsset(asset)}
+                        className="block h-full w-full"
+                        aria-label={`Open ${asset.title} fullscreen`}
+                      >
+                        <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                      </button>
                     )}
                     <button
                       type="button"

@@ -34,7 +34,7 @@ export function PersonasView({
   onSelect: (id: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
   onCreatePersona: (persona: Persona) => void;
-  onCreateLimitReached?: () => void;
+  onCreateLimitReached?: () => boolean | Promise<boolean>;
   onDeletePersona: (personaId: string) => void;
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
@@ -54,21 +54,21 @@ export function PersonasView({
     setManagedPersonaId(personaId);
   }
 
-  function beginCreatePersona() {
+  async function beginCreatePersona() {
     if (!canCreatePersona) {
-      onCreateLimitReached?.();
-      return;
+      const canCreateAfterRefresh = await onCreateLimitReached?.();
+      if (!canCreateAfterRefresh) return;
     }
     setIsCreatingPersona(true);
   }
 
-  function createPersona(event: FormEvent) {
+  async function createPersona(event: FormEvent) {
     event.preventDefault();
     const name = newPersonaName.trim();
     const description = newDescription.trim();
     if (!canCreatePersona) {
-      onCreateLimitReached?.();
-      return;
+      const canCreateAfterRefresh = await onCreateLimitReached?.();
+      if (!canCreateAfterRefresh) return;
     }
     if (!name || !description) return;
 

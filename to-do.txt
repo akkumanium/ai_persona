@@ -12,14 +12,16 @@
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
 84. Put video to demo
-85. Change the way subcriptions work
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
 99. Think more on the name
-100. Delete Plan quota: 0/0 personas - upgrade or delete a persona to create another., but make sure to warn user that they can't create a persona via some another way
-101. The videos are not actually saved.
-102. Change the generator prompts
 103. Upload more voices
+104. Full screen of the frame
+105. Delete uploaded video from generated videos
+106. Change the warning
+107. How is the first frame captured
+108. Is the sound turned off by default?
+109. Aspect ratio seems invisible
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

@@ -204,7 +204,14 @@ select option {
 }
 
 .aspect-ratio-select {
-  background-color: transparent !important;
+  background-color: #111827 !important;
+}
+
+.aspect-ratio-menu {
+  background-color: #111827 !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
 }
 
 .aspect-ratio-glyph {

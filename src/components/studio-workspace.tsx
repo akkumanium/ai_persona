@@ -1,9 +1,9 @@
 "use client";
 
-import { Activity, AudioLines, Clapperboard, Flame, Home, ImageIcon, Mail, Play, Settings, UserRound, Video, type LucideIcon } from "lucide-react";
+import { Activity, AudioLines, Clapperboard, Flame, Home, ImageIcon, Mail, Play, Settings, UserRound, Video, X, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AssetsView, JobsView, SettingsView } from "@/components/studio/assets-jobs-settings";
 import { GeneratePersonaView } from "@/components/studio/generate-persona-view";
 import { GenerationView } from "@/components/studio/generation-view";
@@ -60,6 +60,7 @@ export function StudioWorkspace({
     trendLibraryItemsFromAssets(initialData?.assets ?? demoAssets),
   );
   const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 500));
+  const [currentPersonaLimit, setCurrentPersonaLimit] = useState<number | null>(personaLimit);
   const [userId, setUserId] = useState<string | undefined>(initialUserId);
   const [selectedPersonaId, setSelectedPersonaId] = useState(
     initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
@@ -68,6 +69,7 @@ export function StudioWorkspace({
   const [notice, setNotice] = useState(
     supabaseReady ? "Your workspace is saved." : "Demo workspace is active until Supabase is set.",
   );
+  const [transientAlert, setTransientAlert] = useState("");
 
   const selectedPersona = personas.find((persona) => persona.id === selectedPersonaId) ?? personas[0];
   const personaReferenceAssets = assets.filter(
@@ -79,6 +81,12 @@ export function StudioWorkspace({
     assets.find((asset) => asset.id === selectedPersona?.referenceAssetId) ??
     personaReferenceAssets[0];
   const displayedBalanceCents = Math.max(0, balanceCents);
+
+  useEffect(() => {
+    if (!transientAlert) return;
+    const timeout = window.setTimeout(() => setTransientAlert(""), 5200);
+    return () => window.clearTimeout(timeout);
+  }, [transientAlert]);
 
   function supabaseClient() {
     return supabaseReady ? createBrowserSupabaseClient() : undefined;
@@ -164,8 +172,8 @@ export function StudioWorkspace({
   }
 
   function addPersona(persona: Persona) {
-    if (personaLimit !== null && personas.length >= personaLimit) {
-      setNotice("Your current plan persona limit has been reached.");
+    if (currentPersonaLimit !== null && personas.length >= currentPersonaLimit) {
+      showPersonaLimitWarning();
       return;
     }
     setPersonas((current) => [persona, ...current]);
@@ -189,6 +197,44 @@ export function StudioWorkspace({
         setNotice(`Could not save persona: ${error.message}`);
       }
     })();
+  }
+
+  async function refreshBillingStatus() {
+    if (!supabaseReady) return undefined;
+    try {
+      const response = await fetch("/api/billing/status", { cache: "no-store" });
+      const status = (await response.json()) as {
+        error?: string;
+        balanceCents?: number;
+        personaLimit?: number | null;
+      };
+      if (!response.ok) throw new Error(status.error ?? "Could not refresh billing status.");
+      if (typeof status.balanceCents === "number") {
+        setBalanceCents(status.balanceCents);
+      }
+      if ("personaLimit" in status) {
+        setCurrentPersonaLimit(status.personaLimit ?? null);
+      }
+      return status;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not refresh billing status.");
+      return undefined;
+    }
+  }
+
+  async function handlePersonaLimitReached() {
+    const status = await refreshBillingStatus();
+    const refreshedLimit = status && "personaLimit" in status ? status.personaLimit ?? null : currentPersonaLimit;
+    if (refreshedLimit === null || personas.length < refreshedLimit) {
+      setNotice("Your plan was refreshed. You can create another persona.");
+      return true;
+    }
+    showPersonaLimitWarning();
+    return false;
+  }
+
+  function showPersonaLimitWarning() {
+    setTransientAlert("Persona limit reached. Upgrade your plan or remove a persona to create a new one.");
   }
 
   function deletePersona(personaId: string) {
@@ -406,6 +452,21 @@ export function StudioWorkspace({
       </aside>
 
       <main className="lg:pl-60">
+        {transientAlert ? (
+          <div className="fixed left-4 right-4 top-4 z-50 mx-auto max-w-xl rounded-lg border border-pink-300/70 bg-pink-600 px-4 py-3 text-sm font-semibold text-white shadow-xl lg:left-60">
+            <div className="flex items-center justify-between gap-3">
+              <span>{transientAlert}</span>
+              <button
+                type="button"
+                onClick={() => setTransientAlert("")}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md bg-white/15 text-white transition hover:bg-white/25"
+                aria-label="Dismiss warning"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        ) : null}
         <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/84 backdrop-blur">
           {previewMode ? (
             <div className="border-b border-amber-500/30 bg-amber-950 px-4 py-3 text-amber-50 lg:px-8">
@@ -475,7 +536,7 @@ export function StudioWorkspace({
               personas={personas}
               assets={assets}
               supabaseReady={supabaseReady}
-              personaLimit={personaLimit}
+              personaLimit={currentPersonaLimit}
               selectedPersonaId={selectedPersona?.id}
               onSelect={setSelectedPersonaId}
               onUpdatePersona={updatePersona}
@@ -483,9 +544,7 @@ export function StudioWorkspace({
                 addPersona(persona);
                 setNotice(`${persona.name} is ready for references.`);
               }}
-              onCreateLimitReached={() => {
-                setNotice("Your current plan cannot create another persona. Upgrade or delete a persona first.");
-              }}
+              onCreateLimitReached={handlePersonaLimitReached}
               onDeletePersona={(personaId) => {
                 const personaName = personas.find((persona) => persona.id === personaId)?.name ?? "Persona";
                 deletePersona(personaId);
@@ -606,6 +665,11 @@ export function StudioWorkspace({
               onBalanceRefresh={(nextBalance) => {
                 setBalanceCents(nextBalance);
                 setNotice("Your balance was refreshed after checkout.");
+              }}
+              onBillingStatusRefresh={(status) => {
+                if ("personaLimit" in status) {
+                  setCurrentPersonaLimit(status.personaLimit ?? null);
+                }
               }}
             />
           )}

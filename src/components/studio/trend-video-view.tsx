@@ -23,6 +23,7 @@ import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   ModelSelect,
+  MediaLightbox,
   NumberField,
   PanelTitle,
   SelectField,
@@ -121,6 +122,7 @@ export function TrendVideoView({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState("");
+  const [previewMedia, setPreviewMedia] = useState<{ src: string; title: string; kind?: "image" | "video" } | undefined>();
 
   const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [imageAspectRatio, setImageAspectRatio] = useState("9:16");
@@ -437,7 +439,16 @@ Delete the tattoos. No text, no logos, no watermarks.`);
 
   if (editingItem) {
     return (
-      <div className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+      <>
+        {previewMedia ? (
+          <MediaLightbox
+            src={previewMedia.src}
+            title={previewMedia.title}
+            kind={previewMedia.kind}
+            onClose={() => setPreviewMedia(undefined)}
+          />
+        ) : null}
+        <div className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 bg-white px-4 py-3">
           <button
             type="button"
@@ -481,7 +492,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           >
             <div className="flex flex-wrap items-center gap-3">
               <MediaTile label="Source reel" width="w-32">
-                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls muted />
+                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
               </MediaTile>
 
               <FlowArrow />
@@ -493,11 +504,23 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 </span>
                 <div className="w-32 overflow-hidden rounded-lg border-2 border-emerald-800 bg-stone-900 shadow-sm">
                   {editingItem.firstFramePreview ? (
-                    <img
-                      src={editingItem.firstFramePreview}
-                      alt="Face-swap target"
-                      className="aspect-[9/16] h-full w-full object-cover"
-                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreviewMedia({
+                          src: editingItem.firstFramePreview ?? "",
+                          title: `${editingItem.video.name} first frame`,
+                        })
+                      }
+                      className="block h-full w-full"
+                      aria-label="Open first frame fullscreen"
+                    >
+                      <img
+                        src={editingItem.firstFramePreview}
+                        alt="Face-swap target"
+                        className="aspect-[9/16] h-full w-full object-cover"
+                      />
+                    </button>
                   ) : (
                     <TilePlaceholder icon={Loader2} label="Capturing…" spin />
                   )}
@@ -548,7 +571,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 <SubmitButton
                   loading={Boolean(editingItem.isGeneratingFaces)}
                   icon={Wand2}
-                  label="Generate faces"
+                  label="Generate"
                   costLabel={faceCostLabel}
                   disabled={
                     !selectedPersona ||
@@ -631,7 +654,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
               <FlowArrow />
 
               <MediaTile label="Motion source" width="w-32">
-                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls muted />
+                <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
               </MediaTile>
 
               <FlowArrow />
@@ -724,7 +747,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 <SubmitButton
                   loading={Boolean(editingItem.isGeneratingVideo)}
                   icon={Film}
-                  label="Generate video"
+                  label="Generate"
                   costLabel={motionCostLabel}
                   disabled={!selectedPersona || !selectedCandidate}
                 />
@@ -734,12 +757,21 @@ Delete the tattoos. No text, no logos, no watermarks.`);
 
           {error ? <p className="rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p> : null}
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
   return (
     <div className="grid gap-5">
+      {previewMedia ? (
+        <MediaLightbox
+          src={previewMedia.src}
+          title={previewMedia.title}
+          kind={previewMedia.kind}
+          onClose={() => setPreviewMedia(undefined)}
+        />
+      ) : null}
       <SourceIngress
         isUploading={isUploading}
         isDragOver={isDragOver}
@@ -780,9 +812,21 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                         <Loader2 className="size-5 animate-spin text-white/80" />
                       </div>
                     ) : item.firstFramePreview ? (
-                      <img src={item.firstFramePreview} alt={item.video.name} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewMedia({
+                            src: item.firstFramePreview ?? "",
+                            title: `${item.video.name} first frame`,
+                          })
+                        }
+                        className="block h-full w-full"
+                        aria-label="Open first frame fullscreen"
+                      >
+                        <img src={item.firstFramePreview} alt={item.video.name} className="h-full w-full object-cover" />
+                      </button>
                     ) : (
-                      <video src={sourceVideoToUrl(item.video)} className="h-full w-full object-cover" muted />
+                      <video src={sourceVideoToUrl(item.video)} className="h-full w-full object-cover" />
                     )}
                     {item.video.durationSeconds ? (
                       <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1 py-0.5 text-[9px] font-semibold text-white">

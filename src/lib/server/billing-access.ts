@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getPersonaLimitForPlan, getPlanById, type BillingPlanId } from "@/lib/billing";
+import { env } from "@/lib/env";
+import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 
@@ -22,13 +24,14 @@ export type BillingAccess = {
 };
 
 export async function getBillingAccess(supabase: SupabaseClient, userId: string): Promise<BillingAccess> {
-  const [{ data: profile }, subscriptions] = await Promise.all([
-    supabase
+  const billingSupabase = env.supabaseServiceRoleKey ? createServiceSupabaseClient() : supabase;
+  const [profile, subscriptions] = await Promise.all([
+    billingSupabase
       .from("account_profiles")
       .select("credit_balance_cents, account_metadata")
       .eq("user_id", userId)
       .maybeSingle<AccountProfileRow>(),
-    supabase
+    billingSupabase
       .from("billing_subscriptions")
       .select("status, plan_id")
       .eq("user_id", userId)
@@ -36,8 +39,11 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
       .returns<BillingSubscriptionRow[]>(),
   ]);
 
-  const balanceCents = Math.max(0, profile?.credit_balance_cents ?? 0);
-  const metadataSubscription = getMetadataSubscription(profile?.account_metadata);
+  if (profile.error) throw new Error(`Could not load billing profile: ${profile.error.message}`);
+  if (subscriptions.error) throw new Error(`Could not load billing subscriptions: ${subscriptions.error.message}`);
+
+  const balanceCents = Math.max(0, profile.data?.credit_balance_cents ?? 0);
+  const metadataSubscription = getMetadataSubscription(profile.data?.account_metadata);
   const hasActiveMetadataSubscription = ACTIVE_SUBSCRIPTION_STATUSES.has(metadataSubscription.status);
   const activePlanId = resolveActivePlanId(
     subscriptions.data ?? [],
