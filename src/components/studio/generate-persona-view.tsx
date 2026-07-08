@@ -21,7 +21,6 @@ import {
 } from "@/components/studio/ui";
 import {
   aspectRatiosForImageModel,
-  CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
   chatGptImageQualities,
   imageSizesForModel,
@@ -179,9 +178,6 @@ export function GeneratePersonaView({
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(aspectRatio)) {
       setAspectRatio(nextAspectRatios.includes(activeSlot.aspectRatio) ? activeSlot.aspectRatio : nextAspectRatios[0]);
-    }
-    if (modelId === CHATGPT_IMAGE_MODEL_ID && imageSize !== "2K") {
-      setImageSize("2K");
     }
     const nextImageSizes = imageSizesForModel(modelId);
     if (!nextImageSizes.includes(imageSize)) {
@@ -436,7 +432,7 @@ export function GeneratePersonaView({
           <ModelSelect label="Model" value={safeSelectedModel} options={modelOptions} onChange={changeModel} />
           <SelectField label="Aspect ratio" value={safeAspectRatio} options={imageAspectRatios} onChange={setAspectRatio} />
           {imageModelSupportsSize ? (
-            <SelectField label="Image size" value={imageSize} options={imageSizesForModel(safeSelectedModel)} onChange={setImageSize} />
+            <SelectField label="Resolution" value={imageSize} options={imageSizesForModel(safeSelectedModel)} onChange={setImageSize} />
           ) : null}
           {imageModelSupportsQuality ? (
             <SelectField label="Quality" value={imageQuality} options={chatGptImageQualities} onChange={setImageQuality} />

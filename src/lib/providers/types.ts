@@ -58,6 +58,7 @@ export type VideoGenerationRequest = {
   motionMode?: "animate" | "replace";
   characterOrientation?: "image" | "video";
   keepOriginalSound?: boolean;
+  referenceAssetIds?: string[];
   motionReferenceVideo?: ProviderMediaInput;
   motionReferenceVideoUrl?: string;
   referenceVideo?: ProviderMediaInput;

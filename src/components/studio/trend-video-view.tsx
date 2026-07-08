@@ -10,6 +10,7 @@ import {
   ImageIcon,
   Loader2,
   Play,
+  Plus,
   ScanFace,
   Settings2,
   Upload,
@@ -73,14 +74,35 @@ const DEFAULT_MOTION_MODEL = defaultModelForCapability("video-motion") ?? "kling
 const TREND_SOURCE_MODEL = "local-trend-upload";
 
 export function trendLibraryItemsFromAssets(assets: Asset[]): LibraryItem[] {
-  return assets
+  const trendSources = assets
     .filter(
       (asset) =>
         asset.kind === "video" &&
         asset.generationType === "reference_upload" &&
         asset.model === TREND_SOURCE_MODEL,
     )
-    .map((asset) => ({
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+
+  return trendSources.map((asset) => {
+    const candidates = assets
+        .filter(
+          (candidate) =>
+            candidate.kind === "image" &&
+            candidate.generationType === "image_from_reference" &&
+            Boolean(candidate.referenceAssetIds?.includes(asset.id)),
+        )
+        .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt));
+    const finalVideo = assets
+        .filter((candidate) => {
+          if (candidate.kind !== "video" || candidate.generationType !== "video_motion") return false;
+          const referenceIds = candidate.referenceAssetIds ?? [];
+          return referenceIds.includes(asset.id) || candidates.some((face) => referenceIds.includes(face.id));
+        })
+        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
+    const finalCandidateId =
+      finalVideo?.referenceAssetIds?.find((id) => candidates.some((candidate) => candidate.id === id)) ?? "";
+
+    return {
       id: asset.id,
       video: {
         name: asset.title,
@@ -90,9 +112,11 @@ export function trendLibraryItemsFromAssets(assets: Asset[]): LibraryItem[] {
         storagePath: asset.storagePath,
       },
       importState: "capturing",
-      candidates: [],
-      selectedCandidateId: "",
-    }));
+      candidates,
+      selectedCandidateId: finalCandidateId || candidates[0]?.id || "",
+      finalVideo,
+    };
+  });
 }
 
 export function TrendVideoView({
@@ -364,8 +388,8 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           count: safeCandidateCount,
           referenceImageUrls: personaReferences.map((asset) => asset.url),
           sourceImages: [{ name: item.firstFrame.name, mimeType: item.firstFrame.mimeType, data: item.firstFrame.data ?? "" }],
-          referenceAssetIds: personaReferences.map((asset) => asset.id),
-          titlePrefix: `${selectedPersona.name} trend face`,
+          referenceAssetIds: [item.id, ...personaReferences.map((asset) => asset.id)],
+          titlePrefix: "Trend face",
         }),
       });
       const payload = await response.json();
@@ -374,7 +398,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
       }
       const nextAssets = (payload.assets as Asset[]).map((asset) => ({
         ...asset,
-        referenceAssetIds: personaReferences.map((reference) => reference.id),
+        referenceAssetIds: [item.id, ...personaReferences.map((reference) => reference.id)],
       }));
       updateLibraryItem(item.id, {
         candidates: nextAssets,
@@ -417,6 +441,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           motionMode: motionControls.supportsMotionMode ? motionMode : "animate",
           characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
           keepOriginalSound: motionControls.supportsKeepOriginalSound ? keepOriginalSound : false,
+          referenceAssetIds: [item.id, selectedCandidate.id],
           startFrameImage: candidateInput,
           motionReferenceVideoUrl: item.video.url,
           motionReferenceVideo: item.video.data
@@ -428,7 +453,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
       if (!response.ok) {
         throw new Error(payload.error ?? "Trend video generation failed.");
       }
-      const nextAssets = payload.asset ? [{ ...payload.asset, referenceAssetIds: [selectedCandidate.id] }] : [];
+      const nextAssets = payload.asset ? [{ ...payload.asset, referenceAssetIds: [item.id, selectedCandidate.id] }] : [];
       updateLibraryItem(item.id, { finalVideo: nextAssets[0], isGeneratingVideo: false });
       if (nextAssets[0]) onAssetsCreated(nextAssets, payload.job);
     } catch (generationError) {
@@ -528,12 +553,11 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 <p className="mt-1.5 text-center text-[10px] font-medium text-emerald-800">First frame</p>
               </div>
 
-              <FlowArrow />
+              <FlowPlus />
 
-              <div className="w-24 shrink-0">
-                <p className="mb-1.5 text-center text-[10px] font-medium text-stone-500">Persona refs</p>
+              <div className="w-32 shrink-0">
                 {personaReferences.length ? (
-                  <div className="grid grid-cols-3 gap-1">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {personaReferences.slice(0, 6).map((ref) => (
                       <div key={ref.id} className="aspect-square overflow-hidden rounded border border-stone-200">
                         <img src={ref.url} alt={ref.title} className="h-full w-full object-cover" />
@@ -541,8 +565,11 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center text-[10px] text-stone-400">None</p>
+                  <div className="grid aspect-square place-items-center rounded border border-dashed border-stone-200 bg-stone-50 text-[11px] text-stone-400">
+                    None
+                  </div>
                 )}
+                <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Persona refs</p>
               </div>
 
               <form onSubmit={(event) => void generateFaceCandidates(event)} className="ml-auto w-full max-w-[15rem]">
@@ -556,7 +583,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     <div className="grid grid-cols-2 gap-2">
                       <SelectField label="Aspect" value={safeImageAspectRatio} options={imageAspectRatioOptions} onChange={setImageAspectRatio} />
                       {imageModelSupportsSize ? (
-                        <SelectField label="Size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
+                        <SelectField label="Resolution" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
                       ) : (
                         <div />
                       )}
@@ -584,14 +611,12 @@ Delete the tattoos. No text, no logos, no watermarks.`);
               </form>
             </div>
 
-            {editingItem.isGeneratingFaces ? (
-              <div className="mt-3 border-t border-stone-100 pt-3">
-                <LoadingBlock label="Generating face-swapped frames" />
-              </div>
-            ) : editingItem.candidates.length ? (
+            {editingItem.isGeneratingFaces || editingItem.candidates.length ? (
               <div className="mt-3 border-t border-stone-100 pt-3">
                 <p className="mb-2 text-[11px] font-semibold text-stone-700">
-                  Candidates — tap one to use it as the identity for motion
+                  {editingItem.isGeneratingFaces
+                    ? "Generating face-swapped frames"
+                    : "Candidates — tap one to use it as the identity for motion"}
                 </p>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {editingItem.candidates.map((asset, index) => {
@@ -626,6 +651,11 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                       </button>
                     );
                   })}
+                  {editingItem.isGeneratingFaces
+                    ? Array.from({ length: safeCandidateCount }).map((_, index) => (
+                        <CandidateLoadingCard key={`candidate-loading-${index}`} />
+                      ))
+                    : null}
                 </div>
               </div>
             ) : null}
@@ -652,7 +682,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 )}
               </MediaTile>
 
-              <FlowArrow />
+              <FlowPlus />
 
               <MediaTile label="Motion source" width="w-32">
                 <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
@@ -683,12 +713,24 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   </summary>
                   <div className="space-y-1 px-3 pb-3">
                     <ModelSelect label="Model" value={motionModel} options={motionModelOptions} onChange={setMotionModel} />
-                    <SelectField
-                      label="Resolution"
-                      value={motionResolution}
-                      options={[...motionResolutions]}
-                      onChange={(value) => setMotionResolution(value as (typeof motionResolutions)[number])}
-                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <SelectField
+                        label="Resolution"
+                        value={motionResolution}
+                        options={[...motionResolutions]}
+                        onChange={(value) => setMotionResolution(value as (typeof motionResolutions)[number])}
+                      />
+                      {motionControls.supportsCharacterOrientation ? (
+                        <SelectField
+                          label="Character orientation"
+                          value={motionCharacterOrientation}
+                          options={["video", "image"]}
+                          onChange={(value) => setMotionCharacterOrientation(value as "image" | "video")}
+                        />
+                      ) : (
+                        <div />
+                      )}
+                    </div>
                     {motionControls.supportsMotionMode ? (
                       <div className="grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
                         {(["animate", "replace"] as const).map((modeValue) => (
@@ -702,25 +744,6 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                             )}
                           >
                             {modeValue}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                    {motionControls.supportsCharacterOrientation ? (
-                      <div className="grid grid-cols-2 gap-1 rounded-md bg-stone-100 p-1">
-                        {(["video", "image"] as const).map((orientation) => (
-                          <button
-                            type="button"
-                            key={orientation}
-                            onClick={() => setMotionCharacterOrientation(orientation)}
-                            className={cn(
-                              "h-8 rounded-[5px] px-3 text-xs font-medium capitalize transition",
-                              motionCharacterOrientation === orientation
-                                ? "bg-white text-stone-950 shadow-sm"
-                                : "text-stone-600 hover:text-stone-950",
-                            )}
-                          >
-                            {orientation}
                           </button>
                         ))}
                       </div>
@@ -1007,6 +1030,10 @@ function FlowArrow() {
   return <ArrowRight className="hidden shrink-0 text-stone-300 sm:block" size={16} />;
 }
 
+function FlowPlus() {
+  return <Plus className="hidden shrink-0 text-stone-300 sm:block" size={16} />;
+}
+
 function TilePlaceholder({
   icon: Icon,
   label,
@@ -1024,11 +1051,13 @@ function TilePlaceholder({
   );
 }
 
-function LoadingBlock({ label }: { label: string }) {
+function CandidateLoadingCard() {
   return (
-    <div className="flex min-h-32 flex-col items-center justify-center rounded-md text-center text-xs text-stone-600">
-      <Loader2 className="mb-2 animate-spin text-emerald-800" size={22} />
-      {label}
+    <div className="relative w-20 shrink-0 overflow-hidden rounded-md border border-stone-200 bg-white">
+      <div className="flex aspect-[9/16] items-center justify-center bg-stone-100">
+        <Loader2 className="size-5 animate-spin text-stone-400" />
+      </div>
+      <p className="px-1.5 py-1 text-[9px] font-semibold text-stone-400">…</p>
     </div>
   );
 }

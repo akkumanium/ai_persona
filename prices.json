@@ -1,6 +1,6 @@
 {
 "currency": "USD",
-"last_verified": "2026-06-10",
+"last_verified": "2026-07-08",
 "purpose": "Website API model pricing ingestion",
 "important_notes": [
 "Prices are raw API or gateway costs and do not include your website markup, storage, CDN, failed generations, retries, payment fees, or support margin.",
@@ -85,68 +85,155 @@
 {
 "model_key": "gpt_image_2",
 "display_name": "GPT Image 2",
-"provider": "OpenAI",
+"provider": "WaveSpeedAI / OpenAI",
 "category": "image",
-"pricing_type": "per_output_image",
+"pricing_type": "per_run_by_workflow_quality_resolution",
 "settings": [
 {
+"workflow": "text_to_image",
 "quality": "low",
-"size": "1024x1024",
+"resolution": "1K",
 "unit": "image",
-"raw_price_usd": 0.006
+"raw_price_usd": 0.01
 },
 {
+"workflow": "text_to_image",
 "quality": "low",
-"size": "1024x1536",
+"resolution": "2K",
 "unit": "image",
-"raw_price_usd": 0.005
+"raw_price_usd": 0.02
 },
 {
+"workflow": "text_to_image",
 "quality": "low",
-"size": "1536x1024",
+"resolution": "4K",
 "unit": "image",
-"raw_price_usd": 0.005
+"raw_price_usd": 0.03
 },
 {
+"workflow": "text_to_image",
 "quality": "medium",
-"size": "1024x1024",
+"resolution": "1K",
 "unit": "image",
-"raw_price_usd": 0.053
+"raw_price_usd": 0.06
 },
 {
+"workflow": "text_to_image",
 "quality": "medium",
-"size": "1024x1536",
+"resolution": "2K",
 "unit": "image",
-"raw_price_usd": 0.041
+"raw_price_usd": 0.07
 },
 {
+"workflow": "text_to_image",
 "quality": "medium",
-"size": "1536x1024",
+"resolution": "4K",
 "unit": "image",
-"raw_price_usd": 0.041
+"raw_price_usd": 0.11
 },
 {
+"workflow": "text_to_image",
 "quality": "high",
-"size": "1024x1024",
+"resolution": "1K",
 "unit": "image",
-"raw_price_usd": 0.211
+"raw_price_usd": 0.22
 },
 {
+"workflow": "text_to_image",
 "quality": "high",
-"size": "1024x1536",
+"resolution": "2K",
 "unit": "image",
-"raw_price_usd": 0.165
+"raw_price_usd": 0.23
 },
 {
+"workflow": "text_to_image",
 "quality": "high",
-"size": "1536x1024",
+"resolution": "4K",
 "unit": "image",
-"raw_price_usd": 0.165
+"raw_price_usd": 0.41
+},
+{
+"workflow": "edit",
+"quality": "low",
+"resolution": "1K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.02
+},
+{
+"workflow": "edit",
+"quality": "low",
+"resolution": "2K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.03
+},
+{
+"workflow": "edit",
+"quality": "low",
+"resolution": "4K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.04
+},
+{
+"workflow": "edit",
+"quality": "medium",
+"resolution": "1K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.07
+},
+{
+"workflow": "edit",
+"quality": "medium",
+"resolution": "2K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.08
+},
+{
+"workflow": "edit",
+"quality": "medium",
+"resolution": "4K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.12
+},
+{
+"workflow": "edit",
+"quality": "high",
+"resolution": "1K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.22
+},
+{
+"workflow": "edit",
+"quality": "high",
+"resolution": "2K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.24
+},
+{
+"workflow": "edit",
+"quality": "high",
+"resolution": "4K",
+"included_input_images": 1,
+"unit": "image",
+"raw_price_usd": 0.42
+},
+{
+"workflow": "edit",
+"unit": "additional_input_image",
+"raw_price_usd": 0.012
 }
 ],
 "notes": [
-"Custom GPT Image 2 resolutions may require token-based cost estimation instead of this fixed table.",
-"Multiply raw_price_usd by number of requested output images."
+"WaveSpeedAI model pages list aspect_ratio plus resolution values 1k, 2k, and 4k.",
+"Edit prices include one input image; each additional input image adds $0.012.",
+"Multiply raw_price_usd by number of requested output images/runs."
 ]
 },
 {

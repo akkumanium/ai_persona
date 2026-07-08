@@ -26,7 +26,7 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
   const count = Math.max(1, request.count);
 
   if (request.model === "gpt-image-2") {
-    const outputUsd = gptImage2OutputUsd(request.imageQuality, request.aspectRatio);
+    const outputUsd = gptImage2OutputUsd(request.imageQuality, request.imageSize, referenceCount);
     return {
       rawUsd: outputUsd * count,
       tokens: usdToTokens(outputUsd * count),
@@ -148,13 +148,29 @@ function nanoBananaOutputUsd(imageSize: string) {
   return 0.134;
 }
 
-function gptImage2OutputUsd(quality: ImageGenerationRequest["imageQuality"], aspectRatio: string) {
+function gptImage2OutputUsd(
+  quality: ImageGenerationRequest["imageQuality"],
+  imageSize: string,
+  referenceCount: number,
+) {
   const effectiveQuality = quality === "auto" || !quality ? "medium" : quality;
-  const isSquare = aspectRatio === "1:1";
+  const effectiveSize = imageSize === "4K" ? "4K" : imageSize === "1K" ? "1K" : "2K";
+  const textToImagePrices: Record<string, Record<string, number>> = {
+    low: { "1K": 0.01, "2K": 0.02, "4K": 0.03 },
+    medium: { "1K": 0.06, "2K": 0.07, "4K": 0.11 },
+    high: { "1K": 0.22, "2K": 0.23, "4K": 0.41 },
+  };
+  const editPrices: Record<string, Record<string, number>> = {
+    low: { "1K": 0.02, "2K": 0.03, "4K": 0.04 },
+    medium: { "1K": 0.07, "2K": 0.08, "4K": 0.12 },
+    high: { "1K": 0.22, "2K": 0.24, "4K": 0.42 },
+  };
 
-  if (effectiveQuality === "low") return isSquare ? 0.006 : 0.005;
-  if (effectiveQuality === "high") return isSquare ? 0.211 : 0.165;
-  return isSquare ? 0.053 : 0.041;
+  if (referenceCount > 0) {
+    return editPrices[effectiveQuality][effectiveSize] + Math.max(0, referenceCount - 1) * 0.012;
+  }
+
+  return textToImagePrices[effectiveQuality][effectiveSize];
 }
 
 function kling26GenerationUsd(request: VideoGenerationRequest) {

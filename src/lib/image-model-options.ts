@@ -17,10 +17,11 @@ export const nanoBananaProAspectRatios = [
   "21:9",
 ];
 
-export const chatGptImageAspectRatios = ["1:1", "2:3", "3:2"];
+export const chatGptImageAspectRatios = ["1:1", "3:2", "2:3", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"];
 export const seedream45AspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"];
 export const wan27ImageAspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"];
 export const nanoBananaProImageSizes = ["1K", "2K", "4K"];
+export const chatGptImageSizes = ["1K", "2K", "4K"];
 export const seedream45ImageSizes = ["2K", "4K"];
 export const wan27ImageSizes = ["1K", "2K"];
 export const chatGptImageQualities = ["low", "medium", "high"];
@@ -53,10 +54,11 @@ export function aspectRatiosForImageModel(modelId: string) {
 }
 
 export function supportsImageSize(modelId: string) {
-  return !isChatGptImageModel(modelId);
+  return true;
 }
 
 export function imageSizesForModel(modelId: string) {
+  if (isChatGptImageModel(modelId)) return chatGptImageSizes;
   if (isWan27ImageFamilyModel(modelId)) return wan27ImageSizes;
   return isSeedream45ImageModel(modelId) ? seedream45ImageSizes : nanoBananaProImageSizes;
 }
@@ -66,7 +68,7 @@ export function supportsImageQuality(modelId: string) {
 }
 
 export function supportsImageReferences(modelId: string) {
-  return !isWan27ImageModel(modelId);
+  return true;
 }
 
 export function requiresImageReferences(modelId: string) {

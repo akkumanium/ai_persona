@@ -6,13 +6,13 @@ import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
 describe("model registry", () => {
   it("includes ChatGPT for image generation", () => {
     expect(modelsForCapability("image-prompt").map((model) => model.id)).toEqual(
-      expect.arrayContaining(["gpt-image-2", "seedream-v4.5", "wan-2.7-image", "wan-2.7-image-edit"]),
+      expect.arrayContaining(["gpt-image-2", "seedream-v4.5", "wan-2.7-image"]),
     );
     expect(modelsForCapability("image-reference").map((model) => model.id)).toEqual(
-      expect.arrayContaining(["gpt-image-2", "seedream-v4.5", "wan-2.7-image-edit"]),
+      expect.arrayContaining(["gpt-image-2", "seedream-v4.5", "wan-2.7-image"]),
     );
     expect(modelsForCapability("image-reference").map((model) => model.id)).not.toEqual(
-      expect.arrayContaining(["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini", "wan-2.7-image"]),
+      expect.arrayContaining(["gpt-image-1.5", "gpt-image-1", "gpt-image-1-mini", "wan-2.7-image-edit"]),
     );
   });
 
@@ -56,19 +56,35 @@ describe("token pricing", () => {
         count: 2,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(43);
+    ).toBe(46);
 
     expect(
       estimateImageGenerationPricing({
         prompt: "Generate a vertical image.",
         model: "gpt-image-2",
         aspectRatio: "9:16",
-        imageSize: "2K",
+        imageSize: "4K",
         imageQuality: "medium",
         count: 1,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(5);
+    ).toBe(11);
+
+    expect(
+      estimateImageGenerationPricing({
+        prompt: "Edit a vertical image.",
+        model: "gpt-image-2",
+        aspectRatio: "9:16",
+        imageSize: "2K",
+        imageQuality: "medium",
+        count: 1,
+        referenceImages: [
+          { name: "source", mimeType: "image/png", data: "x" },
+          { name: "style", mimeType: "image/png", data: "x" },
+        ],
+        generationType: "image_from_reference",
+      }).tokens,
+    ).toBe(10);
   });
 
   it("prices Seedream 4.5 per generated image", () => {

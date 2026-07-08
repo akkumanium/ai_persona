@@ -22,7 +22,6 @@ import {
 } from "@/components/studio/ui";
 import {
   aspectRatiosForImageModel,
-  CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
   chatGptImageQualities,
   imageSizesForModel,
@@ -241,9 +240,6 @@ export function GenerationView({
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(imageAspectRatio)) {
       setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
-    }
-    if (modelId === CHATGPT_IMAGE_MODEL_ID && imageAspectRatio === "21:9") {
-      setImageAspectRatio("3:2");
     }
     const nextImageSizes = imageSizesForModel(modelId);
     if (!nextImageSizes.includes(imageSize)) {
@@ -653,7 +649,7 @@ export function GenerationView({
                 onChange={setImageAspectRatio}
               />
               {imageModelSupportsSize ? (
-                <SelectField label="Size" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
+                <SelectField label="Resolution" value={imageSize} options={imageSizesForModel(imageModel)} onChange={setImageSize} />
               ) : (
                 <div />
               )}

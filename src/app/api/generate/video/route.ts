@@ -82,6 +82,7 @@ export async function POST(request: Request) {
             title: `${input.personaName} ${input.mode} video`,
             prompt: input.prompt,
             personaId: input.personaId,
+            referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
             generationType,
             provider: result.provider,
             providerJobId: result.providerJobId,

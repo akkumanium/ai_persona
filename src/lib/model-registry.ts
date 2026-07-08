@@ -26,7 +26,6 @@ import {
   CHATGPT_IMAGE_MODEL_ID,
   NANO_BANANA_PRO_MODEL_ID,
   SEEDREAM_4_5_MODEL_ID,
-  WAN_2_7_IMAGE_EDIT_MODEL_ID,
   WAN_2_7_IMAGE_MODEL_ID,
 } from "@/lib/image-model-options";
 
@@ -45,7 +44,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: "wavespeed",
     capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
-    notes: "OpenAI image model with generation, edit/reference inputs, quality, and fixed output size controls.",
+    notes: "OpenAI image model with generation, edit/reference inputs, quality, aspect ratio, and 1K/2K/4K resolution controls.",
   },
   {
     id: SEEDREAM_4_5_MODEL_ID,
@@ -59,17 +58,9 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     id: WAN_2_7_IMAGE_MODEL_ID,
     label: "Wan 2.7 Image",
     provider: "wavespeed",
-    capabilities: ["image-prompt"],
-    enabled: true,
-    notes: "WaveSpeed Wan 2.7 text-to-image at common social aspect ratios. Prompt-only; reference images are not sent to this endpoint.",
-  },
-  {
-    id: WAN_2_7_IMAGE_EDIT_MODEL_ID,
-    label: "Wan 2.7 Image Edit",
-    provider: "wavespeed",
     capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
-    notes: "WaveSpeed Wan 2.7 prompt-driven image editing with one or more image references.",
+    notes: "WaveSpeed Wan 2.7 image generation. Reference images automatically use the edit endpoint.",
   },
   {
     id: "wan-2.7",

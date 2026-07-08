@@ -19,11 +19,13 @@ export async function POST(request: Request) {
 
     const input = imageGenerationSchema.parse(await request.json());
 
+    const referenceUrlCount =
+      input.referenceImageUrls.length ||
+      (input.referenceImageUrl ? 1 : 0);
     const totalReferenceCount =
       input.sourceImages.length +
       input.sourceImageUrls.length +
-      input.referenceImageUrls.length +
-      (input.referenceImageUrl ? 1 : 0);
+      referenceUrlCount;
 
     // Fail fast on insufficient balance BEFORE resolving/downloading any reference media,
     // so an underfunded account returns 402 instantly instead of after long network work.
@@ -144,7 +146,7 @@ export async function POST(request: Request) {
           input.titlePrefix ??
           (input.assetKind === "avatar"
             ? `${input.personaName} reference ${index + 1}`
-            : `${input.personaName} image ${index + 1}`),
+            : generatedImageTitle(visiblePrompt, index, result.assets.length)),
         prompt: visiblePrompt,
         personaId: input.personaId,
         referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
@@ -200,4 +202,14 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+function generatedImageTitle(prompt: string, index: number, count: number) {
+  const normalizedPrompt = prompt.replace(/\s+/g, " ").trim();
+  const title = normalizedPrompt
+    ? normalizedPrompt.length > 48
+      ? `${normalizedPrompt.slice(0, 45).trim()}...`
+      : normalizedPrompt
+    : "Generated image";
+  return count > 1 ? `${title} ${index + 1}` : title;
 }

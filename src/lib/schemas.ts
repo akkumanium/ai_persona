@@ -87,6 +87,7 @@ export const videoGenerationSchema = z.object({
   motionMode: z.enum(["animate", "replace"]).optional().default("animate"),
   characterOrientation: z.enum(["image", "video"]).optional().default("video"),
   keepOriginalSound: z.boolean().optional().default(true),
+  referenceAssetIds: z.array(z.string().min(1)).min(0).default([]),
   motionReferenceVideo: providerMediaInputSchema.optional(),
   motionReferenceVideoUrl: z.string().min(1).optional(),
   referenceVideo: providerMediaInputSchema.optional(),

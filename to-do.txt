@@ -16,11 +16,15 @@
 92. Generate terms and privacy
 99. Think more on the name
 103. Upload more voices
-105. Delete uploaded video from generated videos
-110. Expose the prompt at reference section
 112. Stop naming images
 113. Merge Wan and Wan edit
 114. Add resolution for GPT Image 2
+115. Too overly compressed
+116. The faceswaps we've generated don't get saved properly. Also the status changed
+117. Delete some default prompts
+118. 5. Change the way we turn an image into a video. At Videos, delete the "search generated images" and the whole section of picking through images that we have generated. Instead, at Images add another button at every image which will allow us to generate a video directly from that image.
+119. Rename Trend Videos to Reel Maker
+120.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

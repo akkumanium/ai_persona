@@ -5,6 +5,7 @@ import { join } from "path";
 import { Client } from "wavespeed";
 import { env } from "@/lib/env";
 import {
+  CHATGPT_IMAGE_MODEL_ID,
   SEEDREAM_4_5_MODEL_ID,
   WAN_2_7_IMAGE_EDIT_MODEL_ID,
   WAN_2_7_IMAGE_MODEL_ID,
@@ -49,13 +50,11 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     const client = wavespeedClient();
+    const isChatGptImage = request.model === CHATGPT_IMAGE_MODEL_ID;
     const isSeedream45 = request.model === SEEDREAM_4_5_MODEL_ID;
-    const isWan27Image = request.model === WAN_2_7_IMAGE_MODEL_ID;
+    const isWan27Image = request.model === WAN_2_7_IMAGE_MODEL_ID || request.model === WAN_2_7_IMAGE_EDIT_MODEL_ID;
     const isWan27ImageEdit = request.model === WAN_2_7_IMAGE_EDIT_MODEL_ID;
     const uploadedReferenceUrls = await uploadProviderImages(client, request.referenceImages ?? []);
-    if (isWan27Image && uploadedReferenceUrls.length) {
-      throw new Error("Wan 2.7 image generation is prompt-only. Turn off reference mode before generating.");
-    }
     if (isWan27ImageEdit && !uploadedReferenceUrls.length) {
       throw new Error("Wan 2.7 image edit requires at least one reference image.");
     }
@@ -67,16 +66,20 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
       images: referenceUrls.length ? referenceUrls : undefined,
       image_url: isSeedream45 ? undefined : referenceUrls[0],
       image_urls: isSeedream45 ? undefined : referenceUrls.length ? referenceUrls : undefined,
-      aspect_ratio: isSeedream45 || isWan27Image || isWan27ImageEdit ? undefined : request.aspectRatio,
+      aspect_ratio: isSeedream45 || isWan27Image ? undefined : request.aspectRatio,
+      resolution: isChatGptImage ? request.imageSize.toLowerCase() : undefined,
       size: isSeedream45
         ? seedream45Size(request.aspectRatio, request.imageSize)
-        : isWan27Image || isWan27ImageEdit
+        : isWan27Image
           ? wan27ImageSize(request.aspectRatio, request.imageSize)
-          : request.imageSize,
-      image_size: isSeedream45 || isWan27Image || isWan27ImageEdit ? undefined : request.imageSize,
+          : isChatGptImage
+            ? undefined
+            : request.imageSize,
+      image_size: isSeedream45 || isWan27Image || isChatGptImage ? undefined : request.imageSize,
       quality: isSeedream45 ? undefined : request.imageQuality,
-      num_outputs: isSeedream45 || isWan27Image || isWan27ImageEdit ? undefined : request.count,
-      seed: isWan27Image || isWan27ImageEdit ? -1 : undefined,
+      output_format: isChatGptImage ? "png" : undefined,
+      num_outputs: isSeedream45 || isWan27Image || isChatGptImage ? undefined : request.count,
+      seed: isWan27Image ? -1 : undefined,
     }, {
       pollInterval: 2,
       timeout: 36000,
@@ -266,8 +269,9 @@ async function uploadProviderInput(client: Client, input: ProviderImageInput | P
 
 function wavespeedImageModel(model: string, hasReferences: boolean) {
   if (model.includes("/")) return model;
-  if (model === WAN_2_7_IMAGE_MODEL_ID) return "alibaba/wan-2.7/text-to-image";
-  if (model === WAN_2_7_IMAGE_EDIT_MODEL_ID) return "alibaba/wan-2.7/image-edit";
+  if (model === WAN_2_7_IMAGE_MODEL_ID || model === WAN_2_7_IMAGE_EDIT_MODEL_ID) {
+    return hasReferences ? "alibaba/wan-2.7/image-edit" : "alibaba/wan-2.7/text-to-image";
+  }
   if (model === "gpt-image-2") return hasReferences ? "openai/gpt-image-2/edit" : "openai/gpt-image-2/text-to-image";
   if (model === SEEDREAM_4_5_MODEL_ID) return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
   return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
