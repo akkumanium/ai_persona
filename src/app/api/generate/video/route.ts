@@ -73,11 +73,11 @@ export async function POST(request: Request) {
       `${generationType.replaceAll("_", " ")} generation`,
     );
 
+    const result = await videoProvider.submit({
+      ...input,
+      motionReferenceVideo,
+    });
     try {
-      const result = await videoProvider.submit({
-        ...input,
-        motionReferenceVideo,
-      });
       const updatedAt = nowIso();
       const asset: Asset | undefined = result.asset
         ? await materializeGeneratedAsset({

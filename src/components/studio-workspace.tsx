@@ -412,7 +412,7 @@ export function StudioWorkspace({
             <Image src="/favicon.svg" alt="" width={32} height={32} className="rounded-md" />
           </div>
           <div>
-            <p className="text-sm font-semibold tracking-normal">Persona Studio</p>
+            <p className="text-sm font-semibold tracking-normal">Idolborn</p>
           </div>
         </div>
 

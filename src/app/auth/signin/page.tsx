@@ -6,8 +6,8 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
-  title: "Sign in | Persona Studio",
-  description: "Sign in to Persona Studio.",
+  title: "Sign in | Idolborn",
+  description: "Sign in to Idolborn.",
 };
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function SignInPage({
           <span className="flex size-10 items-center justify-center rounded-md border border-[#ff4fa3]/40 bg-[#ff4fa3]/14 text-[#ff8fc7]">
             <Sparkles size={19} />
           </span>
-          <span className="text-base font-semibold tracking-normal">Persona Studio</span>
+          <span className="text-base font-semibold tracking-normal">Idolborn</span>
         </Link>
         <Link
           href="/"

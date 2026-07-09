@@ -16,8 +16,8 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
-  title: "Studio | Persona Studio",
-  description: "Create personas, references, images, and videos in Persona Studio.",
+  title: "Studio | Idolborn",
+  description: "Create personas, references, images, and videos in Idolborn.",
 };
 
 export const dynamic = "force-dynamic";

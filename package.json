@@ -34,7 +34,7 @@
     "typescript": "^5",
     "vitest": "^4.1.6"
   },
-  "description": "Persona Studio is a Next.js + Supabase SaaS MVP for creating AI-influencer personas, reference avatars, images, and videos.",
+  "description": "Idolborn is a Next.js + Supabase SaaS MVP for creating AI-influencer personas, reference avatars, images, and videos.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

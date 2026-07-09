@@ -5,8 +5,8 @@ import { env, hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
-  title: "Contact | Persona Studio",
-  description: "Contact Persona Studio by email or Telegram.",
+  title: "Contact | Idolborn",
+  description: "Contact Idolborn by email or Telegram.",
 };
 
 const TELEGRAM_USER = "Idolborn support";

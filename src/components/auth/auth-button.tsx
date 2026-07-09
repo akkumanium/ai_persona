@@ -203,7 +203,7 @@ export function AuthButton({
               <div className="my-auto w-full max-w-md rounded-lg border border-[#ffffff24] bg-[#10151d] p-5 text-white shadow-2xl shadow-black/45 sm:max-h-[calc(100vh-3rem)] sm:overflow-y-auto">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-lg font-semibold">Persona Studio access</p>
+                    <p className="text-lg font-semibold">Idolborn access</p>
                     <p className="mt-1 text-sm leading-6 text-[#d7dfeb]">
                       Sign in to keep account data, assets, and token usage tied to your Supabase user.
                     </p>

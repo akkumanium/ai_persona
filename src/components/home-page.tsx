@@ -329,7 +329,7 @@ export function HomePage({
             <Reveal>
               <div className="hero-eyebrow">
                 <span className="dot" />
-                AI persona studio
+                AI Idolborn
               </div>
             </Reveal>
             <Reveal delay={80}>
@@ -340,7 +340,7 @@ export function HomePage({
             </Reveal>
             <Reveal delay={160}>
               <p className="lead">
-                Persona Studio is the only workspace you need to build a consistent
+                Idolborn is the only workspace you need to build a consistent
                 AI model and ship images, video, and voice that all look like the same person — every time. 
               </p>
             </Reveal>
@@ -450,7 +450,7 @@ export function HomePage({
             </Reveal>
             <Reveal delay={400}>
               <p>
-                Persona Studio replaces the course, the bookmarks, and the five tabs with one workspace. Define your
+                Idolborn replaces the course, the bookmarks, and the five tabs with one workspace. Define your
                 model once. Generate from it forever.
               </p>
             </Reveal>
@@ -476,7 +476,7 @@ export function HomePage({
               <div className="how-left">
                 <p>
                   Most AI tools don&apos;t teach you how to keep face consistent every generation. That&apos;s fine for a one-time usage, useless for social media business.
-                  Persona Studio locks your face, body, and style into a saved reference set — every image,
+                  Idolborn locks your face, body, and style into a saved reference set — every image,
                   video, and voice clip generates <em>from</em> that set, not from scratch.
                 </p>
                 <p className="mt-20">No LoRA or ComfyUI needed.</p>
@@ -505,7 +505,7 @@ export function HomePage({
         </div>
       </section>
 
-      {/* ── 03 — Why Persona Studio ── */}
+      {/* ── 03 — Why Idolbor ── */}
       <section className="why-us" id="why-us">
         <div className="container">
           <Reveal>
@@ -630,7 +630,7 @@ export function HomePage({
       {/* ── Footer ── */}
       <footer className="footer">
         <div className="container footer-inner">
-          <div>(c) Persona Studio / 2026</div>
+          <div>(c) Idolborn / 2026</div>
           <div className="footer-links">
             <Link href="/studio">Studio</Link>
             <Link href="/pricing">Pricing</Link>

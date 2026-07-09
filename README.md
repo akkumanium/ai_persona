@@ -1,6 +1,6 @@
-# Persona Studio
+# Idolborn
 
-Persona Studio is a Next.js SaaS MVP for creating AI-influencer personas and generating reference avatars, campaign images, and short videos from those references.
+Idolborn is a Next.js SaaS MVP for creating AI-influencer personas and generating reference avatars, campaign images, and short videos from those references.
 
 The app currently has a polished home page at `/`, Supabase Auth entry points, and the working creation workspace at `/studio`.
 

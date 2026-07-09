@@ -140,8 +140,11 @@ export async function POST(request: Request) {
       `${generationType.replaceAll("_", " ")} generation`,
     );
 
+    // Once the provider accepts the generation attempt, provider-side failures
+    // (including safety filters) remain billable. Only failures in our processing
+    // after a successful provider response are refunded.
+    const result = await imageProvider.generate(providerRequest);
     try {
-      const result = await imageProvider.generate(providerRequest);
       const updatedAt = nowIso();
       const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
         id: crypto.randomUUID(),

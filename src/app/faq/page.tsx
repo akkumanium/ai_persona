@@ -4,7 +4,7 @@ import { PublicHeader } from "@/components/public-header";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "FAQ | Persona Studio", description: "Answers to common Persona Studio questions." };
+export const metadata = { title: "FAQ | Idolborn", description: "Answers to common questions." };
 
 const questions = [
   ["What can I make in Studio?", "Create a persona, build consistent references, and turn them into images, videos, speech, and talking-avatar clips."],
@@ -42,7 +42,7 @@ export default async function FaqPage() {
             Frequently Asked Questions
           </h1>
           <p className="mt-5 text-base leading-7 text-[#9095a7] sm:text-lg">
-            Everything you need to know about creating, generating, and managing your work in Persona Studio.
+            Everything you need to know about creating, generating, and managing your work in Idolborn.
           </p>
         </header>
 

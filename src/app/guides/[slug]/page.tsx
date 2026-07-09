@@ -29,12 +29,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!article) {
     return {
-      title: "Guide not found | Persona Studio",
+      title: "Guide not found | Idolborn",
     };
   }
 
   return {
-    title: `${article.title} | Persona Studio`,
+    title: `${article.title} | Idolborn`,
     description: article.summary,
   };
 }
@@ -153,7 +153,7 @@ function GuideArticlePaywall({ access, slug }: { access: GuideViewerAccess; slug
                 Subscribe to read the full article.
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[#d8cec3]">
-                Guide pages are included with active Persona Studio plans, alongside generation access and persona management.
+                Guide pages are included with active plans, alongside generation access and persona management.
               </p>
             </div>
           </div>

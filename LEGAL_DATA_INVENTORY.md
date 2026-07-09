@@ -714,7 +714,7 @@ Fields:
 
 ## Uncertainties Requiring Owner Answers
 
-1. What legal/business entity operates Persona Studio, and what contact email/address should policies use?
+1. What legal/business entity operates Idolborn, and what contact email/address should policies use?
 2. Which jurisdictions are targeted or excluded?
 3. Are minors prohibited, and what minimum age applies?
 4. Is the product intended for adult-content creator workflows, and should generated personas/content be restricted to adults?

@@ -22,8 +22,8 @@ const pageMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "Pricing | Persona Studio",
-  description: "Choose a Persona Studio plan for persona capacity, assets, and welcome credits.",
+  title: "Pricing | Idolborn",
+  description: "Choose an Idolborn plan for persona capacity, assets, and welcome credits.",
 };
 
 export const dynamic = "force-dynamic";

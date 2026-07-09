@@ -84,6 +84,22 @@ export function sourceImageToDataUrl(image: SourceImageInput) {
   return `data:${image.mimeType};base64,${image.data}`;
 }
 
+export async function uploadSourceImage(
+  image: SourceImageInput,
+  storage?: StorageUploadOptions,
+): Promise<SourceImageInput> {
+  if (image.url) return image;
+  if (!image.data) throw new Error("The captured image has no uploadable data.");
+
+  const response = await fetch(sourceImageToDataUrl(image));
+  const file = new File([await response.blob()], image.name, { type: image.mimeType });
+  const transfer = new DataTransfer();
+  transfer.items.add(file);
+  const [uploaded] = await encodeFiles(transfer.files, image.mimeType, storage);
+  if (!uploaded) throw new Error("The captured image could not be uploaded.");
+  return uploaded;
+}
+
 async function getStorageContext() {
   try {
     const client = createBrowserSupabaseClient();

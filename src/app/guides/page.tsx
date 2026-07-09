@@ -26,7 +26,7 @@ const pageMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: "Guides | Persona Studio",
+  title: "Guides | Idolborn",
   description: "Practical guides for AI persona setup, model strategy, and traffic quality.",
 };
 
@@ -57,7 +57,7 @@ export default async function GuidesPage() {
               style={{ fontFamily: "var(--font-page-mono), monospace" }}
             >
               <span className="size-1.5 rounded-full bg-[#ff4d6d] shadow-[0_0_12px_rgba(255,77,109,0.8)]" />
-              Persona Studio guides
+              Idolborn guides
             </p>
             <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-normal sm:text-7xl">
               Guides

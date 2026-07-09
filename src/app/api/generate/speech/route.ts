@@ -61,8 +61,8 @@ export async function POST(request: Request) {
     });
     await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
 
+    const result = await speechProvider.generate(providerRequest);
     try {
-      const result = await speechProvider.generate(providerRequest);
       const updatedAt = nowIso();
       const asset: Asset = await materializeGeneratedAsset({
         id: crypto.randomUUID(),

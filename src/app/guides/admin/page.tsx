@@ -10,8 +10,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { saveGuideArticle } from "./actions";
 
 export const metadata = {
-  title: "Manage Guides | Persona Studio",
-  description: "Create and edit Persona Studio guide articles.",
+  title: "Manage Guides | Idolborn",
+  description: "Create and edit Idolborn guide articles.",
 };
 
 export const dynamic = "force-dynamic";

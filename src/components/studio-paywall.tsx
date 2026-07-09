@@ -22,7 +22,7 @@ export function StudioPaywall({
           <span className="flex size-10 items-center justify-center rounded-md bg-[#19141a] text-[#ffd9ea]">
             <Sparkles size={19} />
           </span>
-          <span className="text-base font-semibold tracking-normal">Persona Studio</span>
+          <span className="text-base font-semibold tracking-normal">Idolborn</span>
         </Link>
         <AuthButton initialUserEmail={userEmail} supabaseReady={supabaseReady} />
       </header>

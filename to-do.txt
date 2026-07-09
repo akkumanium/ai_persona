@@ -25,10 +25,10 @@
 118. 5. Change the way we turn an image into a video. At Videos, delete the "search generated images" and the whole section of picking through images that we have generated. Instead, at Images add another button at every image which will allow us to generate a video directly from that image.
 119. Rename Trend Videos to Reel Maker
 120. Fix all the bugs after moving to paddle
-121. [browser] Uncaught SecurityError: Failed to execute 'toDataURL' on 'HTMLCanvasElement': Tainted canvases may not be exported.
-    at video.addEventListener.once (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/src_0bg0tku._.js:11038:36) in logs
 122. How are videos and first frame loaded
 123. Handle error in generation
+124. Request body is too large. Keep it under 4.0 MB.
+125. How does upgrading work
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

@@ -20,7 +20,7 @@ export function PublicHeader({
       <div className="site-nav-inner">
         <Link href="/" className="site-brand">
           <Image src="/favicon.svg" alt="" width={28} height={28} className="site-brand-mark" />
-          <span>Persona studio</span>
+          <span>Idolborn</span>
         </Link>
         <div className="site-nav-links">
           <Link href="/guides">Guides</Link>

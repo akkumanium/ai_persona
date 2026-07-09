@@ -159,8 +159,8 @@ async function generateAvatarReference(body: unknown, userId?: string) {
   });
   await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
 
+  const result = await imageProvider.generate(providerRequest);
   try {
-    const result = await imageProvider.generate(providerRequest);
     const updatedAt = nowIso();
     const assets: Asset[] = await Promise.all(
       result.assets.map(async (asset, index) =>
@@ -279,8 +279,8 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
   });
   await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
 
+  const result = await avatarProvider.submit(providerRequest);
   try {
-    const result = await avatarProvider.submit(providerRequest);
     const updatedAt = nowIso();
     const asset: Asset | undefined = result.asset
       ? await materializeGeneratedAsset(

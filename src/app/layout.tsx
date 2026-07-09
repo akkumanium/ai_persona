@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Persona Studio",
+  title: "Idolborn",
   description: "Create AI-influencer personas, reference avatars, images, and videos.",
   icons: {
     icon: "/favicon.svg",

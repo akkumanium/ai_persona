@@ -17,7 +17,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import { encodeFiles, sourceImageToDataUrl, uploadSourceImage } from "@/components/studio/media";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   ModelSelect,
@@ -370,6 +370,11 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     updateLibraryItem(item.id, { isGeneratingFaces: true });
     setError("");
     try {
+      const uploadedFrame = await uploadSourceImage(item.firstFrame, {
+        enabled: supabaseReady,
+        bucket: "uploads",
+        folder: `trend-frames/${selectedPersona.id}`,
+      });
       const response = await fetch("/api/generate/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -384,7 +389,10 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
           count: safeCandidateCount,
           referenceImageUrls: personaReferences.map((asset) => asset.url),
-          sourceImages: [{ name: item.firstFrame.name, mimeType: item.firstFrame.mimeType, data: item.firstFrame.data ?? "" }],
+          sourceImageUrls: uploadedFrame.url ? [uploadedFrame.url] : [],
+          sourceImages: uploadedFrame.data
+            ? [{ name: uploadedFrame.name, mimeType: uploadedFrame.mimeType, data: uploadedFrame.data }]
+            : [],
           referenceAssetIds: [item.id, ...personaReferences.map((asset) => asset.id)],
           titlePrefix: "Trend face",
         }),

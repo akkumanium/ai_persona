@@ -1,5 +1,5 @@
 export const MAX_JSON_BODY_BYTES = 4 * 1024 * 1024;
-export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 export const MAX_DIRECT_UPLOAD_BYTES = 100 * 1024 * 1024;
 export const MAX_REMOTE_MEDIA_BYTES = 100 * 1024 * 1024;
 export const MAX_INLINE_IMAGE_BYTES = 2_500_000;
