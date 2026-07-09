@@ -94,7 +94,7 @@ export const videoGenerationSchema = z.object({
   startFrameImage: providerImageInputSchema.optional(),
   endFrameImageUrl: z.string().min(1).optional(),
   endFrameImage: providerImageInputSchema.optional(),
-  prompt: z.string().min(10).max(2000),
+  prompt: z.string().max(2000).optional().default(""),
   mode: z.enum(["normal", "motion"]),
   durationSeconds: z.number().int().min(3).max(15).default(5),
   aspectRatio: videoAspectRatioSchema.default("9:16"),
@@ -115,6 +115,17 @@ export const videoGenerationSchema = z.object({
   referenceVideoUrl: z.string().min(1).optional(),
   referenceAudio: providerMediaInputSchema.optional(),
   referenceAudioUrl: z.string().min(1).optional(),
+}).superRefine((input, context) => {
+  if (input.mode === "normal" && input.prompt.length < 10) {
+    context.addIssue({
+      code: "too_small",
+      minimum: 10,
+      inclusive: true,
+      origin: "string",
+      path: ["prompt"],
+      message: "Too small: expected string to have >=10 characters",
+    });
+  }
 });
 
 export const speechGenerationSchema = z.object({

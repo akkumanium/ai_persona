@@ -16,11 +16,6 @@
 92. Generate terms and privacy
 99. Think more on the name
 103. Upload more voices
-112. Stop naming images
-113. Merge Wan and Wan edit
-114. Add resolution for GPT Image 2
-115. Too overly compressed
-116. The faceswaps we've generated don't get saved properly. Also the status changed
 117. Delete some default prompts
 118. 5. Change the way we turn an image into a video. At Videos, delete the "search generated images" and the whole section of picking through images that we have generated. Instead, at Images add another button at every image which will allow us to generate a video directly from that image.
 119. Rename Trend Videos to Reel Maker
@@ -29,6 +24,15 @@
 123. Handle error in generation
 124. Request body is too large. Keep it under 4.0 MB.
 125. How does upgrading work
+126. Make videos expire
+127. Let us see that videos are in process
+128. Could not save reference assets: new row for relation "assets" violates check constraint "assets_reference_slot_check"
+129. Deduct the tokens immediately
+130. We've generated a candidate and another one disappeared
+131. There's no resolution in Kling Motion Control
+132. Provide reference in references in generate mode
+134. Fullscreen for videos doesn't work properly
+135. Fullscreen for images doesn't work properly
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
@@ -99,14 +103,14 @@ Extend the image to a chest-up portrait photography. She's wearing a tight, fitt
 .\first_frame.bat myvideo.mp4 cover.png
 
 ---Faceswap---
-Replace the woman in the second reference image with the woman from the first reference image. The first image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
+Replace the woman in the second reference image with the woman from the first reference image. The first image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, hair and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
 Use the exact outfit, clothing fit, styling, and details from the second reference image.
 Crucially important: Transfer the woman into the pose of the second reference image with absolute precision. Match the pose 100% exactly — every limb angle, joint position, hand placement, finger position, torso tilt, shoulder position, head angle, and body orientation must be copied perfectly from the second image. Do not change the pose in any way. Strongest possible pose adherence is required. The pose from reference photo 2 must remain completely unchanged.
 The second image defines the entire scene: keep the exact same background, environment, camera angle, framing, perspective, depth of field, and composition without any deviation.
 Match the lighting from the second image with perfect accuracy: same light direction, intensity, shadows, highlights, reflections, and color grading.
 Replicate the image quality of the second photo exactly: same resolution, sharpness, skin texture detail, noise level, lens characteristics, and photorealism. Do not enhance or degrade the quality.
 Ensure seamless integration with correct perspective, depth, and contact with the environment. Photorealistic result, natural skin, no stylization, no artistic interpretation, no body reshaping.
-Delete the tattoo on the hand. No text, no logos, no watermarks.
+Delete the tattoos. No text, no logos, no watermarks.
 
 Replace the woman in the first reference image with the woman from the second reference image. The second image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.
 Use the exact outfit, clothing fit, styling, and details from the first reference image.

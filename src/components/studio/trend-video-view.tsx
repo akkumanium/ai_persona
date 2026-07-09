@@ -163,11 +163,11 @@ Delete the tattoos. No text, no logos, no watermarks.`);
   const [motionPrompt, setMotionPrompt] = useState(
     "",
   );
-  const [motionReference, setMotionReference] = useState("copy the original dance, body timing, camera movement, and framing");
+  const [motionReference, setMotionReference] = useState("");
   const [motionMode, setMotionMode] = useState<"animate" | "replace">("animate");
   const [motionCharacterOrientation, setMotionCharacterOrientation] = useState<"image" | "video">("video");
   const [motionResolution, setMotionResolution] = useState<(typeof motionResolutions)[number]>("720p");
-  const [motionNegativePrompt, setMotionNegativePrompt] = useState("blur, distorted body, warped hands, flicker, low quality");
+  const [motionNegativePrompt, setMotionNegativePrompt] = useState("");
   const [keepOriginalSound, setKeepOriginalSound] = useState(true);
 
   const personaReferences = useMemo(
@@ -388,8 +388,14 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           imageSize: imageModelSupportsSize ? imageSize : "2K",
           imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
           count: safeCandidateCount,
-          referenceImageUrls: personaReferences.map((asset) => asset.url),
-          sourceImageUrls: uploadedFrame.url ? [uploadedFrame.url] : [],
+          // WaveSpeed preserves the order of this array. The prompt treats the
+          // target frame as image 1 and persona references as images 2+, so keep
+          // the frame first when it was uploaded as a URL. A base64 fallback is
+          // sent through sourceImages below, which the API also places first.
+          referenceImageUrls: uploadedFrame.url
+            ? [uploadedFrame.url, ...personaReferences.map((asset) => asset.url)]
+            : personaReferences.map((asset) => asset.url),
+          sourceImageUrls: [],
           sourceImages: uploadedFrame.data
             ? [{ name: uploadedFrame.name, mimeType: uploadedFrame.mimeType, data: uploadedFrame.data }]
             : [],
