@@ -121,21 +121,25 @@ export function TrendVideoView({
   assets,
   selectedPersona,
   supabaseReady,
+  jobs,
   onAssetsCreated,
   onSelectPersona,
   library,
   onLibraryChange,
   onSourceAssetsCreated,
+  onRemoveSource,
 }: {
   personas: Persona[];
   assets: Asset[];
   selectedPersona?: Persona;
   supabaseReady?: boolean;
+  jobs: GenerationJob[];
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   library: LibraryItem[];
   onLibraryChange: Dispatch<SetStateAction<LibraryItem[]>>;
   onSourceAssetsCreated: (assets: Asset[]) => void;
+  onRemoveSource: (id: string) => void;
 }) {
   const [editingId, setEditingId] = useState<string | undefined>();
   const capturingIds = useRef(new Set<string>());
@@ -193,6 +197,19 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     ? (editingItem.candidates.find((asset) => asset.id === editingItem.selectedCandidateId) ??
       editingItem.candidates[0])
     : undefined;
+  const activeJobsForEditingItem = editingItem
+    ? jobs.filter(
+        (job) =>
+          (job.status === "queued" || job.status === "running") &&
+          job.referenceAssetIds?.includes(editingItem.id),
+      )
+    : [];
+  const isPersistentlyGeneratingFaces = activeJobsForEditingItem.some(
+    (job) => job.generationType === "image_from_reference" || job.generationType === "image_from_prompt",
+  );
+  const isPersistentlyGeneratingVideo = activeJobsForEditingItem.some(
+    (job) => job.generationType === "video_motion",
+  );
   const safeCandidateCount = Math.min(4, Math.max(1, Math.round(candidateCount)));
   const detectedDuration = editingItem?.video.durationSeconds ? Math.round(editingItem.video.durationSeconds) : 5;
   const safeMotionDuration = Math.min(15, Math.max(3, detectedDuration));
@@ -354,7 +371,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
   }
 
   function removeLibraryItem(id: string) {
-    onLibraryChange((current) => current.filter((item) => item.id !== id));
+    onRemoveSource(id);
     if (editingId === id) setEditingId(undefined);
   }
 
@@ -411,11 +428,18 @@ Delete the tattoos. No text, no logos, no watermarks.`);
         ...asset,
         referenceAssetIds: [item.id, ...personaReferences.map((reference) => reference.id)],
       }));
-      updateLibraryItem(item.id, {
-        candidates: nextAssets,
-        selectedCandidateId: nextAssets[0]?.id ?? "",
-        isGeneratingFaces: false,
-      });
+      onLibraryChange((current) => current.map((currentItem) => {
+        if (currentItem.id !== item.id) return currentItem;
+        return {
+          ...currentItem,
+          candidates: [
+            ...nextAssets,
+            ...currentItem.candidates.filter((candidate) => !nextAssets.some((asset) => asset.id === candidate.id)),
+          ],
+          selectedCandidateId: currentItem.selectedCandidateId || nextAssets[0]?.id || "",
+          isGeneratingFaces: false,
+        };
+      }));
       onAssetsCreated(nextAssets, payload.job);
     } catch (generationError) {
       updateLibraryItem(item.id, { isGeneratingFaces: false });
@@ -466,7 +490,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
       }
       const nextAssets = payload.asset ? [{ ...payload.asset, referenceAssetIds: [item.id, selectedCandidate.id] }] : [];
       updateLibraryItem(item.id, { finalVideo: nextAssets[0], isGeneratingVideo: false });
-      if (nextAssets[0]) onAssetsCreated(nextAssets, payload.job);
+      onAssetsCreated(nextAssets, { ...payload.job, referenceAssetIds: [item.id, selectedCandidate.id] });
     } catch (generationError) {
       updateLibraryItem(item.id, { isGeneratingVideo: false });
       setError(generationError instanceof Error ? generationError.message : "Trend video generation failed.");
@@ -620,7 +644,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   </div>
                 </details>
                 <SubmitButton
-                  loading={Boolean(editingItem.isGeneratingFaces)}
+                  loading={Boolean(editingItem.isGeneratingFaces) || isPersistentlyGeneratingFaces}
                   icon={Wand2}
                   label="Generate faces"
                   costLabel={faceCostLabel}
@@ -635,10 +659,10 @@ Delete the tattoos. No text, no logos, no watermarks.`);
               </form>
             </div>
 
-            {editingItem.isGeneratingFaces || editingItem.candidates.length ? (
+            {editingItem.isGeneratingFaces || isPersistentlyGeneratingFaces || editingItem.candidates.length ? (
               <div className="mt-4 border-t border-stone-100 pt-3">
                 <p className="mb-2 text-[11px] font-semibold text-stone-700">
-                  {editingItem.isGeneratingFaces
+                  {editingItem.isGeneratingFaces || isPersistentlyGeneratingFaces
                     ? "Generating face-swapped frames"
                     : "Candidates — tap one to use it as the identity for motion"}
                 </p>
@@ -650,6 +674,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                         type="button"
                         key={asset.id}
                         onClick={() => selectCandidate(asset.id)}
+                        onDoubleClick={() => setPreviewMedia({ src: asset.url, title: asset.title, kind: "image" })}
                         title={asset.title}
                         className={cn(
                           "group relative w-24 shrink-0 overflow-hidden rounded-md border bg-white text-left transition",
@@ -675,7 +700,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                       </button>
                     );
                   })}
-                  {editingItem.isGeneratingFaces
+                  {editingItem.isGeneratingFaces || isPersistentlyGeneratingFaces
                     ? Array.from({ length: safeCandidateCount }).map((_, index) => (
                         <CandidateLoadingCard key={`candidate-loading-${index}`} />
                       ))
@@ -729,7 +754,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   ) : null}
                 </div>
                 <div className="mt-2 aspect-[9/16] overflow-hidden rounded-lg border-2 border-emerald-800/30 bg-stone-900">
-                  {editingItem.isGeneratingVideo ? (
+                  {editingItem.isGeneratingVideo || isPersistentlyGeneratingVideo ? (
                     <div className="flex h-full items-center justify-center">
                       <Loader2 className="size-6 animate-spin text-white/80" />
                     </div>
@@ -806,7 +831,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   </div>
                 </details>
                 <SubmitButton
-                  loading={Boolean(editingItem.isGeneratingVideo)}
+                  loading={Boolean(editingItem.isGeneratingVideo) || isPersistentlyGeneratingVideo}
                   icon={Film}
                   label="Generate reel"
                   costLabel={motionCostLabel}

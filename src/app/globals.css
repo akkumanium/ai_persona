@@ -52,6 +52,15 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Keep the entire frame visible when the browser's native video controls enter fullscreen. */
+video:fullscreen,
+video:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
+  background: #000;
+}
+
 ::selection {
   background: rgba(255, 79, 163, 0.32);
   color: #ffffff;

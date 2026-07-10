@@ -13,7 +13,7 @@ import { TrendVideoView, trendLibraryItemsFromAssets, type LibraryItem } from "@
 import type { ReferenceSlotId, SourceImageInput, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
-import type { StudioInitialData } from "@/lib/studio-records";
+import { mapJob, type StudioInitialData } from "@/lib/studio-records";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, formatTokens } from "@/lib/utils";
@@ -68,6 +68,7 @@ export function StudioWorkspace({
   );
   const [generateInitialSlotId, setGenerateInitialSlotId] = useState<ReferenceSlotId | undefined>();
   const launchNonce = useRef(0);
+  const pollingJobIds = useRef(new Set<string>());
   const [initialVideoStartFrame, setInitialVideoStartFrame] = useState<{ id: string; nonce: number } | undefined>();
   const [initialMotionImage, setInitialMotionImage] = useState<{ image: SourceImageInput; nonce: number } | undefined>();
   const [initialAvatarImage, setInitialAvatarImage] = useState<{ id: string; nonce: number } | undefined>();
@@ -78,6 +79,7 @@ export function StudioWorkspace({
 
   const selectedPersona = personas.find((persona) => persona.id === selectedPersonaId) ?? personas[0];
   const displayedBalanceCents = Math.max(0, balanceCents);
+  const activeJobCount = jobs.filter((job) => job.status === "queued" || job.status === "running").length;
 
   useEffect(() => {
     if (!transientAlert) return;
@@ -101,12 +103,49 @@ export function StudioWorkspace({
     return { client, userId: user.id };
   }
 
+  useEffect(() => {
+    if (!supabaseReady) return;
+    const client = createBrowserSupabaseClient();
+    let cancelled = false;
+    const refreshActiveJobs = async () => {
+      let activeUserId = userId;
+      if (!activeUserId) {
+        const {
+          data: { user },
+        } = await client.auth.getUser();
+        if (!user) return;
+        activeUserId = user.id;
+        setUserId(user.id);
+      }
+      const { data, error } = await client
+        .from("generation_jobs")
+        .select("*")
+        .in("status", ["queued", "running"])
+        .order("created_at", { ascending: false });
+      if (cancelled || error || !data?.length) return;
+      const activeJobs = data.map(mapJob);
+      setJobs((current) => [
+        ...activeJobs,
+        ...current.filter((job) => !activeJobs.some((activeJob) => activeJob.id === job.id)),
+      ]);
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") void refreshActiveJobs();
+    };
+    void refreshActiveJobs();
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [supabaseReady, userId, view]);
+
   function addJob(job: GenerationJob) {
-    setJobs((current) => [job, ...current]);
+    setJobs((current) => [job, ...current.filter((currentJob) => currentJob.id !== job.id)]);
   }
 
   function addAssets(nextAssets: Asset[], job?: GenerationJob) {
-    setAssets((current) => [...nextAssets, ...current]);
+    setAssets((current) => [...nextAssets, ...current.filter((asset) => !nextAssets.some((nextAsset) => nextAsset.id === asset.id))]);
     if (job?.costEstimateCents) {
       setBalanceCents((current) => Math.max(0, current - job.costEstimateCents));
     }
@@ -309,6 +348,86 @@ export function StudioWorkspace({
     }
   }
 
+  function removeTrendSource(sourceId: string) {
+    const relatedAssets = assets.filter(
+      (asset) => asset.id === sourceId || asset.referenceAssetIds?.includes(sourceId),
+    );
+    const relatedIds = new Set(relatedAssets.map((asset) => asset.id));
+    setTrendLibrary((current) => current.filter((item) => item.id !== sourceId));
+    setAssets((current) => current.filter((asset) => !relatedIds.has(asset.id)));
+
+    const client = supabaseClient();
+    if (!client) return;
+    void (async () => {
+      const { error } = await client.from("assets").delete().in("id", [...relatedIds]);
+      if (error) {
+        setNotice(`Could not delete reel video: ${error.message}`);
+        return;
+      }
+      const storagePaths = relatedAssets
+        .filter((asset): asset is Asset & { storageBucket: string; storagePath: string } => Boolean(asset.storageBucket && asset.storagePath))
+        .reduce<Record<string, string[]>>((pathsByBucket, asset) => {
+          (pathsByBucket[asset.storageBucket] ??= []).push(asset.storagePath);
+          return pathsByBucket;
+        }, {});
+      await Promise.all(Object.entries(storagePaths).map(([bucket, paths]) => client.storage.from(bucket).remove(paths)));
+    })();
+  }
+
+  useEffect(() => {
+    const activeJobs = jobs.filter(
+      (job) =>
+        (job.status === "queued" || job.status === "running") &&
+        Boolean(job.providerJobId) &&
+        (job.generationType === "video_normal" || job.generationType === "video_motion" || job.generationType === "video_prompt"),
+    );
+    if (!activeJobs.length) return;
+
+    let cancelled = false;
+    const pollJobs = async () => {
+      await Promise.all(activeJobs.map(async (job) => {
+        if (!job.providerJobId || pollingJobIds.current.has(job.id)) return;
+        pollingJobIds.current.add(job.id);
+        try {
+          const response = await fetch("/api/jobs/poll", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ provider: job.provider, providerJobId: job.providerJobId }),
+          });
+          const payload = await response.json();
+          if (!response.ok || cancelled || !payload.job) return;
+          const updatedJob = payload.job as GenerationJob;
+          const asset = payload.asset as Asset | undefined;
+          setJobs((current) => [updatedJob, ...current.filter((currentJob) => currentJob.id !== updatedJob.id)]);
+          if (!asset) return;
+          setAssets((current) => [asset, ...current.filter((currentAsset) => currentAsset.id !== asset.id)]);
+          setTrendLibrary((current) => current.map((item) => {
+            if (!asset.referenceAssetIds?.includes(item.id)) return item;
+            if (asset.kind === "image") {
+              return {
+                ...item,
+                candidates: [asset, ...item.candidates.filter((candidate) => candidate.id !== asset.id)],
+                selectedCandidateId: item.selectedCandidateId || asset.id,
+              };
+            }
+            return asset.kind === "video" ? { ...item, finalVideo: asset } : item;
+          }));
+        } catch {
+          // Polling failures are transient; keep the persisted job queued and retry on the next interval.
+        } finally {
+          pollingJobIds.current.delete(job.id);
+        }
+      }));
+    };
+
+    void pollJobs();
+    const interval = window.setInterval(() => void pollJobs(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [jobs]);
+
   function toggleReferenceDefault(assetId: string) {
     const target = assets.find((asset) => asset.id === assetId);
     const nextValue = !target?.isDefaultReference;
@@ -470,6 +589,16 @@ export function StudioWorkspace({
       </aside>
 
       <main className="lg:pl-60">
+        {activeJobCount ? (
+          <button
+            type="button"
+            onClick={() => setView("jobs")}
+            className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-md border border-emerald-800 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 shadow-md"
+          >
+            <Activity className="size-4 animate-pulse" />
+            {activeJobCount} generation{activeJobCount === 1 ? "" : "s"} in progress
+          </button>
+        ) : null}
         {transientAlert ? (
           <div className="fixed left-4 right-4 top-4 z-50 mx-auto max-w-xl rounded-lg border border-pink-300/70 bg-pink-600 px-4 py-3 text-sm font-semibold text-white shadow-xl lg:left-60">
             <div className="flex items-center justify-between gap-3">
@@ -607,6 +736,7 @@ export function StudioWorkspace({
               mode={view}
               personas={personas}
               assets={assets}
+              jobs={jobs}
               selectedPersona={selectedPersona}
               supabaseReady={supabaseReady}
               imagePromptSuggestions={imagePromptSuggestions}
@@ -630,8 +760,10 @@ export function StudioWorkspace({
               assets={assets}
               selectedPersona={selectedPersona}
               supabaseReady={supabaseReady}
+              jobs={jobs}
               library={trendLibrary}
               onLibraryChange={setTrendLibrary}
+              onRemoveSource={removeTrendSource}
               onSourceAssetsCreated={(nextAssets) => {
                 addTrendSourceAssets(nextAssets);
                 setNotice(`${nextAssets.length} reel source${nextAssets.length === 1 ? "" : "s"} saved.`);
@@ -640,7 +772,9 @@ export function StudioWorkspace({
                 addAssets(nextAssets, job);
                 addJob(job);
                 setNotice(
-                  nextAssets.some((asset) => asset.kind === "video")
+                  job.generationType === "video_motion" && job.status !== "succeeded"
+                    ? "Reel generation is in progress."
+                    : nextAssets.some((asset) => asset.kind === "video")
                     ? "Reel generated."
                     : `${nextAssets.length} face frame${nextAssets.length === 1 ? "" : "s"} generated.`,
                 );

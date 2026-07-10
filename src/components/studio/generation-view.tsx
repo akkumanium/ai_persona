@@ -50,6 +50,7 @@ export function GenerationView({
   mode,
   personas,
   assets,
+  jobs,
   selectedPersona,
   supabaseReady,
   imagePromptSuggestions = [],
@@ -65,6 +66,7 @@ export function GenerationView({
   mode: GenerationMode;
   personas: Persona[];
   assets: Asset[];
+  jobs: GenerationJob[];
   selectedPersona?: Persona;
   supabaseReady?: boolean;
   imagePromptSuggestions?: PromptSuggestion[];
@@ -180,8 +182,20 @@ export function GenerationView({
       }),
     [assets, mode, selectedPersona?.id],
   );
-  const isGeneratingImage = activeImageGenerations > 0;
-  const isGeneratingVideo = activeVideoGenerations > 0;
+  const persistedImageGenerations = jobs.filter(
+    (job) =>
+      job.personaId === selectedPersona?.id &&
+      (job.status === "queued" || job.status === "running") &&
+      (job.generationType === "image_from_prompt" || job.generationType === "image_from_reference"),
+  ).length;
+  const persistedVideoGenerations = jobs.filter(
+    (job) =>
+      job.personaId === selectedPersona?.id &&
+      (job.status === "queued" || job.status === "running") &&
+      (job.generationType === "video_normal" || job.generationType === "video_motion" || job.generationType === "video_prompt"),
+  ).length;
+  const isGeneratingImage = activeImageGenerations + persistedImageGenerations > 0;
+  const isGeneratingVideo = activeVideoGenerations + persistedVideoGenerations > 0;
   const isGenerating = mode === "images" ? isGeneratingImage : isGeneratingVideo;
   const imageModelSupportsSize = supportsImageSize(imageModel);
   const imageModelSupportsQuality = supportsImageQuality(imageModel);
@@ -582,8 +596,12 @@ export function GenerationView({
           {isGenerating ? (
             <div className="mb-3 flex items-center gap-2 rounded-md border border-emerald-800/20 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
               <Loader2 className="size-4 animate-spin" />
-              {mode === "images" ? activeImageGenerations : activeVideoGenerations} generation
-              {(mode === "images" ? activeImageGenerations : activeVideoGenerations) === 1 ? "" : "s"} running.
+              {mode === "images"
+                ? activeImageGenerations + persistedImageGenerations
+                : activeVideoGenerations + persistedVideoGenerations} generation
+              {(mode === "images"
+                ? activeImageGenerations + persistedImageGenerations
+                : activeVideoGenerations + persistedVideoGenerations) === 1 ? "" : "s"} running.
             </div>
           ) : null}
           {latestAssets.length ? (

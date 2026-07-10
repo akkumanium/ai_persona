@@ -187,7 +187,7 @@ export function MediaLightbox({
       {kind === "video" ? (
         <video
           src={src}
-          className="max-h-[92vh] max-w-[94vw] rounded-md object-contain"
+          className="h-auto w-auto max-h-[92vh] max-w-[94vw] rounded-md object-contain"
           controls
           autoPlay
           onClick={(event) => event.stopPropagation()}

@@ -17,12 +17,9 @@
 99. Think more on the name
 103. Upload more voices
 117. Delete some default prompts
-118. 5. Change the way we turn an image into a video. At Videos, delete the "search generated images" and the whole section of picking through images that we have generated. Instead, at Images add another button at every image which will allow us to generate a video directly from that image.
-119. Rename Trend Videos to Reel Maker
 120. Fix all the bugs after moving to paddle
 122. How are videos and first frame loaded
 123. Handle error in generation
-124. Request body is too large. Keep it under 4.0 MB.
 125. How does upgrading work
 126. Make videos expire
 127. Let us see that videos are in process
@@ -33,6 +30,10 @@
 132. Provide reference in references in generate mode
 134. Fullscreen for videos doesn't work properly
 135. Fullscreen for images doesn't work properly
+136. Build all the infrastructure needed for the articles and make themm
+137. SEOmaxx through other ways
+138. You can't delete the videos
+139.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

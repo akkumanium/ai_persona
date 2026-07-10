@@ -54,6 +54,7 @@ export type GenerationJob = {
   generationType: GenerationType;
   prompt: string;
   personaId?: string;
+  referenceAssetIds?: string[];
   costEstimateCents: number;
   rawProviderResponse?: unknown;
   errorMessage?: string;

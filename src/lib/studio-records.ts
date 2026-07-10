@@ -114,6 +114,9 @@ export function mapJob(row: JobRow): GenerationJob {
       : typeof inputParams.prompt === "string"
         ? inputParams.prompt
         : "";
+  const referenceAssetIds = Array.isArray(inputParams.referenceAssetIds)
+    ? inputParams.referenceAssetIds.filter((id): id is string => typeof id === "string")
+    : undefined;
 
   return {
     id: row.id,
@@ -124,6 +127,7 @@ export function mapJob(row: JobRow): GenerationJob {
     generationType: row.generation_type,
     prompt: visiblePrompt,
     personaId: row.persona_id ?? undefined,
+    referenceAssetIds,
     costEstimateCents: row.cost_estimate_cents,
     rawProviderResponse: row.raw_provider_response,
     errorMessage: row.error_message ?? undefined,
