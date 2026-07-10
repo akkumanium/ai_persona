@@ -8,7 +8,7 @@ import { promptForReferenceSlot } from "@/lib/reference-prompts";
 import { imageGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -133,18 +133,20 @@ export async function POST(request: Request) {
       },
       inputParams,
     });
-    await reserveTokens(
-      auth.user?.id,
-      estimatedPricing.tokens,
-      jobId,
-      `${generationType.replaceAll("_", " ")} generation`,
-    );
-
-    // Once the provider accepts the generation attempt, provider-side failures
-    // (including safety filters) remain billable. Only failures in our processing
-    // after a successful provider response are refunded.
-    const result = await imageProvider.generate(providerRequest);
+    let providerCompleted = false;
     try {
+      await reserveTokens(
+        auth.user?.id,
+        estimatedPricing.tokens,
+        jobId,
+        `${generationType.replaceAll("_", " ")} generation`,
+      );
+
+      // Once the provider accepts the generation attempt, provider-side failures
+      // (including safety filters) remain billable. Only failures in our processing
+      // after a successful provider response are refunded.
+      const result = await imageProvider.generate(providerRequest);
+      providerCompleted = true;
       const updatedAt = nowIso();
       const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
         id: crypto.randomUUID(),
@@ -187,12 +189,15 @@ export async function POST(request: Request) {
         job,
       });
     } catch (error) {
-      await refundTokens(
-        auth.user?.id,
-        estimatedPricing.tokens,
-        jobId,
-        `${generationType.replaceAll("_", " ")} refund`,
-      );
+      if (providerCompleted) {
+        await refundTokens(
+          auth.user?.id,
+          estimatedPricing.tokens,
+          jobId,
+          `${generationType.replaceAll("_", " ")} refund`,
+        );
+      }
+      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
       throw error;
     }
   } catch (error) {

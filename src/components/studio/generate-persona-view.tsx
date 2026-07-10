@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { ArrowLeft, ImageIcon, Loader2, Upload, WandSparkles } from "lucide-react";
+import { ArrowLeft, ImageIcon, Loader2, Pencil, Upload, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
 import { encodeFiles } from "@/components/studio/media";
@@ -43,6 +43,7 @@ export function GeneratePersonaView({
   onAssetsCreated,
   onSelectPersona,
   onBack,
+  onEditReference,
 }: {
   personas: Persona[];
   assets: Asset[];
@@ -52,6 +53,7 @@ export function GeneratePersonaView({
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onBack: () => void;
+  onEditReference: (asset: Asset) => void;
 }) {
   const initialSlot = referenceSlots.find((slot) => slot.id === (initialSlotId ?? "face")) ?? referenceSlots[0];
   const [selectedSlotId, setSelectedSlotId] = useState<ReferenceSlotId>(initialSlot.id);
@@ -362,9 +364,18 @@ export function GeneratePersonaView({
           {slotAssets.length ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {slotAssets.slice(0, 6).map((asset) => (
-                <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
-                  <div className="aspect-[4/5] bg-stone-100">
+                <article key={asset.id} className="group overflow-hidden rounded-lg border border-stone-200 bg-white">
+                  <div className="relative aspect-[4/5] bg-stone-100">
                     <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => onEditReference(asset)}
+                      className="absolute left-2 top-2 flex h-8 items-center gap-1.5 rounded-md bg-black/55 px-2 text-xs font-semibold text-white opacity-0 transition hover:bg-emerald-800 group-hover:opacity-100"
+                      aria-label="Edit this reference in Images"
+                    >
+                      <Pencil size={14} />
+                      Edit
+                    </button>
                   </div>
                   <div className="p-3">
                     <p className="mt-1 text-xs text-stone-500">{asset.isDefaultReference ? "Default" : asset.model}</p>

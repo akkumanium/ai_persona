@@ -194,8 +194,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
 
   const editingItem = library.find((item) => item.id === editingId);
   const selectedCandidate = editingItem
-    ? (editingItem.candidates.find((asset) => asset.id === editingItem.selectedCandidateId) ??
-      editingItem.candidates[0])
+    ? editingItem.candidates.find((asset) => asset.id === editingItem.selectedCandidateId)
     : undefined;
   const activeJobsForEditingItem = editingItem
     ? jobs.filter(
@@ -377,7 +376,9 @@ Delete the tattoos. No text, no logos, no watermarks.`);
 
   function selectCandidate(assetId: string) {
     if (!editingItem) return;
-    updateLibraryItem(editingItem.id, { selectedCandidateId: assetId });
+    updateLibraryItem(editingItem.id, {
+      selectedCandidateId: editingItem.selectedCandidateId === assetId ? "" : assetId,
+    });
   }
 
   async function generateFaceCandidates(event: FormEvent) {
@@ -670,34 +671,47 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                   {editingItem.candidates.map((asset, index) => {
                     const isPicked = selectedCandidate?.id === asset.id;
                     return (
-                      <button
-                        type="button"
+                      <div
                         key={asset.id}
-                        onClick={() => selectCandidate(asset.id)}
-                        onDoubleClick={() => setPreviewMedia({ src: asset.url, title: asset.title, kind: "image" })}
                         title={asset.title}
                         className={cn(
                           "group relative w-24 shrink-0 overflow-hidden rounded-md border bg-white text-left transition",
                           isPicked ? "border-emerald-800 ring-2 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
                         )}
                       >
-                        <div className="relative aspect-[9/16] bg-stone-100">
-                          <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
-                          <span
-                            className={cn(
-                              "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
-                              isPicked
-                                ? "border-emerald-800 bg-emerald-800 text-white"
-                                : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
-                            )}
-                          >
-                            <Check size={12} strokeWidth={3} />
-                          </span>
-                        </div>
-                        <p className="px-1.5 py-1 text-[9px] font-semibold text-stone-700">
-                          {isPicked ? "Selected" : `#${index + 1}`}
-                        </p>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isPicked) {
+                              setPreviewMedia({ src: asset.url, title: asset.title, kind: "image" });
+                              return;
+                            }
+                            selectCandidate(asset.id);
+                          }}
+                          className="block w-full text-left"
+                          aria-label={isPicked ? `Open ${asset.title} fullscreen` : `Select ${asset.title}`}
+                        >
+                          <div className="relative aspect-[9/16] bg-stone-100">
+                            <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                          </div>
+                          <p className="px-1.5 py-1 text-[9px] font-semibold text-stone-700">
+                            {isPicked ? "Selected" : `#${index + 1}`}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => selectCandidate(asset.id)}
+                          className={cn(
+                            "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
+                            isPicked
+                              ? "border-emerald-800 bg-emerald-800 text-white"
+                              : "border-white/60 bg-black/30 text-transparent group-hover:border-white/80",
+                          )}
+                          aria-label={isPicked ? `Unselect ${asset.title}` : `Select ${asset.title}`}
+                        >
+                          <Check size={12} strokeWidth={3} />
+                        </button>
+                      </div>
                     );
                   })}
                   {editingItem.isGeneratingFaces || isPersistentlyGeneratingFaces

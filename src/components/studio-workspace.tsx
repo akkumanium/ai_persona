@@ -70,6 +70,7 @@ export function StudioWorkspace({
   const launchNonce = useRef(0);
   const pollingJobIds = useRef(new Set<string>());
   const [initialVideoStartFrame, setInitialVideoStartFrame] = useState<{ id: string; nonce: number } | undefined>();
+  const [initialImageReference, setInitialImageReference] = useState<{ id: string; nonce: number } | undefined>();
   const [initialMotionImage, setInitialMotionImage] = useState<{ image: SourceImageInput; nonce: number } | undefined>();
   const [initialAvatarImage, setInitialAvatarImage] = useState<{ id: string; nonce: number } | undefined>();
   const [notice, setNotice] = useState(
@@ -508,6 +509,13 @@ export function StudioWorkspace({
     setView("videos");
   }
 
+  function launchImageEdit(asset: Asset) {
+    launchNonce.current += 1;
+    if (asset.personaId) setSelectedPersonaId(asset.personaId);
+    setInitialImageReference({ id: asset.id, nonce: launchNonce.current });
+    setView("images");
+  }
+
   function launchMotionFromImage(asset: Asset) {
     launchNonce.current += 1;
     setInitialMotionImage({
@@ -705,6 +713,7 @@ export function StudioWorkspace({
               }}
               onToggleReferenceDefault={toggleReferenceDefault}
               onDeleteReference={deleteReferenceAsset}
+              onEditReference={launchImageEdit}
               onNavigateToGenerate={(slotId, personaId) => {
                 if (personaId) setSelectedPersonaId(personaId);
                 setGenerateInitialSlotId(slotId);
@@ -729,6 +738,7 @@ export function StudioWorkspace({
                 setGenerateInitialSlotId(undefined);
                 setView("personas");
               }}
+              onEditReference={launchImageEdit}
             />
           )}
           {(view === "images" || view === "videos" || view === "motion") && (
@@ -740,6 +750,7 @@ export function StudioWorkspace({
               selectedPersona={selectedPersona}
               supabaseReady={supabaseReady}
               imagePromptSuggestions={imagePromptSuggestions}
+              initialImageReference={initialImageReference}
               initialVideoStartFrame={initialVideoStartFrame}
               initialMotionImage={initialMotionImage}
               onGenerateVideoFromImage={launchVideoFromImage}

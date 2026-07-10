@@ -126,6 +126,60 @@ export async function persistGenerationRecords({
   }
 }
 
+export async function markPendingGenerationJobFailed({
+  userId,
+  jobId,
+  error,
+}: {
+  userId?: string;
+  jobId: string;
+  error: unknown;
+}) {
+  if (!hasSupabaseEnv() || !userId) return;
+
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createServiceSupabaseClient()
+    : await createServerSupabaseClient();
+  const errorMessage = error instanceof Error ? error.message : "Generation failed before the provider accepted it.";
+  const { error: updateError } = await supabase
+    .from("generation_jobs")
+    .update({
+      status: "failed",
+      error_message: errorMessage.slice(0, 1000),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("user_id", userId)
+    .in("status", ["queued", "running"]);
+
+  if (updateError) {
+    throw new Error(`Failed to mark generation job as failed: ${updateError.message}`);
+  }
+}
+
+export async function cleanupStalePendingGenerationJobs(
+  supabase: SupabaseClient,
+  userId: string,
+  maxAgeMs = 45 * 60 * 1000,
+) {
+  const stalePendingCutoff = new Date(Date.now() - maxAgeMs).toISOString();
+  const { error } = await supabase
+    .from("generation_jobs")
+    .update({
+      status: "failed",
+      error_message: "The provider did not accept this generation request.",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .in("status", ["queued", "running"])
+    .is("provider_job_id", null)
+    .lt("updated_at", stalePendingCutoff);
+
+  if (error) {
+    throw new Error(`Failed to clean up stale generation jobs: ${error.message}`);
+  }
+}
+
 async function assertOwnedReferences(
   supabase: SupabaseClient,
   userId: string,

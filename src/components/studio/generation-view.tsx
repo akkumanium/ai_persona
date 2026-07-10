@@ -54,6 +54,7 @@ export function GenerationView({
   selectedPersona,
   supabaseReady,
   imagePromptSuggestions = [],
+  initialImageReference,
   initialVideoStartFrame,
   initialMotionImage,
   onGenerateVideoFromImage,
@@ -70,6 +71,7 @@ export function GenerationView({
   selectedPersona?: Persona;
   supabaseReady?: boolean;
   imagePromptSuggestions?: PromptSuggestion[];
+  initialImageReference?: { id: string; nonce: number };
   initialVideoStartFrame?: { id: string; nonce: number };
   initialMotionImage?: { image: SourceImageInput; nonce: number };
   onGenerateVideoFromImage?: (asset: Asset) => void;
@@ -79,8 +81,8 @@ export function GenerationView({
   onSelectPersona: (id: string) => void;
   onDeleteAsset: (assetId: string) => void;
 }) {
-  const [imagePrompt, setImagePrompt] = useState("Editorial product photo for a social launch campaign.");
-  const [videoPrompt, setVideoPrompt] = useState("Short vertical clip with a confident camera turn and subtle smile.");
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [videoPrompt, setVideoPrompt] = useState("");
   const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [imageAspectRatio, setImageAspectRatio] = useState("4:5");
   const [imageSize, setImageSize] = useState("2K");
@@ -97,13 +99,13 @@ export function GenerationView({
   const [previewAsset, setPreviewAsset] = useState<Asset | undefined>();
   const [videoDurationSeconds, setVideoDurationSeconds] = useState(5);
   const [videoAspectRatio, setVideoAspectRatio] = useState("9:16");
-  const [videoNegativePrompt, setVideoNegativePrompt] = useState("blur, distortions, warped hands, low quality");
+  const [videoNegativePrompt, setVideoNegativePrompt] = useState("");
   const [videoCfgScale, setVideoCfgScale] = useState(0.5);
   const [videoGenerateAudio, setVideoGenerateAudio] = useState(false);
   const [videoResolution, setVideoResolution] = useState<"480p" | "720p" | "1080p" | "4K">("720p");
   const [videoReturnLastFrame, setVideoReturnLastFrame] = useState(false);
-  const [motionReference, setMotionReference] = useState("slow head turn, right hand product reveal");
-  const [motionNegativePrompt, setMotionNegativePrompt] = useState("blur, distorted body, flickering, low quality");
+  const [motionReference, setMotionReference] = useState("");
+  const [motionNegativePrompt, setMotionNegativePrompt] = useState("");
   const [motionMode, setMotionMode] = useState<"animate" | "replace">("animate");
   const [motionCharacterOrientation, setMotionCharacterOrientation] = useState<"image" | "video">("video");
   const [motionKeepOriginalSound, setMotionKeepOriginalSound] = useState(true);
@@ -240,6 +242,25 @@ export function GenerationView({
       endFrameImageUrl: normalVideoSupportsEndFrame ? uploadedVideoEndFrame?.url : undefined,
     }).tokens,
   );
+
+  const [appliedImageReferenceNonce, setAppliedImageReferenceNonce] = useState<number | undefined>();
+  if (initialImageReference && initialImageReference.nonce !== appliedImageReferenceNonce) {
+    setAppliedImageReferenceNonce(initialImageReference.nonce);
+    const asset = assets.find((candidate) => candidate.id === initialImageReference.id);
+    if (asset) {
+      setUploadedImageReferences((current) => {
+        if (current.some((image) => image.url === asset.url)) return current;
+        return [
+          ...current,
+          {
+            name: asset.title || "Reference image",
+            mimeType: asset.mimeType || "image/png",
+            url: asset.url,
+          },
+        ].slice(0, 8);
+      });
+    }
+  }
   const motionVideoCostLabel = formatTokens(
     estimateVideoGenerationPricing({
       prompt: videoPrompt,

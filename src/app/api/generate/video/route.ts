@@ -7,7 +7,7 @@ import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -66,18 +66,20 @@ export async function POST(request: Request) {
       },
       inputParams: input,
     });
-    await reserveTokens(
-      auth.user?.id,
-      estimatedPricing.tokens,
-      jobId,
-      `${generationType.replaceAll("_", " ")} generation`,
-    );
-
-    const result = await videoProvider.submit({
-      ...input,
-      motionReferenceVideo,
-    });
+    let providerCompleted = false;
     try {
+      await reserveTokens(
+        auth.user?.id,
+        estimatedPricing.tokens,
+        jobId,
+        `${generationType.replaceAll("_", " ")} generation`,
+      );
+
+      const result = await videoProvider.submit({
+        ...input,
+        motionReferenceVideo,
+      });
+      providerCompleted = true;
       const updatedAt = nowIso();
       const asset: Asset | undefined = result.asset
         ? await materializeGeneratedAsset({
@@ -123,12 +125,15 @@ export async function POST(request: Request) {
         providerJobId: result.providerJobId,
       });
     } catch (error) {
-      await refundTokens(
-        auth.user?.id,
-        estimatedPricing.tokens,
-        jobId,
-        `${generationType.replaceAll("_", " ")} refund`,
-      );
+      if (providerCompleted) {
+        await refundTokens(
+          auth.user?.id,
+          estimatedPricing.tokens,
+          jobId,
+          `${generationType.replaceAll("_", " ")} refund`,
+        );
+      }
+      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
       throw error;
     }
   } catch (error) {

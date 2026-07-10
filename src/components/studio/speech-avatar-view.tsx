@@ -45,7 +45,7 @@ export function SpeechView({
   onSelectPersona: (id: string) => void;
   onDeleteAsset: (assetId: string) => void;
 }) {
-  const [text, setText] = useState("A short reusable voice line for the next avatar clip.");
+  const [text, setText] = useState("");
   const [voiceId, setVoiceId] = useState("");
   const [voiceMode, setVoiceMode] = useState<"preset" | "custom">(
     SPEECH_VOICE_PRESETS.length ? "preset" : "custom",

@@ -4,6 +4,7 @@ import { StudioPaywall } from "@/components/studio-paywall";
 import { StudioWorkspace } from "@/components/studio-workspace";
 import { hasSupabaseEnv } from "@/lib/env";
 import { getBillingAccess } from "@/lib/server/billing-access";
+import { cleanupStalePendingGenerationJobs } from "@/lib/server/studio-persistence";
 import { loadImagePromptSuggestions } from "@/lib/server/prompt-library";
 import {
   emptyStudioData,
@@ -41,6 +42,11 @@ export default async function StudioPage() {
   }
 
   const access = await getBillingAccess(supabase, user.id);
+
+  // Synchronous provider requests have no provider job id to poll. If the
+  // request dies after its local row is created, that row used to remain
+  // "queued" forever and looked like a generation the user never started.
+  await cleanupStalePendingGenerationJobs(supabase, user.id);
 
   const [personas, assets, jobs, ledger, imagePromptSuggestions] = await Promise.all([
     supabase.from("personas").select("*").order("created_at", { ascending: false }),

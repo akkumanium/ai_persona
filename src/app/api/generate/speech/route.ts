@@ -6,7 +6,7 @@ import { estimateSpeechGenerationPricing } from "@/lib/pricing";
 import { speechGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -59,10 +59,11 @@ export async function POST(request: Request) {
       },
       inputParams,
     });
-    await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
-
-    const result = await speechProvider.generate(providerRequest);
+    let providerCompleted = false;
     try {
+      await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
+      const result = await speechProvider.generate(providerRequest);
+      providerCompleted = true;
       const updatedAt = nowIso();
       const asset: Asset = await materializeGeneratedAsset({
         id: crypto.randomUUID(),
@@ -99,7 +100,10 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ asset, job });
     } catch (error) {
-      await refundTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text refund");
+      if (providerCompleted) {
+        await refundTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text refund");
+      }
+      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
       throw error;
     }
   } catch (error) {

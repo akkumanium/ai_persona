@@ -14,7 +14,6 @@
 84. Put video to demo
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
-99. Think more on the name
 103. Upload more voices
 117. Delete some default prompts
 120. Fix all the bugs after moving to paddle
@@ -22,18 +21,12 @@
 123. Handle error in generation
 125. How does upgrading work
 126. Make videos expire
-127. Let us see that videos are in process
-128. Could not save reference assets: new row for relation "assets" violates check constraint "assets_reference_slot_check"
 129. Deduct the tokens immediately
-130. We've generated a candidate and another one disappeared
-131. There's no resolution in Kling Motion Control
-132. Provide reference in references in generate mode
-134. Fullscreen for videos doesn't work properly
-135. Fullscreen for images doesn't work properly
-136. Build all the infrastructure needed for the articles and make themm
+130. We've generated a candidate and another one disappeared (to verify)
+136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
-138. You can't delete the videos
-139.
+141. Don't redirect to images when we're trying to edit a reference
+142. FInish the FAQ
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

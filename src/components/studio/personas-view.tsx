@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
-import { ArrowLeft, Loader2, Star, Trash2, Upload, UserRound, WandSparkles, X } from "lucide-react";
+import { ArrowLeft, Loader2, Pencil, Star, Trash2, Upload, UserRound, WandSparkles, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
@@ -23,6 +23,7 @@ export function PersonasView({
   onAddReferences,
   onToggleReferenceDefault,
   onDeleteReference,
+  onEditReference,
   onNavigateToGenerate,
 }: {
   personas: Persona[];
@@ -38,6 +39,7 @@ export function PersonasView({
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
+  onEditReference: (asset: Asset) => void;
   onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [managedPersonaId, setManagedPersonaId] = useState<string | undefined>();
@@ -102,6 +104,7 @@ export function PersonasView({
         onAddReferences={onAddReferences}
         onToggleReferenceDefault={onToggleReferenceDefault}
         onDeleteReference={onDeleteReference}
+        onEditReference={onEditReference}
         onNavigateToGenerate={onNavigateToGenerate}
       />
     );
@@ -201,6 +204,7 @@ function PersonaManagementView({
   onAddReferences,
   onToggleReferenceDefault,
   onDeleteReference,
+  onEditReference,
   onNavigateToGenerate,
 }: {
   persona: Persona;
@@ -212,6 +216,7 @@ function PersonaManagementView({
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
+  onEditReference: (asset: Asset) => void;
   onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [isEditingPersona, setIsEditingPersona] = useState(false);
@@ -381,6 +386,7 @@ function PersonaManagementView({
             uploading={uploadingSlotId === slot.id}
             onToggleReferenceDefault={onToggleReferenceDefault}
             onDeleteReference={(assetId) => onDeleteReference(persona.id, assetId)}
+            onEditReference={onEditReference}
             onPreviewReference={(asset) => setPreviewAssetId(asset.id)}
           />
         ))}
@@ -402,6 +408,7 @@ function ReferenceSlotCard({
   uploading,
   onToggleReferenceDefault,
   onDeleteReference,
+  onEditReference,
   onPreviewReference,
 }: {
   slot: (typeof referenceSlots)[number];
@@ -412,6 +419,7 @@ function ReferenceSlotCard({
   uploading?: boolean;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (assetId: string) => void;
+  onEditReference: (asset: Asset) => void;
   onPreviewReference: (asset: Asset) => void;
 }) {
   const latestAsset = assets[0];
@@ -465,6 +473,7 @@ function ReferenceSlotCard({
               asset={asset}
               onToggleReferenceDefault={onToggleReferenceDefault}
               onDeleteReference={onDeleteReference}
+              onEditReference={onEditReference}
               onPreviewReference={onPreviewReference}
               isPreviewed={previewAsset?.id === asset.id}
             />
@@ -515,12 +524,14 @@ function ReferenceAssetRow({
   asset,
   onToggleReferenceDefault,
   onDeleteReference,
+  onEditReference,
   onPreviewReference,
   isPreviewed = false,
 }: {
   asset: Asset;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (assetId: string) => void;
+  onEditReference: (asset: Asset) => void;
   onPreviewReference: (asset: Asset) => void;
   isPreviewed?: boolean;
 }) {
@@ -539,6 +550,14 @@ function ReferenceAssetRow({
           </button>
           <p className="mt-1 text-[11px] text-stone-500"></p>
           <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onEditReference(asset)}
+              className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs font-semibold text-stone-600 transition hover:border-emerald-800 hover:text-emerald-800"
+            >
+              <Pencil size={12} />
+              Edit
+            </button>
             <button
               type="button"
               onClick={() => onToggleReferenceDefault(asset.id)}

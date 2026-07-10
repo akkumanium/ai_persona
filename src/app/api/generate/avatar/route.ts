@@ -9,7 +9,7 @@ import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts
 import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
@@ -157,10 +157,11 @@ async function generateAvatarReference(body: unknown, userId?: string) {
     },
     inputParams,
   });
-  await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
-
-  const result = await imageProvider.generate(providerRequest);
+  let providerCompleted = false;
   try {
+    await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
+    const result = await imageProvider.generate(providerRequest);
+    providerCompleted = true;
     const updatedAt = nowIso();
     const assets: Asset[] = await Promise.all(
       result.assets.map(async (asset, index) =>
@@ -207,7 +208,10 @@ async function generateAvatarReference(body: unknown, userId?: string) {
 
     return NextResponse.json({ assets, job });
   } catch (error) {
-    await refundTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} refund`);
+    if (providerCompleted) {
+      await refundTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} refund`);
+    }
+    await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
     throw error;
   }
 }
@@ -277,10 +281,11 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
     },
     inputParams,
   });
-  await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
-
-  const result = await avatarProvider.submit(providerRequest);
+  let providerCompleted = false;
   try {
+    await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
+    const result = await avatarProvider.submit(providerRequest);
+    providerCompleted = true;
     const updatedAt = nowIso();
     const asset: Asset | undefined = result.asset
       ? await materializeGeneratedAsset(
@@ -325,7 +330,10 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
 
     return NextResponse.json({ asset, job, providerJobId: result.providerJobId });
   } catch (error) {
-    await refundTokens(userId, estimatedPricing.tokens, jobId, "avatar talking refund");
+    if (providerCompleted) {
+      await refundTokens(userId, estimatedPricing.tokens, jobId, "avatar talking refund");
+    }
+    await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
     throw error;
   }
 }
