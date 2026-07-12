@@ -198,12 +198,12 @@ begin
   return new;
 end; $$;
 
-create or replace function public.claim_referral(p_code text, p_referred_user_id uuid)
+create or replace function public.claim_referral(p_referral_code text, p_referred_user_id uuid)
 returns boolean language plpgsql security definer set search_path = public as $$
 declare referrer_id uuid;
 begin
   if auth.uid() is null or auth.uid() <> p_referred_user_id then raise exception 'not authorized'; end if;
-  select user_id into referrer_id from public.account_profiles where referral_code = lower(trim(p_code));
+  select user_id into referrer_id from public.account_profiles where referral_code = lower(trim(p_referral_code));
   if referrer_id is null or referrer_id = p_referred_user_id then return false; end if;
   insert into public.referral_rewards(referrer_user_id, referred_user_id, status, reward_amount_cents)
   values(referrer_id, p_referred_user_id, 'pending', 100) on conflict (referred_user_id) do nothing;

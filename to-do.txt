@@ -28,6 +28,8 @@
 142. Finish the FAQ
 144. Create a PDF to send to people
 145. When we delete a video, we shouldn't delete assets from them
+146. Some npm issue
+147. Request protection is temporarily unavailable., Could not save persona: Request protection is temporarily unavailable.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
