@@ -1,14 +1,10 @@
-import { NanoBananaProvider } from "@/lib/providers/nano-banana";
-import { OpenAIImageProvider } from "@/lib/providers/openai-image";
 import { KlingVideoProvider } from "@/lib/providers/kling";
 import { ElevenLabsSpeechProvider } from "@/lib/providers/elevenlabs";
 import { SeedanceVideoProvider } from "@/lib/providers/seedance";
 import { WanVideoProvider } from "@/lib/providers/wan";
 import { WavespeedAvatarProvider, WavespeedMediaProvider } from "@/lib/providers/wavespeed";
-import type { AvatarProvider, ImageProvider, SpeechProvider, VideoProvider } from "@/lib/providers/types";
+import type { AsyncImageProvider, AvatarProvider, SpeechProvider, VideoProvider } from "@/lib/providers/types";
 
-const nanoBananaProvider = new NanoBananaProvider();
-const openAIImageProvider = new OpenAIImageProvider();
 const wanVideoProvider = new WanVideoProvider();
 const klingVideoProvider = new KlingVideoProvider();
 const seedanceVideoProvider = new SeedanceVideoProvider();
@@ -16,18 +12,17 @@ const wavespeedMediaProvider = new WavespeedMediaProvider();
 const elevenLabsSpeechProvider = new ElevenLabsSpeechProvider();
 const wavespeedAvatarProvider = new WavespeedAvatarProvider();
 
-export const imageProvider: ImageProvider = {
+export const imageProvider: AsyncImageProvider = {
 	name: "wavespeed",
-	async generate(request) {
+	async submit(request) {
     if (process.env.USE_LEGACY_IMAGE_PROVIDERS === "true") {
-      if (request.model.startsWith("gpt-")) {
-        return openAIImageProvider.generate(request);
-      }
-
-      return nanoBananaProvider.generate(request);
+      throw new Error("Legacy image providers do not support durable asynchronous jobs.");
     }
 
-		return wavespeedMediaProvider.generate(request);
+		return wavespeedMediaProvider.submitImage(request);
+	},
+  async poll(providerJobId) {
+    return wavespeedMediaProvider.pollImage(providerJobId);
 	},
 };
 

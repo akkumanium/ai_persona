@@ -6,11 +6,11 @@ import type { ImageGenerationRequest, ProviderImageInput } from "@/lib/providers
 import { estimateImageGenerationPricing } from "@/lib/pricing";
 import { promptForReferenceSlot } from "@/lib/reference-prompts";
 import { imageGenerationSchema } from "@/lib/schemas";
-import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
+import { sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
+import { markPendingGenerationJobFailed, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
-import type { Asset, GenerationJob } from "@/lib/types";
+import type { GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
@@ -115,6 +115,7 @@ export async function POST(request: Request) {
       assetKind: input.assetKind,
       referenceSlot: input.referenceSlot,
       referenceAssetIds: input.referenceAssetIds,
+      isDefaultReference: input.isDefaultReference,
       hiddenPromptUsed: false,
     };
     await persistPendingGenerationJob({
@@ -142,32 +143,15 @@ export async function POST(request: Request) {
         `${generationType.replaceAll("_", " ")} generation`,
       );
 
-      // Once the provider accepts the generation attempt, provider-side failures
-      // (including safety filters) remain billable. Only failures in our processing
-      // after a successful provider response are refunded.
-      const result = await imageProvider.generate(providerRequest);
+      const result = await imageProvider.submit(providerRequest);
       providerCompleted = true;
-      await recordProviderAcceptance({ userId: auth.user?.id, jobId, raw: result.raw });
+      await recordProviderAcceptance({ userId: auth.user?.id, jobId, providerJobId: result.providerJobId, raw: result.raw });
       const updatedAt = nowIso();
-      const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
-        id: crypto.randomUUID(),
-        kind: input.assetKind,
-        title: "",
-        prompt: visiblePrompt,
-        personaId: input.personaId,
-        referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
-        referenceSlot: input.referenceSlot,
-        isDefaultReference: input.assetKind === "avatar" ? input.isDefaultReference && index === 0 : false,
-        generationType,
-        provider: result.provider,
-        model: result.model,
-        createdAt: updatedAt,
-        ...asset,
-      }, auth.user?.id)));
       const job: GenerationJob = {
         id: jobId,
-        status: "succeeded",
+        status: "running",
         provider: result.provider,
+        providerJobId: result.providerJobId,
         model: result.model,
         generationType,
         prompt: visiblePrompt,
@@ -178,17 +162,11 @@ export async function POST(request: Request) {
         updatedAt,
       };
 
-      await persistGenerationRecords({
-        userId: auth.user?.id,
-        assets,
-        job,
-        inputParams,
-      });
-
       return NextResponse.json({
-        assets,
+        assets: [],
         job,
-      });
+        providerJobId: result.providerJobId,
+      }, { status: 202 });
     } catch (error) {
       if (!providerCompleted) await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
       throw error;

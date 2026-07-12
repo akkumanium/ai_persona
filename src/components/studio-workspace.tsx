@@ -380,12 +380,13 @@ export function StudioWorkspace({
       (job) =>
         (job.status === "queued" || job.status === "running") &&
         Boolean(job.providerJobId) &&
-        (job.generationType === "video_normal" || job.generationType === "video_motion" || job.generationType === "video_prompt"),
+        (job.generationType === "video_normal" || job.generationType === "video_motion" || job.generationType === "video_prompt" || job.generationType === "image_from_prompt" || job.generationType === "image_from_reference" || job.generationType === "avatar_prompt" || job.generationType === "avatar_image_blend" || job.generationType === "avatar_normalization"),
     );
     if (!activeJobs.length) return;
 
     let cancelled = false;
     const pollJobs = async () => {
+      if (document.visibilityState !== "visible") return;
       await Promise.all(activeJobs.map(async (job) => {
         if (!job.providerJobId || pollingJobIds.current.has(job.id)) return;
         pollingJobIds.current.add(job.id);
@@ -402,6 +403,11 @@ export function StudioWorkspace({
           setJobs((current) => [updatedJob, ...current.filter((currentJob) => currentJob.id !== updatedJob.id)]);
           if (!asset) return;
           setAssets((current) => [asset, ...current.filter((currentAsset) => currentAsset.id !== asset.id)]);
+          if (asset.kind === "avatar" && asset.isDefaultReference && asset.personaId) {
+            setPersonas((current) => current.map((persona) => persona.id === asset.personaId && !persona.referenceAssetId
+              ? { ...persona, referenceAssetId: asset.id }
+              : persona));
+          }
           setTrendLibrary((current) => current.map((item) => {
             if (!asset.referenceAssetIds?.includes(item.id)) return item;
             if (asset.kind === "image") {
@@ -422,7 +428,7 @@ export function StudioWorkspace({
     };
 
     void pollJobs();
-    const interval = window.setInterval(() => void pollJobs(), 5000);
+    const interval = window.setInterval(() => void pollJobs(), 45_000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);

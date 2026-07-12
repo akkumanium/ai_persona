@@ -14,6 +14,8 @@ export const env = {
   seedanceApiKey: process.env.SEEDANCE_API_KEY,
   seedanceModel: process.env.SEEDANCE_MODEL ?? "dreamina-seedance-2-0-260128",
   wavespeedApiKey: process.env.WAVESPEED_API_KEY,
+  wavespeedWebhookUrl: process.env.WAVESPEED_WEBHOOK_URL,
+  wavespeedWebhookSecret: process.env.WAVESPEED_WEBHOOK_SECRET,
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "imblueop@gmail.com",
   paddleClientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,

@@ -94,6 +94,10 @@ NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_50=
 NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_100=
 
 WAVESPEED_API_KEY=
+# Public HTTPS endpoint, for example https://app.example.com/api/wavespeed/webhook
+WAVESPEED_WEBHOOK_URL=
+# Signing secret from the WaveSpeed webhook configuration (whsec_...)
+WAVESPEED_WEBHOOK_SECRET=
 ELEVENLABS_API_KEY=
 CRON_SECRET=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000

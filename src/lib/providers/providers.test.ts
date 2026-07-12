@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { modelsForCapability } from "@/lib/model-registry";
 import { estimateImageGenerationPricing, estimateVideoGenerationPricing, usdToTokens } from "@/lib/pricing";
 import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
+import { wavespeedImageInput } from "@/lib/providers/wavespeed";
 
 describe("model registry", () => {
   it("includes ChatGPT for image generation", () => {
@@ -181,5 +182,25 @@ describe("provider fallbacks", () => {
     expect(result.status).toBe("succeeded");
     expect(result.model).toBe("wan-animate");
     expect(result.asset?.mimeType).toBe("video/mp4");
+  });
+});
+
+describe("WaveSpeed image inputs", () => {
+  it("uses the Wan 2.7 edit schema without unsupported image aliases", () => {
+    expect(wavespeedImageInput({
+      prompt: "Change the shirt to red.",
+      referenceUrls: ["https://provider.example/source.png"],
+      aspectRatio: "9:16",
+      imageSize: "1K",
+      count: 1,
+      isChatGptImage: false,
+      isSeedream45: false,
+      isWan27Image: true,
+    })).toEqual({
+      prompt: "Change the shirt to red.",
+      images: ["https://provider.example/source.png"],
+      size: "768*1344",
+      seed: -1,
+    });
   });
 });

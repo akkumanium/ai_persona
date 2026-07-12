@@ -21,7 +21,6 @@ import type {
   GeneratedAssetPayload,
   ImageGenerationRequest,
   ImageGenerationResult,
-  ImageProvider,
   ProviderImageInput,
   ProviderMediaInput,
   VideoGenerationRequest,
@@ -48,10 +47,10 @@ type WavespeedRunResult = {
   };
 };
 
-export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
+export class WavespeedMediaProvider implements VideoProvider {
   name = "wavespeed" as const;
 
-  async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
+  async submitImage(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
     const client = wavespeedClient();
     const isChatGptImage = request.model === CHATGPT_IMAGE_MODEL_ID;
     const isSeedream45 = request.model === SEEDREAM_4_5_MODEL_ID;
@@ -63,30 +62,17 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
     }
     const referenceUrls = isSeedream45 ? uploadedReferenceUrls.slice(0, 10) : uploadedReferenceUrls;
     const model = wavespeedImageModel(request.model, referenceUrls.length > 0);
-    const result = await client.run(model, {
+    const result = await submitWavespeedPrediction(model, wavespeedImageInput({
       prompt: request.prompt,
-      image: isSeedream45 ? undefined : referenceUrls[0],
-      images: referenceUrls.length ? referenceUrls : undefined,
-      image_url: isSeedream45 ? undefined : referenceUrls[0],
-      image_urls: isSeedream45 ? undefined : referenceUrls.length ? referenceUrls : undefined,
-      aspect_ratio: isSeedream45 || isWan27Image ? undefined : request.aspectRatio,
-      resolution: isChatGptImage ? request.imageSize.toLowerCase() : undefined,
-      size: isSeedream45
-        ? seedream45Size(request.aspectRatio, request.imageSize)
-        : isWan27Image
-          ? wan27ImageSize(request.aspectRatio, request.imageSize)
-          : isChatGptImage
-            ? undefined
-            : request.imageSize,
-      image_size: isSeedream45 || isWan27Image || isChatGptImage ? undefined : request.imageSize,
-      quality: isSeedream45 ? undefined : request.imageQuality,
-      output_format: isChatGptImage ? "png" : undefined,
-      num_outputs: isSeedream45 || isWan27Image || isChatGptImage ? undefined : request.count,
-      seed: isWan27Image ? -1 : undefined,
-    }, {
-      pollInterval: 2,
-      timeout: 90,
-    }) as WavespeedRunResult;
+      referenceUrls,
+      aspectRatio: request.aspectRatio,
+      imageSize: request.imageSize,
+      imageQuality: request.imageQuality,
+      count: request.count,
+      isChatGptImage,
+      isSeedream45,
+      isWan27Image,
+    }));
     const assets = outputsFromResult(result)
       .map((url, index): GeneratedAssetPayload => ({
         url,
@@ -95,15 +81,33 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
       }))
       .slice(0, request.count);
 
-    if (!assets.length) {
-      throw new Error("WaveSpeed image generation returned no assets.");
-    }
-
     return {
       provider: this.name,
       model,
       assets,
+      // Submission is intentionally asynchronous even if a provider happens to
+      // include outputs in its acknowledgement; the durable completion path owns assets.
+      status: "queued",
+      providerJobId: taskIdFromResult(result),
       costEstimateCents: estimateImageGenerationPricing(request).tokens,
+      raw: result,
+    };
+  }
+
+  async pollImage(providerJobId: string): Promise<ImageGenerationResult> {
+    const result = await getWavespeedPrediction(providerJobId);
+    const assets = outputsFromResult(result).map((url, index): GeneratedAssetPayload => ({
+      url,
+      mimeType: mimeTypeFromUrl(url, "image/png"),
+      providerAssetId: `${providerJobId}-${index}`,
+    }));
+    return {
+      provider: this.name,
+      model: firstString(result.data?.model, result.model) ?? "wavespeed",
+      assets,
+      status: normalizeVideoStatus(statusFromResult(result)),
+      providerJobId,
+      costEstimateCents: 0,
       raw: result,
     };
   }
@@ -239,11 +243,67 @@ function wavespeedClient() {
 
   return new Client(env.wavespeedApiKey, {
     connectionTimeout: 20,
-    timeout: 90,
+    timeout: 30,
     maxRetries: 1,
     maxConnectionRetries: 1,
     retryInterval: 1,
   });
+}
+
+type WavespeedImageInputOptions = {
+  prompt: string;
+  referenceUrls: string[];
+  aspectRatio: string;
+  imageSize: string;
+  imageQuality?: string;
+  count: number;
+  isChatGptImage: boolean;
+  isSeedream45: boolean;
+  isWan27Image: boolean;
+};
+
+export function wavespeedImageInput(options: WavespeedImageInputOptions): Record<string, unknown> {
+  const {
+    prompt,
+    referenceUrls,
+    aspectRatio,
+    imageSize,
+    imageQuality,
+    count,
+    isChatGptImage,
+    isSeedream45,
+    isWan27Image,
+  } = options;
+
+  // Wan 2.7 endpoints reject the generic image/image_url aliases. Image Edit
+  // specifically requires `images`; Text To Image accepts no reference fields.
+  if (isWan27Image) {
+    return {
+      prompt,
+      ...(referenceUrls.length ? { images: referenceUrls } : {}),
+      size: wan27ImageSize(aspectRatio, imageSize),
+      seed: -1,
+    };
+  }
+
+  return {
+    prompt,
+    image: isSeedream45 ? undefined : referenceUrls[0],
+    images: referenceUrls.length ? referenceUrls : undefined,
+    image_url: isSeedream45 ? undefined : referenceUrls[0],
+    image_urls: isSeedream45 ? undefined : referenceUrls.length ? referenceUrls : undefined,
+    aspect_ratio: isSeedream45 ? undefined : aspectRatio,
+    resolution: isChatGptImage ? imageSize.toLowerCase() : undefined,
+    size: isSeedream45
+      ? seedream45Size(aspectRatio, imageSize)
+      : isChatGptImage
+        ? undefined
+        : imageSize,
+    image_size: isSeedream45 || isChatGptImage ? undefined : imageSize,
+    quality: isSeedream45 ? undefined : imageQuality,
+    output_format: isChatGptImage ? "png" : undefined,
+    num_outputs: isSeedream45 || isChatGptImage ? undefined : count,
+  };
 }
 
 async function uploadProviderImages(client: Client, images: ProviderImageInput[]) {
@@ -325,9 +385,11 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
 }
 
 async function submitWavespeedPrediction(model: string, input: Record<string, unknown>) {
+  if (!env.wavespeedWebhookUrl) throw new Error("WAVESPEED_WEBHOOK_URL is not configured.");
+  if (!env.wavespeedWebhookSecret) throw new Error("WAVESPEED_WEBHOOK_SECRET is not configured.");
   return wavespeedApiRequest(`${WAVESPEED_API_BASE_URL}/api/v3/${model}`, {
     method: "POST",
-    body: JSON.stringify(input),
+    body: JSON.stringify({ ...input, webhook_url: env.wavespeedWebhookUrl }),
   });
 }
 

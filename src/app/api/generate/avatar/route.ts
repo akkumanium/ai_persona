@@ -139,6 +139,9 @@ async function generateAvatarReference(body: unknown, userId?: string) {
     imageQuality: input.imageQuality,
     count: input.count,
     referenceSlot: input.referenceSlot,
+    referenceAssetIds: input.referenceAssetIds,
+    isDefaultReference: input.isDefaultReference,
+    titlePrefix: input.titlePrefix,
     sourceImageCount: referenceImages.length,
   };
   await persistPendingGenerationJob({
@@ -160,36 +163,15 @@ async function generateAvatarReference(body: unknown, userId?: string) {
   let providerCompleted = false;
   try {
     await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
-    const result = await imageProvider.generate(providerRequest);
+    const result = await imageProvider.submit(providerRequest);
     providerCompleted = true;
-    await recordProviderAcceptance({ userId, jobId, raw: result.raw });
+    await recordProviderAcceptance({ userId, jobId, providerJobId: result.providerJobId, raw: result.raw });
     const updatedAt = nowIso();
-    const assets: Asset[] = await Promise.all(
-      result.assets.map(async (asset, index) =>
-        materializeGeneratedAsset(
-          {
-            id: crypto.randomUUID(),
-            kind: "avatar",
-            title: input.titlePrefix ?? `${input.personaName} reference ${index + 1}`,
-            prompt: visiblePrompt,
-            personaId: input.personaId,
-            referenceAssetIds: input.referenceAssetIds.length ? input.referenceAssetIds : undefined,
-            referenceSlot: input.referenceSlot,
-            isDefaultReference: input.isDefaultReference && index === 0,
-            generationType,
-            provider: result.provider,
-            model: result.model,
-            createdAt: updatedAt,
-            ...asset,
-          },
-          userId,
-        ),
-      ),
-    );
     const job: GenerationJob = {
       id: jobId,
-      status: "succeeded",
+      status: "running",
       provider: result.provider,
+      providerJobId: result.providerJobId,
       model: result.model,
       generationType,
       prompt: visiblePrompt,
@@ -200,14 +182,7 @@ async function generateAvatarReference(body: unknown, userId?: string) {
       updatedAt,
     };
 
-    await persistGenerationRecords({
-      userId,
-      assets,
-      job,
-      inputParams,
-    });
-
-    return NextResponse.json({ assets, job });
+    return NextResponse.json({ assets: [], job, providerJobId: result.providerJobId }, { status: 202 });
   } catch (error) {
     if (!providerCompleted) await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
     throw error;

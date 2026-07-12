@@ -32,8 +32,25 @@
 148. Extra security check of GLM edits
 149. Check if Email asks for confirmation
 152. Change to only have one subscription
-154. Data fixes, some of the F weren't done (F-12,16,17,18,20), also discuss with Codex about CDN and all that stuff.
-156.
+156. Change public contact email. (and create it)
+157. Prediction timed out after 90 seconds (task_id: 647d6691f28e43cba14e48d1b1f68519)
+158. Also bug: Error: Request failed. Please check your input parameters and try again: Request failed. Please check your input parameters and try again., {
+  "code": 1405,
+  "created_at": "2026-07-12T14:56:56.797676047Z",
+  "error": "Request failed. Please check your input parameters and try again: Request failed. Please check your input parameters and try again.",
+  "id": "647d6691f28e43cba14e48d1b1f68519",
+  "model": "alibaba/wan-2.7/image-edit",
+  "outputs": [],
+  "status": "failed",
+  "timings": {
+    "inference": 0
+  },
+  "urls": {
+    "get": "https://api.wavespeed.ai/api/v3/predictions/647d6691f28e43cba14e48d1b1f68519/result"
+  }
+}
+159.
+160.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

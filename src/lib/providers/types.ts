@@ -33,6 +33,8 @@ export type ImageGenerationResult = {
   provider: ProviderName | "demo";
   model: string;
   assets: GeneratedAssetPayload[];
+  status?: JobStatus;
+  providerJobId?: string;
   costEstimateCents: number;
   raw: unknown;
 };
@@ -125,6 +127,12 @@ export type AvatarGenerationResult = {
 export interface ImageProvider {
   name: ProviderName;
   generate(request: ImageGenerationRequest): Promise<ImageGenerationResult>;
+}
+
+export interface AsyncImageProvider {
+  name: ProviderName;
+  submit(request: ImageGenerationRequest): Promise<ImageGenerationResult>;
+  poll(providerJobId: string): Promise<ImageGenerationResult>;
 }
 
 export interface VideoProvider {
