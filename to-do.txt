@@ -27,6 +27,7 @@
 141. Don't redirect to images when we're trying to edit a reference (to verify)
 142. Finish the FAQ
 144. Create a PDF to send to people
+145. When we delete a video, we shouldn't delete assets from them
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
