@@ -16,6 +16,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const bucket = searchParams.get("bucket");
   const storagePath = searchParams.get("path");
+  const variant = searchParams.get("variant");
 
   if (!bucket || !storagePath) {
     return NextResponse.json({ error: "Bucket and path are required." }, { status: 400 });
@@ -28,7 +29,18 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServiceSupabaseClient();
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storagePath, 60 * 60);
+  if (variant && variant !== "card") {
+    return NextResponse.json({ error: "Media variant is not supported." }, { status: 400 });
+  }
+
+  const isCardImage = variant === "card" && bucket !== "generated-videos" && bucket !== "generated-audio";
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(
+    storagePath,
+    60 * 60,
+    isCardImage
+      ? { transform: { width: 640, height: 640, resize: "contain", quality: 70 } }
+      : undefined,
+  );
 
   if (error || !data?.signedUrl) {
     return NextResponse.json({ error: "Storage object not found." }, { status: 404 });
@@ -37,7 +49,7 @@ export async function GET(request: Request) {
   return NextResponse.redirect(data.signedUrl, {
     status: 307,
     headers: {
-      "Cache-Control": "private, no-store",
+      "Cache-Control": "private, max-age=300",
     },
   });
 }

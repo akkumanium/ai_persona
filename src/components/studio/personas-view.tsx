@@ -1,11 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
-
 import { ArrowLeft, Loader2, Pencil, Star, Trash2, Upload, UserRound, WandSparkles, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { ReferenceSlotId } from "@/components/studio/types";
-import { PanelTitle, SubmitButton, TextArea, TextField } from "@/components/studio/ui";
+import { CardImage, DeferredVideo, PanelTitle, SubmitButton, TextArea, TextField } from "@/components/studio/ui";
 import { NANO_BANANA_PRO_MODEL_ID } from "@/lib/image-model-options";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, initials } from "@/lib/utils";
@@ -143,7 +141,7 @@ export function PersonasView({
               >
                 <div className="h-36 bg-stone-100">
                   {reference ? (
-                    <img src={reference.url} alt={persona.name} className="h-full w-full object-contain p-3" />
+                    <CardImage src={reference.url} alt={persona.name} className="h-full w-full object-contain p-3" />
                   ) : (
                     <div className="flex h-full items-center justify-center text-3xl font-semibold text-stone-400">
                       {initials(persona.name)}
@@ -443,7 +441,7 @@ function ReferenceSlotCard({
       </div>
       <div className="mt-3 flex aspect-[4/5] items-center justify-center overflow-hidden rounded-md bg-white">
         {displayAsset ? (
-          <img src={displayAsset.url} alt={displayAsset.title} className="h-full w-full object-cover" />
+          <CardImage src={displayAsset.url} alt={displayAsset.title} className="h-full w-full object-cover" />
         ) : (
           <span className="text-sm font-medium text-stone-400">Empty</span>
         )}
@@ -508,9 +506,9 @@ function AssetSection({ title, assets }: { title: string; assets: Asset[] }) {
             <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
               <div className="aspect-[4/5] bg-stone-100">
                 {asset.kind === "video" ? (
-                  <video src={asset.url} className="h-full w-full object-cover" controls />
+                  <DeferredVideo src={asset.url} title={asset.title} className="h-full w-full object-cover" />
                 ) : (
-                  <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                  <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                 )}
               </div>
               <div className="p-3">
@@ -677,7 +675,7 @@ function ReferenceEditor({
 
         <div className="mt-5 grid gap-5 sm:grid-cols-[11rem_minmax(0,1fr)]">
           <div className="overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
-            <img src={asset.url} alt={asset.title} className="aspect-[4/5] h-full w-full object-cover" />
+            <CardImage src={asset.url} alt={asset.title} className="aspect-[4/5] h-full w-full object-cover" />
           </div>
           <div>
             <TextArea

@@ -376,26 +376,26 @@ export function HomePage({
                 className="card-back-3"
                 depth="0.25"
                 base="translate(-50%, -50%) rotate(14deg)"
-                image="/home/persona-body-ref.png"
+                image="/home/persona-body-ref.webp"
                 label="Outside"
               />
               <HeroCard
                 className="card-back-2"
                 depth="0.4"
                 base="translate(-50%, -50%) rotate(-10deg)"
-                image="/home/persona-wardrobe.png"
+                image="/home/persona-wardrobe.webp"
                 label="Gym"
               />
               <HeroCard
                 className="card-back-1"
                 depth="0.6"
                 base="translate(-50%, -50%) rotate(8deg)"
-                image="/home/persona-video-frame.jpg"
+                image="/home/persona-video-frame.webp"
                 label="Video / 04s"
               />
               <div className="card card-front" data-depth="1.0" data-base="translate(-50%, -50%)">
                 <Image
-                  src="/home/persona-primary.png"
+                  src="/home/persona-primary.webp"
                   alt=""
                   fill
                   priority

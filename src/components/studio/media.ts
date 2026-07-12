@@ -5,6 +5,7 @@ import {
   formatBytes,
   isAllowedMimeType,
 } from "@/lib/media-limits";
+import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type StorageUploadOptions = {
   enabled?: boolean;
@@ -61,22 +62,41 @@ export async function uploadSourceImage(
 }
 
 async function uploadFileToStorage(file: File, fallbackMimeType: string, storage: StorageUploadOptions): Promise<SourceImageInput> {
-  const formData = new FormData();
-  formData.set("file", file);
-  formData.set("bucket", storage.bucket);
-  formData.set("folder", storage.folder ?? "temporary");
-
-  const response = await fetch("/api/media/upload", {
+  const mimeType = file.type || fallbackMimeType;
+  const initiateResponse = await fetch("/api/media/uploads/initiate", {
     method: "POST",
-    body: formData,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: file.name,
+      mimeType,
+      sizeBytes: file.size,
+      bucket: storage.bucket,
+      folder: storage.folder ?? "temporary",
+    }),
   });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({})) as { error?: string };
+  if (!initiateResponse.ok) {
+    const payload = await initiateResponse.json().catch(() => ({})) as { error?: string };
     throw new Error(payload.error ?? "Upload failed.");
   }
+  const upload = await initiateResponse.json() as { intentId: string; bucket: string; storagePath: string; token: string };
+  const { error: uploadError } = await createBrowserSupabaseClient().storage.from(upload.bucket).uploadToSignedUrl(
+    upload.storagePath,
+    upload.token,
+    file,
+    { cacheControl: "3600", contentType: mimeType },
+  );
+  if (uploadError) throw new Error(uploadError.message || "Upload failed.");
 
-  const payload = (await response.json()) as { name: string; mimeType: string; url: string; storageBucket?: string; storagePath?: string };
+  const finalizeResponse = await fetch("/api/media/uploads/finalize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intentId: upload.intentId }),
+  });
+  if (!finalizeResponse.ok) {
+    const payload = await finalizeResponse.json().catch(() => ({})) as { error?: string };
+    throw new Error(payload.error ?? "Upload verification failed.");
+  }
+  const payload = (await finalizeResponse.json()) as { name: string; mimeType: string; url: string; storageBucket?: string; storagePath?: string };
   return {
     name: payload.name,
     mimeType: payload.mimeType || file.type || fallbackMimeType,

@@ -2,11 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Check, ChevronDown, Loader2, Upload, X } from "lucide-react";
+import { AudioLines, Check, ChevronDown, Loader2, Play, Upload, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { Asset, Persona } from "@/lib/types";
+import { buildMediaCardUrl } from "@/lib/media-urls";
 import { cn } from "@/lib/utils";
 
 export function PanelTitle({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
@@ -17,6 +18,58 @@ export function PanelTitle({ icon: Icon, title }: { icon: LucideIcon; title: str
       </div>
       <h2 className="text-base font-semibold text-stone-950">{title}</h2>
     </div>
+  );
+}
+
+export function CardImage({ src, alt = "", className }: { src: string; alt?: string; className?: string }) {
+  return <img src={buildMediaCardUrl(src)} alt={alt} loading="lazy" decoding="async" className={className} />;
+}
+
+export function DeferredVideo({
+  src,
+  title,
+  className,
+  posterSrc,
+  onOpen,
+}: {
+  src: string;
+  title: string;
+  className?: string;
+  posterSrc?: string;
+  onOpen?: () => void;
+}) {
+  const [active, setActive] = useState(false);
+  const isLocal = src.startsWith("blob:");
+  if (active || isLocal) {
+    return <video src={src} className={className} controls autoPlay={active} preload={active ? "metadata" : "auto"} playsInline />;
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen ? onOpen() : setActive(true)}
+      className={cn("relative flex items-center justify-center overflow-hidden bg-stone-900 text-white", className)}
+      aria-label={`Play ${title}`}
+    >
+      {posterSrc ? <CardImage src={posterSrc} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" /> : null}
+      <span className="relative flex size-12 items-center justify-center rounded-full bg-black/60"><Play size={20} fill="currentColor" /></span>
+    </button>
+  );
+}
+
+export function DeferredAudio({ src, title, className }: { src: string; title: string; className?: string }) {
+  const [active, setActive] = useState(false);
+  if (active || src.startsWith("blob:")) {
+    return <audio src={src} className={className} controls autoPlay={active} preload={active ? "metadata" : "auto"} />;
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setActive(true)}
+      className={cn("flex h-10 w-full items-center justify-center gap-2 rounded-md border border-stone-200 bg-stone-50 text-sm font-semibold text-stone-700", className)}
+      aria-label={`Play ${title}`}
+    >
+      <AudioLines size={16} /> Play audio
+    </button>
   );
 }
 
@@ -72,7 +125,7 @@ export function SourceImageField({
       </div>
       <div className="mt-1.5 flex items-center gap-3 rounded-md border border-stone-200 bg-stone-50 p-2">
         <div className="size-14 shrink-0 overflow-hidden rounded-md border border-stone-200 bg-stone-100">
-          <img src={image.url} alt="" className="h-full w-full object-cover" />
+          <CardImage src={image.url} alt="" className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-stone-950">{image.name}</p>
@@ -190,12 +243,15 @@ export function MediaLightbox({
           className="h-auto w-auto max-h-[92vh] max-w-[94vw] rounded-md object-contain"
           controls
           autoPlay
+          preload="metadata"
+          playsInline
           onClick={(event) => event.stopPropagation()}
         />
       ) : (
         <img
           src={src}
           alt={title}
+          decoding="async"
           className="max-h-[92vh] max-w-[94vw] rounded-md object-contain"
           onClick={(event) => event.stopPropagation()}
         />
@@ -241,7 +297,7 @@ export function ReferencePicker({
               isSelected ? "border-emerald-800 ring-1 ring-emerald-800" : "border-stone-200 hover:border-emerald-800",
             )}
           >
-            <img src={asset.url} alt="" className="h-full w-full object-cover" />
+            <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
             <span
               className={cn(
                 "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",
@@ -712,7 +768,7 @@ export function ImageThumbStrip({
             key={`${image.name ?? "image"}-${index}`}
             className="relative aspect-square overflow-hidden rounded-md border border-stone-200 bg-stone-100"
           >
-            {src ? <img src={src} alt={image.name ?? `Image ${index + 1}`} className="h-full w-full object-cover" /> : null}
+            {src ? <CardImage src={src} alt={image.name ?? `Image ${index + 1}`} className="h-full w-full object-cover" /> : null}
             <button
               type="button"
               onClick={() => onRemove(index)}

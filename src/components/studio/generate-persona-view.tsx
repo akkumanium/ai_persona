@@ -1,5 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
-
 import { ArrowLeft, ImageIcon, Loader2, Pencil, Upload, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
@@ -7,6 +5,7 @@ import { encodeFiles } from "@/components/studio/media";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
   CheckboxField,
+  CardImage,
   ImageThumbStrip,
   ModelSelect,
   ModeToggle,
@@ -366,7 +365,7 @@ export function GeneratePersonaView({
               {slotAssets.slice(0, 6).map((asset) => (
                 <article key={asset.id} className="group overflow-hidden rounded-lg border border-stone-200 bg-white">
                   <div className="relative aspect-[4/5] bg-stone-100">
-                    <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                    <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
                       onClick={() => onEditReference(asset)}

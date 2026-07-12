@@ -1,11 +1,11 @@
-/* eslint-disable @next/next/no-img-element */
-
 import { AudioLines, Check, Clapperboard, Film, ImageIcon, Loader2, Pencil, Play, Trash2, Upload, Video, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   CheckboxField,
+  CardImage,
+  DeferredVideo,
   ImageThumbStrip,
   MediaLightbox,
   ModelSelect,
@@ -631,7 +631,12 @@ export function GenerationView({
                 <article key={asset.id} className="group overflow-hidden rounded-lg border border-stone-200 bg-white">
                   <div className="relative aspect-[4/5] bg-stone-100">
                     {asset.kind === "video" ? (
-                      <video src={asset.url} className="h-full w-full object-cover" controls />
+                      <DeferredVideo
+                        src={asset.url}
+                        title={asset.title}
+                        className="h-full w-full object-cover"
+                        onOpen={() => setPreviewAsset(asset)}
+                      />
                     ) : (
                       <button
                         type="button"
@@ -639,7 +644,7 @@ export function GenerationView({
                         className="block h-full w-full"
                         aria-label="Open image fullscreen"
                       >
-                        <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                        <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                       </button>
                     )}
                     <button
@@ -775,7 +780,7 @@ export function GenerationView({
                               : "border-stone-200 opacity-55 hover:opacity-100 hover:border-emerald-800",
                           )}
                         >
-                          <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                          <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                           <span
                             className={cn(
                               "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border transition",

@@ -131,7 +131,7 @@ The initial schema is in `supabase/migrations/001_initial_schema.sql`. It define
 
 `supabase/migrations/002_auth_account_security.sql` adds account profiles, token balances stored in the existing balance column, auth user profile creation, stronger storage path policies, and asset metadata needed for persisted references.
 
-Apply all migrations through `017_prelaunch_security_hardening.sql` before deploying this release. The final migration adds checkout intents, ordered and idempotent billing state, durable rate limits, storage quotas, service-only job writes, transactional generation finalization, and refund/adjustment handling.
+Apply all migrations through `018_direct_media_uploads.sql` before deploying this release. Migration 017 adds checkout intents, ordered and idempotent billing state, durable rate limits, storage quotas, service-only job writes, transactional generation finalization, and refund/adjustment handling. Migration 018 adds the short-lived upload intents used for direct browser-to-Supabase media uploads and stale-reservation cleanup.
 
 When Supabase is configured, `/studio` and generation routes require an authenticated user, while active subscription state is enforced by the database when credits are reserved. Configure Vercel Cron with the same `CRON_SECRET` used by the protected reconciliation routes in `vercel.json`.
 

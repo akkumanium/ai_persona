@@ -524,3 +524,39 @@ Use signed fixtures and the Paddle webhook simulator:
 5. Provider failover and circuit breakers.
 6. Database query telemetry and slow-query monitoring.
 7. Full browser/device accessibility test matrix.
+
+---UPDATE: 12.07.26---
+# Verification Report: `issues.md`
+
+Codex did **not** fix everything, but it fixed all the **Critical** and most **High** launch blockers. Most fixes land in a single migration `supabase/migrations/017_prelaunch_security_hardening.sql` plus rewritten webhook/billing code. Here's the finding-by-finding status:
+
+## Fully FIXED (12)
+
+| # | Finding | Severity | Key evidence |
+|---|---------|----------|--------------|
+| **F-02** | Paddle price spoofing | Critical | `webhook/route.ts:55-58` resolves plan **only** from Paddle `price.id` via server catalog; `custom_data.plan_id` no longer trusted; mismatch rejected under row lock (`017:256`) |
+| **F-03** | Arbitrary WaveSpeed models | Critical | Schemas now use `z.enum(...)` allowlists (`schemas.ts:52,74,96,204`); unknown models **throw** instead of fallback (`wavespeed.ts:281,324`, `pricing.ts:119`); daily spend ceiling (`017:221`) |
+| **F-04** | Refund exploitation | Critical | Credits **frozen before** Paddle call (`refund/route.ts:24` → `create_refund_request_and_reserve`, `017:363`); entitlement revoked on full refund (`017:353`) |
+| **F-05** | Out-of-order webhooks | High | `occurred_at` parsed + compared; `last_event_occurred_at` column (`017:21`); upsert applies state only when newer (`017:292-297`) |
+| **F-06** | Non-atomic refund/chargeback | High | Single atomic RPC `apply_paddle_adjustment_event` keyed by adjustment ID (`017:349`); explicit `chargeback`/`chargeback_reverse`/`refund` handling; proportional reversal (`017:341`) |
+| **F-07** | 10-hour synchronous timeout | High | `36000` gone; submit-only with 20s timeout (`wavespeed.ts:34`); job ID persisted + `202` returned (`video/route.ts:108,152`); durable reconciler at `internal/jobs/reconcile` |
+| **F-08** | Relative media URLs | High | Video route resolves `/api/media/object` → bytes → re-uploaded to provider (`route.ts:46-64`, `media-storage.ts:114`); relative URLs never sent raw to provider |
+| **F-09** | Storage abuse | High | Client writes dropped (`017:155`); bucket `file_size_limit`/`allowed_mime_types` set (`017:158`); entitlement-gated server upload endpoint (`media/upload/route.ts`); per-user quota (`017:142`) |
+| **F-10** | SSRF bypass | High | `redirect:"manual"` + per-hop validation + cap (`media-storage.ts:166`); **IP-pinned** connection kills DNS rebinding (`media-storage.ts:206-214`); full IPv4/IPv6 private ranges blocked; 15s timeout |
+| **F-11** | Non-atomic generation/refund | High | `finalize_generation_job` inserts assets **then** marks succeeded in one transaction (`017:400-416`); idempotent ledger via `operation_key` (`017:97`); `refundTokens` is now dead code |
+| **F-13** | Referral RPC IDOR | High | `claim_referral` now enforces `auth.uid() = p_referred_user_id` (`017:201-211`) |
+| **F-14** | Duplicate subscriptions | High | Distinct sub/topup env vars (`env.ts:27-38`); `assertValidBillingCatalog()` rejects dupes (`billing.ts:170`); server checkout intents; `one_active_subscription_per_user` unique index (`017:38`) |
+| **F-15** | Job IDOR | Medium | Client writes to `generation_jobs` revoked (`017:164`); poll route reads stored `provider_job_id` scoped to owner (`jobs/poll/route.ts:29`); unique index on `(provider, provider_job_id)` (`017:167`) |
+| **F-19** | Dependency advisories | Medium | `@google/genai` removed; `npm audit` = **0** advisories; versions bumped/overridden |
+
+## PARTIALLY FIXED (5)
+
+- **F-12 — Rate limiting:** Core defect fixed (durable Postgres-backed limiter replacing in-memory `Map`, `017:99-122`, expired keys cleaned). **Still open:** key is still `${feature}:${forwarded-IP-header}` not `userId + verified IP`; no signup CAPTCHA / WAF config in code.
+- **F-16 — DB integrity:** Persona race (advisory lock), unique active-subscription, status/plan CHECK, billing periods, ledger idempotency, default-reference & provider-job uniqueness — **all fixed**. **Still open:** `reference_asset_ids` and `output_asset_ids` arrays not normalized into join tables / no FKs.
+- **F-17 — Studio loading:** Server SSR now explicit-column + `.limit()` + omits `raw_provider_response`. **Still open:** client polling still `select("*")` (`studio-workspace.tsx:123`); no real cursor/range pagination; all rows still rendered.
+- **F-18 — Observability:** Security headers (`next.config.ts:12-39`), health endpoint (`api/health`), reconcile routes done. **Still open:** no zod env validation at startup, no structured logging/Sentry/OTel/alerting/timeouts, no global `error.tsx`.
+- **F-20 — User-facing:** `/demo` link, legal pages (terms/privacy), SEO (sitemap/robots/canonical/OG) fixed. **Still open:** no self-service account deletion/export with storage cleanup (only manual contact-form path); raw `<img>/<video>` and fixed-width grids unchanged.
+
+## Bottom line
+
+Every **Critical** finding (F-02, F-03, F-04) is genuinely closed, and the **High** launch blockers are all resolved except for one design gap in **F-12** (rate-limit keying + signup CAPTCHA). The remaining gaps (F-16 array normalization, F-17 client pagination, F-18 env validation/logging, F-20 account deletion) are the audit's own "should fix shortly after launch" items — so not everything in `issues.md` is done, but the launch-blocking security holes are. The one F-12 gap (forwarded-IP keying, no CAPTCHA) is worth treating as a real residual launch risk since it leaves provider/storage cost exposure per the original finding.

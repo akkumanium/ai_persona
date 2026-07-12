@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { videoProvider } from "@/lib/providers";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
+import { cleanupExpiredUploadIntents } from "@/lib/server/direct-media-upload";
 import { persistGenerationRecords } from "@/lib/server/studio-persistence";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 import type { Asset, GenerationJob } from "@/lib/types";
@@ -14,6 +15,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   if (!env.supabaseServiceRoleKey) return NextResponse.json({ error: "Service database access is not configured." }, { status: 503 });
+  const expiredUploadsCleaned = await cleanupExpiredUploadIntents();
   const service = createServiceSupabaseClient();
   const { data: jobs, error } = await service.from("generation_jobs")
     .select("id,user_id,persona_id,status,provider,provider_job_id,model,generation_type,input_params,cost_estimate_cents,created_at")
@@ -39,5 +41,5 @@ export async function GET(request: Request) {
     await persistGenerationRecords({ userId: job.user_id, job: persistedJob, assets: asset ? [asset] : [], inputParams });
     return job.id;
   }));
-  return NextResponse.json({ checked: outcomes.length, completed: outcomes.filter((result) => result.status === "fulfilled").length, failed: outcomes.filter((result) => result.status === "rejected").length });
+  return NextResponse.json({ checked: outcomes.length, completed: outcomes.filter((result) => result.status === "fulfilled").length, failed: outcomes.filter((result) => result.status === "rejected").length, expiredUploadsCleaned });
 }

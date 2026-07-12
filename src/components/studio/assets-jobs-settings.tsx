@@ -1,11 +1,9 @@
-/* eslint-disable @next/next/no-img-element */
-
 import { Coins, Copy, Gift, Trash2, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TokenTopUps } from "@/components/billing-plans";
 import { BillingManagement } from "@/components/billing-management";
 import type { AssetFilter } from "@/components/studio/types";
-import { ModeToggle, PanelTitle } from "@/components/studio/ui";
+import { CardImage, DeferredAudio, DeferredVideo, ModeToggle, PanelTitle } from "@/components/studio/ui";
 import type { PublicPaddleConfig } from "@/lib/billing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { formatTokens } from "@/lib/utils";
@@ -52,12 +50,12 @@ export function AssetsView({
                       <div className="flex size-14 items-center justify-center rounded-md bg-emerald-50 text-emerald-800">
                         <Coins size={24} />
                       </div>
-                      <audio src={asset.url} className="mt-5 w-full" controls />
+                      <DeferredAudio src={asset.url} title={asset.title} className="mt-5 w-full" />
                     </div>
                   ) : asset.kind === "video" ? (
-                    <video src={asset.url} className="h-full w-full object-cover" controls />
+                    <DeferredVideo src={asset.url} title={asset.title} className="h-full w-full object-cover" />
                   ) : (
-                    <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                    <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                   )}
                 </div>
                 <div className="p-4">

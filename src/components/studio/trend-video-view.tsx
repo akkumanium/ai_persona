@@ -20,6 +20,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl, uploadSourceImage } from "@/components/studio/media";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
+  CardImage,
+  DeferredVideo,
   ModelSelect,
   MediaLightbox,
   NumberField,
@@ -556,7 +558,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
-                    <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
+                    <DeferredVideo src={sourceVideoToUrl(editingItem.video)} title={editingItem.video.name} className="h-full w-full object-cover" />
                   </div>
                   <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Source reel</p>
                 </div>
@@ -577,6 +579,8 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                         <img
                           src={editingItem.firstFramePreview}
                           alt="Face-swap target"
+                          loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-cover"
                         />
                       </button>
@@ -606,7 +610,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                         className="aspect-square overflow-hidden rounded-md border border-stone-200 transition hover:border-emerald-800"
                         aria-label={`Preview ${ref.title}`}
                       >
-                        <img src={ref.url} alt={ref.title} className="h-full w-full object-cover" />
+                        <CardImage src={ref.url} alt={ref.title} className="h-full w-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -692,7 +696,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                           aria-label={isPicked ? `Open ${asset.title} fullscreen` : `Select ${asset.title}`}
                         >
                           <div className="relative aspect-[9/16] bg-stone-100">
-                            <img src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
+                            <CardImage src={asset.url} alt={asset.title} className="h-full w-full object-cover" />
                           </div>
                           <p className="px-1.5 py-1 text-[9px] font-semibold text-stone-700">
                             {isPicked ? "Selected" : `#${index + 1}`}
@@ -742,7 +746,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 <div>
                   <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
                     {selectedCandidate ? (
-                      <img src={selectedCandidate.url} alt={selectedCandidate.title} className="h-full w-full object-cover" />
+                      <CardImage src={selectedCandidate.url} alt={selectedCandidate.title} className="h-full w-full object-cover" />
                     ) : (
                       <TilePlaceholder icon={ImageIcon} label="From step 1" />
                     )}
@@ -751,7 +755,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                 </div>
                 <div>
                   <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
-                    <video src={sourceVideoToUrl(editingItem.video)} className="h-full w-full object-cover" controls />
+                    <DeferredVideo src={sourceVideoToUrl(editingItem.video)} title={editingItem.video.name} className="h-full w-full object-cover" />
                   </div>
                   <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Motion source</p>
                 </div>
@@ -773,7 +777,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                       <Loader2 className="size-6 animate-spin text-white/80" />
                     </div>
                   ) : editingItem.finalVideo ? (
-                    <video src={editingItem.finalVideo.url} className="h-full w-full object-cover" controls />
+                    <DeferredVideo src={editingItem.finalVideo.url} title={editingItem.finalVideo.title} className="h-full w-full object-cover" />
                   ) : (
                     <TilePlaceholder icon={Play} label="Output" />
                   )}
@@ -924,10 +928,10 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                         className="block h-full w-full"
                         aria-label="Open first frame fullscreen"
                       >
-                        <img src={item.firstFramePreview} alt={item.video.name} className="h-full w-full object-cover" />
+                        <img src={item.firstFramePreview} alt={item.video.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       </button>
                     ) : (
-                      <video src={sourceVideoToUrl(item.video)} className="h-full w-full object-cover" />
+                      <DeferredVideo src={sourceVideoToUrl(item.video)} title={item.video.name} className="h-full w-full object-cover" />
                     )}
                     {item.video.durationSeconds ? (
                       <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1 py-0.5 text-[9px] font-semibold text-white">

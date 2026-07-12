@@ -1,7 +1,6 @@
 6. Come up with a name
 7. Google oauth settings fix 
 12. Email fix
-36. Check data usage
 41. Add carousel
 42. Add runninghub
 46. Maybe change "tokens" to tokens icon
@@ -11,7 +10,7 @@
 72. Change referral link
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
-84. Put video to demo
+84. Put video to demo (or delete the demo)
 91. Emphasize targeting both OFM and UGC
 92. Generate terms and privacy
 103. Upload more voices
@@ -29,11 +28,12 @@
 144. Create a PDF to send to people
 145. When we delete a video, we shouldn't delete assets from them
 146. Some npm issue
-147. Request protection is temporarily unavailable., Could not save persona: Request protection is temporarily unavailable.
+147. Request protection is temporarily unavailable., Could not save persona: Request protection is temporarily unavailable. (to verify)
 148. Extra security check of GLM edits
 149. Check if Email asks for confirmation
-150. What are these NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_10/50/100
-151. Why did vercel deployment failed
+152. Change to only have one subscription
+154. Data fixes, some of the F weren't done (F-12,16,17,18,20), also discuss with Codex about CDN and all that stuff.
+156.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.
@@ -51,11 +51,6 @@ Free nudes
 https://video.a2e.ai/?coupon=uXjP
 For good near nude 
 https://foxy.ai/
-
-
-Client secret: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
-Client ID: 1018998953537-l4djb3tqlb5a0pphq0sn78o894h5hi6o.apps.googleusercontent.com
-Elevenlabs:sk_84b6297aec782c86eb03363a44c44f0018eaae12c734a148
 
 
 I want you to thoroughly analyze and describe the photo I sent you. Based on that analysis, you need to create a prompt for Seedream 4.5 and/or Nano Banana Pro. Use the following format:
@@ -93,15 +88,9 @@ Lighting & presentation: Clean studio lighting - soft key light upper left, gent
 
 and costume details across all four views. No text, no watermarks, no extra figures, no background environment. [insert outfit or clothing and basic features here]
 
-
----Names---
-MeroMero, Oshimen, Meroi, Stanmade, Idolmade, Idolborn
-
 ---Chest up---
 
 Extend the image to a chest-up portrait photography. She's wearing a tight, fitted gym bra with cleavage. Increase the size of her bust in a tasteful manner.
-
-.\first_frame.bat myvideo.mp4 cover.png
 
 ---Faceswap---
 Replace the woman in the second reference image with the woman from the first reference image. The first image is the strict identity reference — preserve her exact face, body shape, proportions, silhouette, hair and anatomy with maximum fidelity. Do not alter, stretch, resize, or reshape any body part.

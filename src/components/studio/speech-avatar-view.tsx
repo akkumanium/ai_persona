@@ -3,6 +3,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { SourceAudioInput, SourceImageInput } from "@/components/studio/types";
 import {
+  DeferredAudio,
+  DeferredVideo,
   ModelSelect,
   ModeToggle,
   PanelTitle,
@@ -129,7 +131,7 @@ export function SpeechView({
                       <Trash2 size={15} />
                     </button>
                   </div>
-                  <audio src={asset.url} className="mt-4 w-full" controls />
+                  <DeferredAudio src={asset.url} title={asset.title} className="mt-4 w-full" />
                   {asset.prompt ? <p className="mt-3 line-clamp-3 text-xs leading-5 text-stone-600">{asset.prompt}</p> : null}
                 </article>
               ))}
@@ -394,7 +396,7 @@ export function AvatarView({
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {avatarAssets.slice(0, 6).map((asset) => (
                 <article key={asset.id} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
-                  <video src={asset.url} className="aspect-[4/5] w-full bg-stone-100 object-cover" controls />
+                  <DeferredVideo src={asset.url} title={asset.title} className="aspect-[4/5] w-full bg-stone-100 object-cover" />
                   <div className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
