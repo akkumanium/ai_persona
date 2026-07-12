@@ -65,6 +65,10 @@ export const videoProvider: VideoProvider = {
       return wanVideoProvider.poll(taskId);
     }
 
+    if (provider === "wavespeed" || process.env.USE_LEGACY_VIDEO_PROVIDERS !== "true") {
+      return wavespeedMediaProvider.poll(taskId);
+    }
+
     if (providerJobId.startsWith("cgt-")) {
       return seedanceVideoProvider.poll(providerJobId);
     }

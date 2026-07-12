@@ -152,6 +152,32 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
   },
 ];
 
+export const IMAGE_MODEL_IDS = [
+  NANO_BANANA_PRO_MODEL_ID,
+  CHATGPT_IMAGE_MODEL_ID,
+  SEEDREAM_4_5_MODEL_ID,
+  WAN_2_7_IMAGE_MODEL_ID,
+] as const;
+
+export const VIDEO_MODEL_IDS = [
+  "wan-2.7",
+  "wan-animate",
+  "kling-v2-6-std",
+  "kling-v2-6-pro",
+  "kling-v3-0-std",
+  "kling-v3-0-pro",
+  "kling-v3-0-4k",
+  "kling-v3-0-motion-std",
+  "kling-v3-0-motion-pro",
+  "dreamina-seedance-2-0-260128",
+  "dreamina-seedance-2-0-fast-260128",
+] as const;
+
+export const TALKING_AVATAR_MODEL_IDS = [
+  "wavespeed-ai/longcat-avatar",
+  "wavespeed-ai/infinitetalk",
+] as const;
+
 const DEFAULT_MODEL_BY_CAPABILITY: Partial<Record<ModelCapability, string>> = {
   "video-motion": "kling-v3-0-motion-std",
 };

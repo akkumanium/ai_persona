@@ -1,0 +1,13 @@
+import Link from "next/link";
+
+export const metadata = { title: "Terms | Idolborn", description: "Idolborn subscription, credit, generation, and refund terms." };
+
+export default function TermsPage() {
+  return <main className="min-h-screen bg-stone-50 px-5 py-14 text-stone-800"><article className="mx-auto max-w-3xl rounded-xl border border-stone-200 bg-white p-7 shadow-sm [&_h2]:mb-2 [&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-semibold [&_p]:mt-3 [&_p]:leading-7"><Link href="/" className="text-sm font-semibold text-emerald-800">← Home</Link><h1 className="mt-6 text-3xl font-semibold text-stone-950">Terms of service</h1><p>Last updated: July 12, 2026.</p>
+    <h2>Eligibility and acceptable use</h2><p>You must be legally able to enter this agreement and must have permission to use every uploaded image, voice, video, and other input. Persona subjects must be adults. Do not use Idolborn for unlawful, deceptive, abusive, infringing, or non-consensual content, or to bypass provider safeguards.</p>
+    <h2>Subscriptions and tokens</h2><p>Subscriptions renew at the interval and price shown by Paddle until canceled. Each subscription includes the stated one-time welcome-token grant; it is not renewed monthly. Token top-ups require an active subscription. Generation costs are shown as token estimates derived from the selected provider model and options, and tokens are reserved when work is submitted.</p>
+    <h2>Cancellation and refunds</h2><p>You may cancel future renewal through the billing portal. The automated full-refund path applies only to the latest qualifying subscription payment while its refundable token grant remains unused. Those tokens are frozen while Paddle reviews the request. Approved full refunds revoke the related local entitlement; rejected requests release the frozen tokens. Partial refunds, disputes, chargebacks, taxes, and payment-method issues are handled according to Paddle records and applicable law.</p>
+    <h2>Generated results</h2><p>AI results can be inaccurate, inconsistent, or unsuitable and are not guaranteed to be unique. You are responsible for reviewing outputs and complying with laws and platform rules before publication. Provider outages may delay accepted jobs; accepted work remains recorded for reconciliation.</p>
+    <h2>Availability and liability</h2><p>The service is provided on an as-available basis. Nothing in these terms excludes rights or liabilities that cannot legally be excluded. For account, billing, or legal questions, use the <Link href="/contact">contact form</Link>.</p>
+  </article></main>;
+}

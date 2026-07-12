@@ -619,8 +619,8 @@ export function HomePage({
               <Link href="/studio" className="btn-primary">
                 Start generating <span>&rarr;</span>
               </Link>
-              <Link href="/demo" className="btn-text">
-                or see the demo first
+              <Link href="/studio" className="btn-text">
+                or explore the studio
               </Link>
             </div>
           </Reveal>
@@ -637,6 +637,8 @@ export function HomePage({
             <Link href="/guides">Guides</Link>
             <Link href="/faq">FAQ</Link>
             <Link href="/contact">Contact</Link>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
           </div>
         </div>
       </footer>

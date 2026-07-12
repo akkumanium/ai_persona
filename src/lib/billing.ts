@@ -161,7 +161,19 @@ export function getBillingOptionById(optionId?: string | null) {
 }
 
 export function getBillingOptionByPriceId(priceId?: string | null) {
-  return [...billingPlans, ...billingTopUps].find((option) => option.priceId && option.priceId === priceId);
+  if (!priceId) return undefined;
+  const matches = [...billingPlans, ...billingTopUps].filter((option) => option.priceId === priceId);
+  if (matches.length > 1) throw new Error(`Paddle price ID ${priceId} is configured more than once.`);
+  return matches[0];
+}
+
+export function assertValidBillingCatalog() {
+  const configured = [...billingPlans, ...billingTopUps].filter((option) => option.priceId);
+  const duplicate = configured.find((option, index) => configured.findIndex((candidate) => candidate.priceId === option.priceId) !== index);
+  if (duplicate) throw new Error(`Paddle price ID ${duplicate.priceId} must be unique.`);
+  if (env.paddleEnvironment === "production" && configured.length !== billingPlans.length + billingTopUps.length) {
+    throw new Error("Every Paddle subscription and top-up price ID is required in production.");
+  }
 }
 
 export function getPersonaLimitForPlan(planId?: string | null) {
@@ -178,6 +190,7 @@ export function hasPaddleCheckoutEnv() {
 }
 
 export function getPublicPaddleConfig() {
+  assertValidBillingCatalog();
   const environment: "sandbox" | "production" =
     env.paddleEnvironment === "production" ? "production" : "sandbox";
 

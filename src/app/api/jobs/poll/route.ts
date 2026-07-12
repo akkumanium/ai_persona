@@ -11,14 +11,13 @@ import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
-    const rateLimited = rateLimitRequest(request, { key: "jobs-poll", limit: 60, windowMs: 60 * 1000 });
+    const rateLimited = await rateLimitRequest(request, { key: "jobs-poll", limit: 60, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
 
-    const { provider, providerJobId } = (await readJsonRequest(request, 8 * 1024) ?? {}) as {
-      provider?: unknown;
+    const { providerJobId } = (await readJsonRequest(request, 8 * 1024) ?? {}) as {
       providerJobId?: unknown;
     };
     if (!providerJobId) {
@@ -29,7 +28,7 @@ export async function POST(request: Request) {
       const supabase = await createServerSupabaseClient();
       const { data: job, error } = await supabase
         .from("generation_jobs")
-        .select("*")
+        .select("id, user_id, persona_id, status, provider, provider_job_id, model, generation_type, input_params, cost_estimate_cents, created_at")
         .eq("user_id", auth.user.id)
         .eq("provider_job_id", String(providerJobId))
         .maybeSingle();
@@ -45,7 +44,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ job });
       }
 
-      const result = await videoProvider.poll(provider ? `${String(provider)}:${providerJobId}` : String(providerJobId));
+      if (job.provider_job_id !== String(providerJobId) || !["wavespeed", "wan", "kling", "seedance"].includes(job.provider)) {
+        return NextResponse.json({ error: "Stored provider job metadata is invalid." }, { status: 409 });
+      }
+      const result = await videoProvider.poll(`${job.provider}:${job.provider_job_id}`);
       const updatedAt = nowIso();
       const inputParams = (job.input_params ?? {}) as Record<string, unknown>;
       const referenceAssetIds = Array.isArray(inputParams.referenceAssetIds)
@@ -92,8 +94,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ job: persistedJob, asset });
     }
 
-    const result = await videoProvider.poll(provider ? `${String(provider)}:${providerJobId}` : String(providerJobId));
-    return NextResponse.json(result);
+    return NextResponse.json({ error: "Persistent job ownership is required for polling." }, { status: 503 });
   } catch (error) {
     const requestErrorResponse = requestBodyErrorResponse(error);
     if (requestErrorResponse) return requestErrorResponse;

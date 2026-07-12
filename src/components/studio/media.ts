@@ -5,23 +5,12 @@ import {
   formatBytes,
   isAllowedMimeType,
 } from "@/lib/media-limits";
-import { buildStorageObjectUrl } from "@/lib/media-urls";
-import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type StorageUploadOptions = {
   enabled?: boolean;
   bucket: string;
   folder?: string;
 };
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
 
 export async function encodeFiles(
   files: FileList | null,
@@ -34,7 +23,6 @@ export async function encodeFiles(
     bucket: "uploads",
     folder: "temporary",
   };
-  const storageContext = storageOptions.enabled ? await getStorageContext() : undefined;
 
   return Promise.all(
     inputFiles.map(async (file) => {
@@ -46,35 +34,7 @@ export async function encodeFiles(
         throw new Error(`Media uploads must be ${formatBytes(MAX_DIRECT_UPLOAD_BYTES)} or smaller.`);
       }
 
-      if (storageContext) {
-        const storagePath = [
-          storageContext.userId,
-          storageOptions.folder?.replace(/^\/+|\/+$/g, ""),
-          `${crypto.randomUUID()}-${safeFileName(file.name)}`,
-        ]
-          .filter(Boolean)
-          .join("/");
-        const { error: uploadError } = await storageContext.client.storage
-          .from(storageOptions.bucket)
-          .upload(storagePath, file, {
-            contentType: mimeType,
-            upsert: false,
-          });
-
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        return {
-          name: file.name,
-          mimeType,
-          url: buildStorageObjectUrl(storageOptions.bucket, storagePath),
-          storageBucket: storageOptions.bucket,
-          storagePath,
-        };
-      }
-
-      return uploadFileToTemp(file, fallbackMimeType);
+      return uploadFileToStorage(file, fallbackMimeType, storageOptions);
     }),
   );
 }
@@ -100,27 +60,11 @@ export async function uploadSourceImage(
   return uploaded;
 }
 
-async function getStorageContext() {
-  try {
-    const client = createBrowserSupabaseClient();
-    const {
-      data: { user },
-      error,
-    } = await client.auth.getUser();
-
-    if (error || !user) {
-      return undefined;
-    }
-
-    return { client, userId: user.id };
-  } catch {
-    return undefined;
-  }
-}
-
-async function uploadFileToTemp(file: File, fallbackMimeType: string): Promise<SourceImageInput> {
+async function uploadFileToStorage(file: File, fallbackMimeType: string, storage: StorageUploadOptions): Promise<SourceImageInput> {
   const formData = new FormData();
   formData.set("file", file);
+  formData.set("bucket", storage.bucket);
+  formData.set("folder", storage.folder ?? "temporary");
 
   const response = await fetch("/api/media/upload", {
     method: "POST",
@@ -128,23 +72,16 @@ async function uploadFileToTemp(file: File, fallbackMimeType: string): Promise<S
   });
 
   if (!response.ok) {
-    const fallbackDataUrl = await fileToDataUrl(file);
-    return {
-      name: file.name,
-      mimeType: file.type || fallbackMimeType,
-      data: fallbackDataUrl.split(",")[1] ?? "",
-    };
+    const payload = await response.json().catch(() => ({})) as { error?: string };
+    throw new Error(payload.error ?? "Upload failed.");
   }
 
-  const payload = (await response.json()) as { name: string; mimeType: string; url: string };
+  const payload = (await response.json()) as { name: string; mimeType: string; url: string; storageBucket?: string; storagePath?: string };
   return {
     name: payload.name,
     mimeType: payload.mimeType || file.type || fallbackMimeType,
     url: payload.url,
+    storageBucket: payload.storageBucket,
+    storagePath: payload.storagePath,
   };
-}
-
-function safeFileName(name: string) {
-  const normalizedName = name.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
-  return normalizedName || "upload";
 }

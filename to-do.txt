@@ -21,12 +21,12 @@
 123. Handle error in generation
 125. How does upgrading work
 126. Make videos expire
-129. Deduct the tokens immediately
 130. We've generated a candidate and another one disappeared (to verify)
 136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
-141. Don't redirect to images when we're trying to edit a reference
-142. FInish the FAQ
+141. Don't redirect to images when we're trying to edit a reference (to verify)
+142. Finish the FAQ
+144. Create a PDF to send to people
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

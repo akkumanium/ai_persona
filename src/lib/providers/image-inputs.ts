@@ -24,14 +24,10 @@ export async function imageUrlToProviderInput(
     return dataUrlImage;
   }
 
-  try {
-    const media = await mediaUrlToBase64Input(url, userId);
-    return {
-      name,
-      mimeType: media.mimeType,
-      data: media.data,
-    };
-  } catch {
-    return undefined;
-  }
+  const media = await mediaUrlToBase64Input(url, userId);
+  return {
+    name,
+    mimeType: media.mimeType,
+    data: media.data,
+  };
 }

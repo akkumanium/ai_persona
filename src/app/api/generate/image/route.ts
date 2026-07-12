@@ -8,14 +8,14 @@ import { promptForReferenceSlot } from "@/lib/reference-prompts";
 import { imageGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
-    const rateLimited = rateLimitRequest(request, { key: "generate-image", limit: 20, windowMs: 60 * 1000 });
+    const rateLimited = await rateLimitRequest(request, { key: "generate-image", limit: 20, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
@@ -147,6 +147,7 @@ export async function POST(request: Request) {
       // after a successful provider response are refunded.
       const result = await imageProvider.generate(providerRequest);
       providerCompleted = true;
+      await recordProviderAcceptance({ userId: auth.user?.id, jobId, raw: result.raw });
       const updatedAt = nowIso();
       const assets: Asset[] = await Promise.all(result.assets.map(async (asset, index) => materializeGeneratedAsset({
         id: crypto.randomUUID(),
@@ -189,15 +190,7 @@ export async function POST(request: Request) {
         job,
       });
     } catch (error) {
-      if (providerCompleted) {
-        await refundTokens(
-          auth.user?.id,
-          estimatedPricing.tokens,
-          jobId,
-          `${generationType.replaceAll("_", " ")} refund`,
-        );
-      }
-      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+      if (!providerCompleted) await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
       throw error;
     }
   } catch (error) {

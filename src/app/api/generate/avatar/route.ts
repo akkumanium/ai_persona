@@ -9,14 +9,14 @@ import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts
 import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
-    const rateLimited = rateLimitRequest(request, { key: "generate-avatar", limit: 20, windowMs: 60 * 1000 });
+    const rateLimited = await rateLimitRequest(request, { key: "generate-avatar", limit: 20, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
@@ -162,6 +162,7 @@ async function generateAvatarReference(body: unknown, userId?: string) {
     await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
     const result = await imageProvider.generate(providerRequest);
     providerCompleted = true;
+    await recordProviderAcceptance({ userId, jobId, raw: result.raw });
     const updatedAt = nowIso();
     const assets: Asset[] = await Promise.all(
       result.assets.map(async (asset, index) =>
@@ -208,10 +209,7 @@ async function generateAvatarReference(body: unknown, userId?: string) {
 
     return NextResponse.json({ assets, job });
   } catch (error) {
-    if (providerCompleted) {
-      await refundTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} refund`);
-    }
-    await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
+    if (!providerCompleted) await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
     throw error;
   }
 }
@@ -286,6 +284,7 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
     await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
     const result = await avatarProvider.submit(providerRequest);
     providerCompleted = true;
+    await recordProviderAcceptance({ userId, jobId, providerJobId: result.providerJobId, raw: result.raw });
     const updatedAt = nowIso();
     const asset: Asset | undefined = result.asset
       ? await materializeGeneratedAsset(
@@ -328,12 +327,9 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
       inputParams,
     });
 
-    return NextResponse.json({ asset, job, providerJobId: result.providerJobId });
+    return NextResponse.json({ asset, job, providerJobId: result.providerJobId }, { status: result.status === "queued" || result.status === "running" ? 202 : 200 });
   } catch (error) {
-    if (providerCompleted) {
-      await refundTokens(userId, estimatedPricing.tokens, jobId, "avatar talking refund");
-    }
-    await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
+    if (!providerCompleted) await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
     throw error;
   }
 }

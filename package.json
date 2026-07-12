@@ -10,29 +10,33 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@elevenlabs/elevenlabs-js": "^2.52.0",
-    "@google/genai": "^2.2.0",
     "@supabase/ssr": "^0.10.3",
-    "@supabase/supabase-js": "^2.105.4",
+    "@supabase/supabase-js": "^2.110.2",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
-    "next": "^16.2.6",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "next": "^16.2.10",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tailwind-merge": "^3.6.0",
-    "wavespeed": "^0.2.3",
+    "wavespeed": "^0.2.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "tailwindcss": "^4",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4.3.2",
     "typescript": "^5",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "@babel/core": "7.29.7",
+    "js-yaml": "4.2.0",
+    "postcss": "8.5.17",
+    "vite": "8.0.16"
   },
   "description": "Idolborn is a Next.js + Supabase SaaS MVP for creating AI-influencer personas, reference avatars, images, and videos.",
   "main": "index.js",

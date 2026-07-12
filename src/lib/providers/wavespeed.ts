@@ -30,6 +30,9 @@ import type {
 } from "@/lib/providers/types";
 import { firstString, normalizeVideoStatus, videoAssetFromUrl } from "@/lib/providers/video-utils";
 
+const WAVESPEED_API_BASE_URL = "https://api.wavespeed.ai";
+const WAVESPEED_REQUEST_TIMEOUT_MS = 20_000;
+
 type WavespeedRunResult = {
   outputs?: unknown;
   id?: unknown;
@@ -82,7 +85,7 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
       seed: isWan27Image ? -1 : undefined,
     }, {
       pollInterval: 2,
-      timeout: 36000,
+      timeout: 90,
     }) as WavespeedRunResult;
     const assets = outputsFromResult(result)
       .map((url, index): GeneratedAssetPayload => ({
@@ -159,17 +162,14 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
           shot_type: request.model.startsWith("kling-v3-0") ? "customize" : undefined,
           seed: -1,
         };
-    const result = await client.run(model, input, {
-      pollInterval: 5,
-      timeout: 36000,
-    }) as WavespeedRunResult;
+    const result = await submitWavespeedPrediction(model, input);
     const outputUrl = outputsFromResult(result)[0];
     const providerJobId = taskIdFromResult(result);
 
     return {
       provider: this.name,
       model,
-      status: normalizeVideoStatus(statusFromResult(result)),
+      status: outputUrl ? "succeeded" : "queued",
       providerJobId,
       asset: videoAssetFromUrl(outputUrl, providerJobId),
       costEstimateCents: estimateVideoGenerationPricing(request).tokens,
@@ -178,13 +178,16 @@ export class WavespeedMediaProvider implements ImageProvider, VideoProvider {
   }
 
   async poll(providerJobId: string): Promise<VideoGenerationResult> {
+    const result = await getWavespeedPrediction(providerJobId);
+    const outputUrl = outputsFromResult(result)[0];
     return {
       provider: this.name,
-      model: "wavespeed",
-      status: "succeeded",
+      model: firstString(result.data?.model, result.model) ?? "wavespeed",
+      status: normalizeVideoStatus(statusFromResult(result)),
       providerJobId,
+      asset: videoAssetFromUrl(outputUrl, providerJobId),
       costEstimateCents: 0,
-      raw: { providerJobId },
+      raw: result,
     };
   }
 }
@@ -206,24 +209,21 @@ export class WavespeedAvatarProvider {
     }
 
     const model = request.model ?? "wavespeed-ai/longcat-avatar";
-    const result = await client.run(model, {
+    const result = await submitWavespeedPrediction(model, {
       image,
       audio,
       prompt: request.prompt || undefined,
       resolution: request.resolution,
       seed: request.seed ?? -1,
       mask_image: request.maskImageUrl,
-    }, {
-      pollInterval: 5,
-      timeout: 36000,
-    }) as WavespeedRunResult;
+    });
     const outputUrl = outputsFromResult(result)[0];
     const providerJobId = taskIdFromResult(result);
 
     return {
       provider: this.name,
       model,
-      status: normalizeVideoStatus(statusFromResult(result)),
+      status: outputUrl ? "succeeded" : "queued",
       providerJobId,
       asset: videoAssetFromUrl(outputUrl, providerJobId),
       costEstimateCents: estimateAvatarGenerationPricing(request).tokens,
@@ -238,8 +238,10 @@ function wavespeedClient() {
   }
 
   return new Client(env.wavespeedApiKey, {
+    connectionTimeout: 20,
+    timeout: 90,
     maxRetries: 1,
-    maxConnectionRetries: 5,
+    maxConnectionRetries: 1,
     retryInterval: 1,
   });
 }
@@ -261,20 +263,22 @@ async function uploadProviderInput(client: Client, input: ProviderImageInput | P
   await mkdir(tempDir, { recursive: true });
   await writeFile(tempPath, bytes);
   try {
-    return await client.upload(tempPath, { timeout: 600 });
+    return await client.upload(tempPath, { timeout: 30 });
   } finally {
     await unlink(tempPath).catch(() => undefined);
   }
 }
 
 function wavespeedImageModel(model: string, hasReferences: boolean) {
-  if (model.includes("/")) return model;
   if (model === WAN_2_7_IMAGE_MODEL_ID || model === WAN_2_7_IMAGE_EDIT_MODEL_ID) {
     return hasReferences ? "alibaba/wan-2.7/image-edit" : "alibaba/wan-2.7/text-to-image";
   }
   if (model === "gpt-image-2") return hasReferences ? "openai/gpt-image-2/edit" : "openai/gpt-image-2/text-to-image";
   if (model === SEEDREAM_4_5_MODEL_ID) return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
-  return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
+  if (model === "gemini-3-pro-image") {
+    return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
+  }
+  throw new Error(`WaveSpeed image model is not allowlisted: ${model}`);
 }
 
 function wan27ImageSize(aspectRatio: string, imageSize: string) {
@@ -291,7 +295,6 @@ function wan27ImageSize(aspectRatio: string, imageSize: string) {
 }
 
 function wavespeedVideoModel(request: VideoGenerationRequest) {
-  if (request.model.includes("/")) return request.model;
   if (request.model === "kling-v3-0-motion-std") return "kwaivgi/kling-v3.0-std/motion-control";
   if (request.model === "kling-v3-0-motion-pro") return "kwaivgi/kling-v3.0-pro/motion-control";
   if (isSeedanceModel(request.model)) {
@@ -318,7 +321,41 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
     }
     return `kwaivgi/kling-v2.6-${request.model === "kling-v2-6-pro" || request.providerMode === "pro" || request.endFrameImageUrl || request.endFrameImage ? "pro" : "std"}/${mode}`;
   }
-  return request.model;
+  throw new Error(`WaveSpeed video model is not allowlisted: ${request.model}`);
+}
+
+async function submitWavespeedPrediction(model: string, input: Record<string, unknown>) {
+  return wavespeedApiRequest(`${WAVESPEED_API_BASE_URL}/api/v3/${model}`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+async function getWavespeedPrediction(providerJobId: string) {
+  if (!/^[A-Za-z0-9_-]{6,200}$/.test(providerJobId)) {
+    throw new Error("Invalid WaveSpeed job ID.");
+  }
+  return wavespeedApiRequest(
+    `${WAVESPEED_API_BASE_URL}/api/v3/predictions/${encodeURIComponent(providerJobId)}/result`,
+    { method: "GET" },
+  );
+}
+
+async function wavespeedApiRequest(url: string, init: RequestInit): Promise<WavespeedRunResult> {
+  if (!env.wavespeedApiKey) throw new Error("WAVESPEED_API_KEY is not configured.");
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${env.wavespeedApiKey}`,
+      "Content-Type": "application/json",
+    },
+    signal: AbortSignal.timeout(WAVESPEED_REQUEST_TIMEOUT_MS),
+  });
+  const payload = await response.json().catch(() => ({})) as WavespeedRunResult & { message?: string };
+  if (!response.ok) {
+    throw new Error(`WaveSpeed request failed (${response.status}): ${payload.message ?? "provider error"}`);
+  }
+  return payload;
 }
 
 function isSeedanceModel(model: string) {

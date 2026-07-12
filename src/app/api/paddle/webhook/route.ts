@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getBillingOptionById, getBillingOptionByPriceId } from "@/lib/billing";
+import { assertValidBillingCatalog, getBillingOptionByPriceId } from "@/lib/billing";
 import { env, hasSupabaseEnv } from "@/lib/env";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
@@ -11,224 +11,173 @@ export const runtime = "nodejs";
 type PaddleWebhookEvent = {
   event_id?: string;
   event_type?: string;
+  occurred_at?: string;
   data?: Record<string, unknown>;
 };
 
-type BillingEventDetails = {
-  userId?: string;
-  planId?: string;
-  priceId?: string;
-  amountCents: number;
-  isSubscriptionPayment: boolean;
-  subscriptionId?: string;
-  customerId?: string;
-  subscriptionStatus: string;
-  entityId?: string;
-};
+type CheckoutIntentRow = { id: string; user_id: string; option_id: string; price_id: string; expires_at: string; consumed_at: string | null };
 
 export async function POST(request: Request) {
-  if (!env.paddleWebhookSecretKey) {
-    return NextResponse.json({ error: "Paddle webhook secret is not configured." }, { status: 500 });
+  if (!env.paddleWebhookSecretKey || !hasSupabaseEnv() || !env.supabaseServiceRoleKey) {
+    return NextResponse.json({ error: "Billing webhook configuration is incomplete." }, { status: 503 });
   }
-  if (!hasSupabaseEnv() || !env.supabaseServiceRoleKey) {
-    return NextResponse.json({ error: "Supabase service role is not configured." }, { status: 500 });
-  }
-
-  const signature = request.headers.get("paddle-signature");
   const rawBody = await request.text();
-
-  if (!signature) {
-    return NextResponse.json({ error: "Missing Paddle signature." }, { status: 400 });
-  }
-  if (!verifyPaddleSignature(signature, rawBody, env.paddleWebhookSecretKey)) {
+  const signature = request.headers.get("paddle-signature");
+  if (!signature || !verifyPaddleSignature(signature, rawBody, env.paddleWebhookSecretKey)) {
     return NextResponse.json({ error: "Invalid Paddle signature." }, { status: 401 });
   }
-
   let event: PaddleWebhookEvent;
   try {
     event = JSON.parse(rawBody) as PaddleWebhookEvent;
   } catch {
     return NextResponse.json({ error: "Webhook payload is not valid JSON." }, { status: 400 });
   }
-
-  const eventId = event.event_id;
-  const eventType = event.event_type;
-  if (!eventId || !eventType || !event.data) {
+  if (!event.event_id || !event.event_type || !event.occurred_at || !event.data || !Number.isFinite(Date.parse(event.occurred_at))) {
     return NextResponse.json({ error: "Webhook payload is missing required fields." }, { status: 400 });
   }
 
-  const details = getBillingEventDetails(eventType, event.data);
-  const supabase = createServiceSupabaseClient();
+  try {
+    assertValidBillingCatalog();
+    const service = createServiceSupabaseClient();
+    if (event.event_type.startsWith("adjustment.")) {
+      const processed = await processAdjustment(service, {
+        ...event,
+        event_id: event.event_id,
+        event_type: event.event_type,
+        occurred_at: event.occurred_at,
+        data: event.data,
+      });
+      return NextResponse.json({ received: true, processed });
+    }
+    if (event.event_type !== "transaction.completed" && !event.event_type.startsWith("subscription.")) {
+      return NextResponse.json({ received: true, ignored: true });
+    }
+    const item = getSingleCatalogItem(event.data);
+    if (!item) throw new Error("Paddle event must contain exactly one quantity-one catalog item.");
+    const option = getBillingOptionByPriceId(item.priceId);
+    if (!option) throw new Error("Paddle price is not present in the server catalog.");
+    const currency = getString(event.data.currency_code) ?? getNestedString(event.data, "details", "totals", "currency_code");
+    if (event.event_type === "transaction.completed" && currency?.toUpperCase() !== "USD") {
+      throw new Error("Paddle transaction currency does not match the USD catalog.");
+    }
 
-  if (eventType.startsWith("adjustment.")) {
-    const processed = await processRefundAdjustmentEvent(supabase, eventId, eventType, event.data, event);
-    return NextResponse.json({ received: true, processed });
-  }
-
-  if (!details.userId || !details.planId || !details.priceId) {
-    return NextResponse.json({ received: true, ignored: true });
-  }
-
-  const { data, error } = await supabase.rpc("apply_paddle_billing_event", {
-    p_event_id: eventId,
-    p_event_type: eventType,
-    p_user_id: details.userId,
-    p_paddle_entity_id: details.entityId ?? null,
-    p_subscription_id: details.subscriptionId ?? null,
-    p_paddle_customer_id: details.customerId ?? null,
-    p_subscription_status: details.subscriptionStatus,
-    p_plan_id: details.planId,
-    p_price_id: details.priceId,
-    p_amount_cents: details.amountCents,
-    p_payload: event,
-    p_is_subscription_payment: details.isSubscriptionPayment,
-  });
-
-  if (error) {
-    console.error("Failed to apply Paddle billing event", error);
+    const subscriptionId = event.event_type.startsWith("subscription.") ? getString(event.data.id) : getString(event.data.subscription_id);
+    const intent = await resolveCheckoutIntent(service, event.data, item.priceId, option.id, subscriptionId);
+    if (!intent) throw new Error("Paddle event is not associated with a valid server checkout intent.");
+    const paidAmount = getMoneyAmount(event.data);
+    const { data: processed, error } = await service.rpc("apply_paddle_billing_event_v2", {
+      p_event_id: event.event_id,
+      p_event_type: event.event_type,
+      p_occurred_at: event.occurred_at,
+      p_user_id: intent.user_id,
+      p_checkout_intent_id: intent.id,
+      p_paddle_entity_id: getString(event.data.id) ?? subscriptionId ?? null,
+      p_subscription_id: subscriptionId ?? null,
+      p_paddle_customer_id: getString(event.data.customer_id) ?? null,
+      p_subscription_status: getString(event.data.status) ?? statusFromSubscriptionEvent(event.event_type),
+      p_plan_id: option.id,
+      p_price_id: item.priceId,
+      p_grant_amount_cents: event.event_type === "transaction.completed" ? option.creditCents : 0,
+      p_paid_amount_minor: paidAmount,
+      p_payload: event,
+      p_is_subscription_payment: option.kind === "subscription" && event.event_type === "transaction.completed",
+    });
+    if (error) throw error;
+    return NextResponse.json({ received: true, processed: Boolean(processed) });
+  } catch (error) {
+    console.error(JSON.stringify({ level: "error", operation: "paddle_webhook", eventId: event.event_id, eventType: event.event_type, message: error instanceof Error ? error.message : "unknown" }));
     return NextResponse.json({ error: "Failed to process Paddle webhook." }, { status: 500 });
   }
-
-  return NextResponse.json({ received: true, processed: Boolean(data) });
 }
 
-async function processRefundAdjustmentEvent(
-  supabase: SupabaseClient,
-  eventId: string,
-  eventType: string,
+async function resolveCheckoutIntent(
+  service: SupabaseClient,
   data: Record<string, unknown>,
-  payload: PaddleWebhookEvent,
+  priceId: string,
+  optionId: string,
+  subscriptionId?: string,
 ) {
-  const adjustmentId = getString(data.id);
-  if (!adjustmentId) return false;
-
-  const { data: requestRow } = await supabase
-    .from("billing_refund_requests")
-    .select("id, user_id, amount_cents, status")
-    .eq("paddle_adjustment_id", adjustmentId)
-    .maybeSingle<{ id: string; user_id: string; amount_cents: number; status: string }>();
-
-  const { error: eventError } = await supabase.from("billing_webhook_events").insert({
-    event_id: eventId,
-    event_type: eventType,
-    user_id: requestRow?.user_id ?? null,
-    paddle_entity_id: adjustmentId,
-    payload,
-  });
-  if (eventError) {
-    if (eventError.code === "23505") return false;
-    throw eventError;
+  const intentId = getCustomDataValue(data, "checkout_intent_id");
+  if (intentId) {
+    const { data: intent, error } = await service.from("billing_checkout_intents")
+      .select("id, user_id, option_id, price_id, expires_at, consumed_at")
+      .eq("id", intentId).maybeSingle<CheckoutIntentRow>();
+    if (error || !intent || intent.price_id !== priceId || intent.option_id !== optionId || Date.parse(intent.expires_at) < Date.now()) return undefined;
+    return intent;
   }
-
-  if (!requestRow) return true;
-
-  const status = getString(data.status)?.toLowerCase() ?? "unknown";
-  if (["rejected", "failed", "canceled", "cancelled"].includes(status)) {
-    await supabase
-      .from("billing_refund_requests")
-      .update({ status: "rejected", failure_message: `Paddle adjustment ${status}.` })
-      .eq("id", requestRow.id)
-      .neq("status", "approved");
-    return true;
-  }
-
-  if (!["approved", "complete", "completed"].includes(status) || requestRow.status === "approved") {
-    await supabase
-      .from("billing_refund_requests")
-      .update({ status: "submitted" })
-      .eq("id", requestRow.id)
-      .in("status", ["pending", "submitted"]);
-    return true;
-  }
-
-  const { data: profile } = await supabase
-    .from("account_profiles")
-    .select("credit_balance_cents")
-    .eq("user_id", requestRow.user_id)
-    .single<{ credit_balance_cents: number | null }>();
-  const nextBalance = Math.max(0, (profile?.credit_balance_cents ?? 0) - requestRow.amount_cents);
-  await Promise.all([
-    supabase
-      .from("account_profiles")
-      .update({ credit_balance_cents: nextBalance })
-      .eq("user_id", requestRow.user_id),
-    supabase.from("credit_ledger").insert({
-      user_id: requestRow.user_id,
-      amount_cents: -requestRow.amount_cents,
-      description: `Paddle refund credit reversal: ${adjustmentId}`,
-    }),
-    supabase
-      .from("billing_refund_requests")
-      .update({ status: "approved" })
-      .eq("id", requestRow.id),
-  ]);
-
-  return true;
+  if (!subscriptionId) return undefined;
+  const { data: subscription } = await service.from("billing_subscriptions")
+    .select("user_id, checkout_intent_id").eq("subscription_id", subscriptionId)
+    .maybeSingle<{ user_id: string; checkout_intent_id: string | null }>();
+  if (!subscription?.checkout_intent_id) return undefined;
+  const { data: intent } = await service.from("billing_checkout_intents")
+    .select("id, user_id, option_id, price_id, expires_at, consumed_at")
+    .eq("id", subscription.checkout_intent_id).maybeSingle<CheckoutIntentRow>();
+  return intent?.user_id === subscription.user_id && intent.price_id === priceId && intent.option_id === optionId ? intent : undefined;
 }
 
-function verifyPaddleSignature(signatureHeader: string, rawBody: string, secret: string) {
-  const parts = Object.fromEntries(
-    signatureHeader
-      .split(";")
-      .map((part) => part.split("="))
-      .filter((part): part is [string, string] => part.length === 2),
-  );
-  const timestamp = parts.ts;
-  const signatures = signatureHeader
-    .split(";")
-    .filter((part) => part.startsWith("h1="))
-    .map((part) => part.slice(3));
+async function processAdjustment(service: SupabaseClient, event: Required<Pick<PaddleWebhookEvent, "event_id" | "event_type" | "occurred_at" | "data">> & PaddleWebhookEvent) {
+  const adjustmentId = getString(event.data.id);
+  const transactionId = getString(event.data.transaction_id);
+  if (!adjustmentId || !transactionId) throw new Error("Adjustment is missing its ID or transaction ID.");
+  const { data, error } = await service.rpc("apply_paddle_adjustment_event", {
+    p_event_id: event.event_id,
+    p_event_type: event.event_type,
+    p_occurred_at: event.occurred_at,
+    p_adjustment_id: adjustmentId,
+    p_transaction_id: transactionId,
+    p_action: getString(event.data.action) ?? "unknown",
+    p_adjustment_type: getString(event.data.type) ?? "unknown",
+    p_status: getString(event.data.status) ?? "unknown",
+    p_adjusted_amount_minor: getMoneyAmount(event.data),
+    p_payload: event,
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
 
-  if (!timestamp || !signatures.length) return false;
-
-  const eventTime = Number(timestamp);
-  if (!Number.isFinite(eventTime)) return false;
-  const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - eventTime);
-  if (ageSeconds > 5) return false;
-
-  const expected = createHmac("sha256", secret).update(`${timestamp}:${rawBody}`).digest("hex");
-  const expectedBuffer = Buffer.from(expected, "hex");
-
+export function verifyPaddleSignature(signatureHeader: string, rawBody: string, secret: string) {
+  const timestamp = signatureHeader.split(";").find((part) => part.startsWith("ts="))?.slice(3);
+  const signatures = signatureHeader.split(";").filter((part) => part.startsWith("h1=")).map((part) => part.slice(3));
+  if (!timestamp || !signatures.length || !/^\d+$/.test(timestamp)) return false;
+  if (Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp)) > 5) return false;
+  const expected = Buffer.from(createHmac("sha256", secret).update(`${timestamp}:${rawBody}`).digest("hex"), "hex");
   return signatures.some((candidate) => {
-    const candidateBuffer = Buffer.from(candidate, "hex");
-    return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
+    if (!/^[a-fA-F0-9]{64}$/.test(candidate)) return false;
+    const actual = Buffer.from(candidate, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
   });
 }
 
-function getBillingEventDetails(eventType: string, data: Record<string, unknown>): BillingEventDetails {
-  if (eventType === "transaction.completed") {
-    const priceId = findPriceId(data);
-    const plan = getBillingOptionById(getCustomDataValue(data, "plan_id")) ?? getBillingOptionByPriceId(priceId);
-    return {
-      userId: getCustomDataValue(data, "app_user_id"),
-      planId: plan?.id,
-      priceId: plan?.priceId,
-      amountCents: plan?.creditCents ?? 0,
-      isSubscriptionPayment: plan?.kind === "subscription",
-      subscriptionId: getString(data.subscription_id),
-      customerId: getString(data.customer_id),
-      subscriptionStatus: plan?.kind === "topup" ? "top_up" : "active",
-      entityId: getString(data.id),
-    };
-  }
+function getSingleCatalogItem(data: Record<string, unknown>) {
+  if (!Array.isArray(data.items) || data.items.length !== 1) return undefined;
+  const item = data.items[0];
+  if (!item || typeof item !== "object" || Array.isArray(item)) return undefined;
+  const record = item as Record<string, unknown>;
+  const price = record.price && typeof record.price === "object" && !Array.isArray(record.price) ? record.price as Record<string, unknown> : undefined;
+  const priceId = getString(record.price_id) ?? getString(price?.id);
+  const quantity = typeof record.quantity === "number" ? record.quantity : Number(record.quantity ?? 1);
+  return priceId && quantity === 1 ? { priceId } : undefined;
+}
 
-  if (eventType.startsWith("subscription.")) {
-    const priceId = findPriceId(data);
-    const plan = getBillingOptionById(getCustomDataValue(data, "plan_id")) ?? getBillingOptionByPriceId(priceId);
-    return {
-      userId: getCustomDataValue(data, "app_user_id"),
-      planId: plan?.id,
-      priceId: plan?.priceId,
-      amountCents: 0,
-      isSubscriptionPayment: false,
-      subscriptionId: getString(data.id),
-      customerId: getString(data.customer_id),
-      subscriptionStatus: getString(data.status) ?? statusFromSubscriptionEvent(eventType),
-      entityId: getString(data.id),
-    };
-  }
+function getMoneyAmount(data: Record<string, unknown>) {
+  const value = getNestedString(data, "totals", "total") ?? getNestedString(data, "details", "totals", "total");
+  const amount = Number(value ?? 0);
+  return Number.isSafeInteger(amount) && amount >= 0 ? amount : 0;
+}
 
-  return { amountCents: 0, isSubscriptionPayment: false, subscriptionStatus: "unknown" };
+function getNestedString(record: Record<string, unknown>, ...path: string[]) {
+  let value: unknown = record;
+  for (const key of path) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+    value = (value as Record<string, unknown>)[key];
+  }
+  return getString(value);
+}
+
+function getCustomDataValue(data: Record<string, unknown>, key: string) {
+  const custom = data.custom_data;
+  return custom && typeof custom === "object" && !Array.isArray(custom) ? getString((custom as Record<string, unknown>)[key]) : undefined;
 }
 
 function statusFromSubscriptionEvent(eventType: string) {
@@ -239,31 +188,6 @@ function statusFromSubscriptionEvent(eventType: string) {
   return "active";
 }
 
-function getCustomDataValue(data: Record<string, unknown>, key: string) {
-  const customData = data.custom_data;
-  if (!customData || typeof customData !== "object" || Array.isArray(customData)) return undefined;
-  return getString((customData as Record<string, unknown>)[key]);
-}
-
-function findPriceId(data: Record<string, unknown>) {
-  const items = data.items;
-  if (!Array.isArray(items)) return undefined;
-
-  for (const item of items) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-    const itemRecord = item as Record<string, unknown>;
-    const directPriceId = getString(itemRecord.price_id);
-    if (directPriceId) return directPriceId;
-    const price = itemRecord.price;
-    if (price && typeof price === "object" && !Array.isArray(price)) {
-      const nestedPriceId = getString((price as Record<string, unknown>).id);
-      if (nestedPriceId) return nestedPriceId;
-    }
-  }
-
-  return undefined;
-}
-
 function getString(value: unknown) {
-  return typeof value === "string" && value.trim() ? value : undefined;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }

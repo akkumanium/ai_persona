@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 import { requireUserWhenSupabaseIsConfigured } from "@/lib/auth";
 import { motionControlsForModel } from "@/lib/model-registry";
+import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
 import { mediaUrlToProviderInput } from "@/lib/providers/media-inputs";
 import { videoProvider } from "@/lib/providers";
 import { estimateVideoGenerationPricing } from "@/lib/pricing";
 import { videoGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
-import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError, refundTokens, reserveTokens } from "@/lib/server/token-billing";
+import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
+import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
-    const rateLimited = rateLimitRequest(request, { key: "generate-video", limit: 12, windowMs: 60 * 1000 });
+    const rateLimited = await rateLimitRequest(request, { key: "generate-video", limit: 12, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
@@ -42,11 +43,25 @@ export async function POST(request: Request) {
     // so an underfunded account returns 402 instantly instead of after long downloads.
     await assertSufficientTokens(auth.user?.id, Math.max(1, estimateVideoGenerationPricing(input).tokens));
 
+    const startFrameImage = input.startFrameImage ?? (input.startFrameImageUrl
+      ? await imageUrlToProviderInput(input.startFrameImageUrl, `${input.personaName}-start-frame`, auth.user?.id)
+      : input.referenceImageUrl
+        ? await imageUrlToProviderInput(input.referenceImageUrl, `${input.personaName}-reference`, auth.user?.id)
+        : undefined);
+    const endFrameImage = input.endFrameImage ?? (input.endFrameImageUrl
+      ? await imageUrlToProviderInput(input.endFrameImageUrl, `${input.personaName}-end-frame`, auth.user?.id)
+      : undefined);
     const motionReferenceVideo =
       input.motionReferenceVideo ??
       (input.motionReferenceVideoUrl
         ? await mediaUrlToProviderInput(input.motionReferenceVideoUrl, `${input.personaName}-motion-reference`, auth.user?.id)
         : undefined);
+    const referenceVideo = input.referenceVideo ?? (input.referenceVideoUrl
+      ? await mediaUrlToProviderInput(input.referenceVideoUrl, `${input.personaName}-reference-video`, auth.user?.id)
+      : undefined);
+    const referenceAudio = input.referenceAudio ?? (input.referenceAudioUrl
+      ? await mediaUrlToProviderInput(input.referenceAudioUrl, `${input.personaName}-reference-audio`, auth.user?.id)
+      : undefined);
     const estimatedPricing = estimateVideoGenerationPricing(input);
     const jobId = crypto.randomUUID();
     const createdAt = nowIso();
@@ -77,9 +92,20 @@ export async function POST(request: Request) {
 
       const result = await videoProvider.submit({
         ...input,
+        referenceImageUrl: undefined,
+        startFrameImageUrl: undefined,
+        endFrameImageUrl: undefined,
+        motionReferenceVideoUrl: undefined,
+        referenceVideoUrl: undefined,
+        referenceAudioUrl: undefined,
+        startFrameImage,
+        endFrameImage,
         motionReferenceVideo,
+        referenceVideo,
+        referenceAudio,
       });
       providerCompleted = true;
+      await recordProviderAcceptance({ userId: auth.user?.id, jobId, providerJobId: result.providerJobId, raw: result.raw });
       const updatedAt = nowIso();
       const asset: Asset | undefined = result.asset
         ? await materializeGeneratedAsset({
@@ -123,17 +149,9 @@ export async function POST(request: Request) {
         asset,
         job,
         providerJobId: result.providerJobId,
-      });
+      }, { status: result.status === "queued" || result.status === "running" ? 202 : 200 });
     } catch (error) {
-      if (providerCompleted) {
-        await refundTokens(
-          auth.user?.id,
-          estimatedPricing.tokens,
-          jobId,
-          `${generationType.replaceAll("_", " ")} refund`,
-        );
-      }
-      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+      if (!providerCompleted) await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
       throw error;
     }
   } catch (error) {

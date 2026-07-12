@@ -27,7 +27,7 @@ type PersonaRow = {
 };
 
 export async function POST(request: Request) {
-  const rateLimited = rateLimitRequest(request, { key: "personas", limit: 30, windowMs: 10 * 60 * 1000 });
+  const rateLimited = await rateLimitRequest(request, { key: "personas", limit: 30, windowMs: 10 * 60 * 1000 });
   if (rateLimited) return rateLimited;
 
   const auth = await requireUserWhenSupabaseIsConfigured();

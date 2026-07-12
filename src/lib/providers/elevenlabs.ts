@@ -1,4 +1,3 @@
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { env } from "@/lib/env";
 import { estimateSpeechGenerationPricing } from "@/lib/pricing";
 import type {
@@ -15,22 +14,32 @@ export class ElevenLabsSpeechProvider implements SpeechProvider {
       throw new Error("ELEVENLABS_API_KEY is not configured. ElevenLabs speech generation is not connected.");
     }
 
-    const client = new ElevenLabsClient({ apiKey: env.elevenLabsApiKey });
-    const audioStream = await client.textToSpeech.convert(request.voiceId, {
-      text: request.text,
-      modelId: request.model,
-      outputFormat: request.outputFormat,
-      languageCode: request.languageCode,
-      seed: request.seed,
-      voiceSettings: {
-        stability: request.stability,
-        similarityBoost: request.similarityBoost,
-        style: request.style,
-        speed: request.speed,
-        useSpeakerBoost: request.useSpeakerBoost,
-      },
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(request.voiceId)}?output_format=${encodeURIComponent(request.outputFormat)}`, {
+      method: "POST",
+      headers: { "xi-api-key": env.elevenLabsApiKey, "Content-Type": "application/json", Accept: "audio/*" },
+      body: JSON.stringify({
+        text: request.text,
+        model_id: request.model,
+        language_code: request.languageCode,
+        seed: request.seed,
+        voice_settings: {
+          stability: request.stability,
+          similarity_boost: request.similarityBoost,
+          style: request.style,
+          speed: request.speed,
+          use_speaker_boost: request.useSpeakerBoost,
+        },
+      }),
+      signal: AbortSignal.timeout(30_000),
     });
-    const bytes = await readableStreamToUint8Array(audioStream);
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`ElevenLabs request failed (${response.status}): ${detail.slice(0, 300)}`);
+    }
+    const contentLength = Number(response.headers.get("content-length") ?? 0);
+    if (contentLength > 25 * 1024 * 1024) throw new Error("ElevenLabs audio response is too large.");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > 25 * 1024 * 1024) throw new Error("ElevenLabs audio response is too large.");
     const mimeType = request.outputFormat.startsWith("wav") ? "audio/wav" : "audio/mpeg";
 
     return {
@@ -50,27 +59,4 @@ export class ElevenLabsSpeechProvider implements SpeechProvider {
       },
     };
   }
-}
-
-async function readableStreamToUint8Array(stream: ReadableStream<Uint8Array>) {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalLength = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    chunks.push(value);
-    totalLength += value.length;
-  }
-
-  const output = new Uint8Array(totalLength);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  return output;
 }

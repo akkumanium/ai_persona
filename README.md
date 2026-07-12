@@ -84,10 +84,18 @@ PADDLE_API_KEY=
 PADDLE_WEBHOOK_SECRET_KEY=
 NEXT_PUBLIC_PADDLE_PRICE_ID_2=
 NEXT_PUBLIC_PADDLE_PRICE_ID_5=
-NEXT_PUBLIC_PADDLE_PRICE_ID_10=
+NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_10=
 NEXT_PUBLIC_PADDLE_PRICE_ID_20=
-NEXT_PUBLIC_PADDLE_PRICE_ID_50=
-NEXT_PUBLIC_PADDLE_PRICE_ID_100=
+NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_50=
+NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_100=
+NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_10=
+NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_50=
+NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_100=
+
+WAVESPEED_API_KEY=
+ELEVENLABS_API_KEY=
+CRON_SECRET=
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 GEMINI_API_KEY=
 NANO_BANANA_MODEL=gemini-3-pro-image-preview
@@ -106,6 +114,8 @@ SEEDANCE_API_KEY=
 SEEDANCE_MODEL=dreamina-seedance-2-0-260128
 ```
 
+Every Paddle price ID must be nonempty and unique. Subscription prices and top-up prices must never share an ID. Production billing refuses ambiguous or incomplete catalogs.
+
 ## Supabase
 
 The initial schema is in `supabase/migrations/001_initial_schema.sql`. It defines:
@@ -120,7 +130,9 @@ The initial schema is in `supabase/migrations/001_initial_schema.sql`. It define
 
 `supabase/migrations/002_auth_account_security.sql` adds account profiles, token balances stored in the existing balance column, auth user profile creation, stronger storage path policies, and asset metadata needed for persisted references.
 
-When Supabase is configured, `/studio` and the generation API routes require an authenticated user. The current workspace still keeps personas, assets, jobs, and usage in local UI state until the persistence layer is connected to Supabase queries and storage writes.
+Apply all migrations through `017_prelaunch_security_hardening.sql` before deploying this release. The final migration adds checkout intents, ordered and idempotent billing state, durable rate limits, storage quotas, service-only job writes, transactional generation finalization, and refund/adjustment handling.
+
+When Supabase is configured, `/studio` and generation routes require an authenticated user, while active subscription state is enforced by the database when credits are reserved. Configure Vercel Cron with the same `CRON_SECRET` used by the protected reconciliation routes in `vercel.json`.
 
 ### Supabase Auth Setup
 

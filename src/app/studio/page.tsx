@@ -49,10 +49,10 @@ export default async function StudioPage() {
   await cleanupStalePendingGenerationJobs(supabase, user.id);
 
   const [personas, assets, jobs, ledger, imagePromptSuggestions] = await Promise.all([
-    supabase.from("personas").select("*").order("created_at", { ascending: false }),
-    supabase.from("assets").select("*").order("created_at", { ascending: false }),
-    supabase.from("generation_jobs").select("*").order("created_at", { ascending: false }),
-    supabase.from("credit_ledger").select("*").order("created_at", { ascending: false }),
+    supabase.from("personas").select("id, name, description, style_notes, status, reference_asset_id, created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("assets").select("id, kind, public_url, storage_bucket, storage_path, title, prompt, persona_id, reference_asset_ids, reference_slot, is_default_reference, generation_type, provider, provider_job_id, provider_asset_id, model, mime_type, created_at").order("created_at", { ascending: false }).limit(200),
+    supabase.from("generation_jobs").select("id, status, provider, provider_job_id, model, generation_type, input_params, persona_id, cost_estimate_cents, error_message, created_at, updated_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("credit_ledger").select("id, job_id, amount_cents, description, created_at").order("created_at", { ascending: false }).limit(100),
     loadImagePromptSuggestions(),
   ]);
 

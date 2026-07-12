@@ -6,7 +6,8 @@ import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import type { ReferenceSlotId } from "@/components/studio/types";
 import { PanelTitle, SubmitButton, TextArea, TextField } from "@/components/studio/ui";
-import type { Asset, Persona } from "@/lib/types";
+import { NANO_BANANA_PRO_MODEL_ID } from "@/lib/image-model-options";
+import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, initials } from "@/lib/utils";
 
 export function PersonasView({
@@ -23,7 +24,7 @@ export function PersonasView({
   onAddReferences,
   onToggleReferenceDefault,
   onDeleteReference,
-  onEditReference,
+  onReferenceEdited,
   onNavigateToGenerate,
 }: {
   personas: Persona[];
@@ -39,7 +40,7 @@ export function PersonasView({
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
-  onEditReference: (asset: Asset) => void;
+  onReferenceEdited: (assets: Asset[], job: GenerationJob) => void;
   onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [managedPersonaId, setManagedPersonaId] = useState<string | undefined>();
@@ -104,7 +105,7 @@ export function PersonasView({
         onAddReferences={onAddReferences}
         onToggleReferenceDefault={onToggleReferenceDefault}
         onDeleteReference={onDeleteReference}
-        onEditReference={onEditReference}
+        onReferenceEdited={onReferenceEdited}
         onNavigateToGenerate={onNavigateToGenerate}
       />
     );
@@ -204,7 +205,7 @@ function PersonaManagementView({
   onAddReferences,
   onToggleReferenceDefault,
   onDeleteReference,
-  onEditReference,
+  onReferenceEdited,
   onNavigateToGenerate,
 }: {
   persona: Persona;
@@ -216,7 +217,7 @@ function PersonaManagementView({
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
   onDeleteReference: (personaId: string, assetId: string) => void;
-  onEditReference: (asset: Asset) => void;
+  onReferenceEdited: (assets: Asset[], job: GenerationJob) => void;
   onNavigateToGenerate: (slotId?: ReferenceSlotId, personaId?: string) => void;
 }) {
   const [isEditingPersona, setIsEditingPersona] = useState(false);
@@ -225,6 +226,7 @@ function PersonaManagementView({
   const [previewAssetId, setPreviewAssetId] = useState<string | undefined>();
   const [uploadingSlotId, setUploadingSlotId] = useState<ReferenceSlotId | undefined>();
   const [uploadError, setUploadError] = useState("");
+  const [editingReference, setEditingReference] = useState<Asset | undefined>();
   const referenceAssets = assets.filter(
     (asset) => asset.personaId === persona.id && (asset.kind === "avatar" || asset.kind === "upload"),
   );
@@ -386,12 +388,21 @@ function PersonaManagementView({
             uploading={uploadingSlotId === slot.id}
             onToggleReferenceDefault={onToggleReferenceDefault}
             onDeleteReference={(assetId) => onDeleteReference(persona.id, assetId)}
-            onEditReference={onEditReference}
+            onEditReference={setEditingReference}
             onPreviewReference={(asset) => setPreviewAssetId(asset.id)}
           />
         ))}
       </div>
       {uploadError ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{uploadError}</p> : null}
+
+      {editingReference ? (
+        <ReferenceEditor
+          asset={editingReference}
+          persona={persona}
+          onAssetsCreated={onReferenceEdited}
+          onClose={() => setEditingReference(undefined)}
+        />
+      ) : null}
 
       <AssetSection title="Images" assets={imageAssets} />
       <AssetSection title="Videos" assets={videoAssets} />
@@ -579,6 +590,113 @@ function ReferenceAssetRow({
             </button>
           </div>
         </>
+    </div>
+  );
+}
+
+function ReferenceEditor({
+  asset,
+  persona,
+  onAssetsCreated,
+  onClose,
+}: {
+  asset: Asset;
+  persona: Persona;
+  onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
+  onClose: () => void;
+}) {
+  const [instructions, setInstructions] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState("");
+  const slotId: ReferenceSlotId = asset.referenceSlot === "chest-up" || asset.referenceSlot === "body" || asset.referenceSlot === "face-grid"
+    ? asset.referenceSlot
+    : "face";
+  const slot = referenceSlots.find((candidate) => candidate.id === slotId) ?? referenceSlots[0];
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const requestedChanges = instructions.trim();
+    if (requestedChanges.length < 10) return;
+
+    setIsGenerating(true);
+    setError("");
+    try {
+      const response = await fetch("/api/generate/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personaId: persona.id,
+          personaName: persona.name,
+          model: NANO_BANANA_PRO_MODEL_ID,
+          prompt: [
+            "Edit this reference image while preserving the persona's identity, facial features, body proportions, and overall likeness.",
+            `Requested changes: ${requestedChanges}`,
+          ].join("\n"),
+          additionalPrompt: "",
+          styleNotes: persona.styleNotes,
+          aspectRatio: slot.aspectRatio,
+          imageSize: "2K",
+          count: 1,
+          assetKind: "avatar",
+          referenceSlot: slotId,
+          referenceAssetIds: [asset.id],
+          referenceImageUrls: [asset.url],
+          isDefaultReference: false,
+          titlePrefix: `Edited ${slot.label} reference`,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Reference edit failed.");
+      onAssetsCreated(payload.assets, payload.job);
+      onClose();
+    } catch (generationError) {
+      setError(generationError instanceof Error ? generationError.message : "Reference edit failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/45 p-4" role="dialog" aria-modal="true" aria-labelledby="reference-editor-title">
+      <form onSubmit={submit} className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-5 shadow-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="reference-editor-title" className="text-lg font-semibold text-stone-950">Edit {slot.label.toLowerCase()} reference</h2>
+            <p className="mt-1 text-sm text-stone-600">Describe the changes to make. The edited version will be saved in this same reference slot; the original remains available.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isGenerating}
+            className="rounded-md p-1.5 text-stone-500 transition hover:bg-stone-100 hover:text-stone-950 disabled:opacity-50"
+            aria-label="Close reference editor"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-[11rem_minmax(0,1fr)]">
+          <div className="overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
+            <img src={asset.url} alt={asset.title} className="aspect-[4/5] h-full w-full object-cover" />
+          </div>
+          <div>
+            <TextArea
+              label="Changes"
+              value={instructions}
+              onChange={setInstructions}
+              rows={7}
+            />
+            <p className="mt-2 text-xs leading-5 text-stone-500">Identity and proportions are kept from the selected reference.</p>
+            {error ? <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+            <SubmitButton
+              loading={isGenerating}
+              icon={Pencil}
+              label="Save edited reference"
+              disabled={instructions.trim().length < 10}
+            />
+          </div>
+        </div>
+      </form>
     </div>
   );
 }

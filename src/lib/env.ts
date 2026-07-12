@@ -25,19 +25,20 @@ export const env = {
   paddleFiftyDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_50,
   paddleHundredDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_100,
   paddleSoloSubscriptionPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_10 ?? process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_10,
+    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_10,
   paddleCreatorSubscriptionPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_50 ?? process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_50,
+    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_50,
   paddleAgencySubscriptionPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_100 ?? process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_100,
+    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_100,
   paddleTenDollarTopUpPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_10 ?? process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_10,
+    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_10,
   paddleFiftyDollarTopUpPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_50 ?? process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_50,
+    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_50,
   paddleHundredDollarTopUpPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_100 ?? process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_100,
+    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_100,
   paddleWebhookSecretKey: process.env.PADDLE_WEBHOOK_SECRET_KEY,
   paddleApiKey: process.env.PADDLE_API_KEY,
+  cronSecret: process.env.CRON_SECRET,
 };
 
 export function hasSupabaseEnv() {

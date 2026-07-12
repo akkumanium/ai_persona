@@ -1,4 +1,6 @@
 import { lookup } from "dns/promises";
+import { get as httpGet, type IncomingMessage, type RequestOptions } from "http";
+import { get as httpsGet } from "https";
 import { isIP } from "net";
 import { env, hasSupabaseEnv } from "@/lib/env";
 import {
@@ -149,26 +151,7 @@ export async function resolveAssetContent(url: string, userId?: string) {
   if (!/^https?:$/.test(parsed.protocol)) {
     throw new Error("Unsupported media URL.");
   }
-  await assertSafeRemoteMediaUrl(parsed);
-
-  const response = await fetch(parsed.toString());
-  if (!response.ok) {
-    throw new Error("Could not download remote media.");
-  }
-  const mimeType = normalizeMimeType(response.headers.get("content-type") ?? "application/octet-stream");
-  const contentLength = response.headers.get("content-length");
-  if (contentLength && Number(contentLength) > MAX_REMOTE_MEDIA_BYTES) {
-    throw new Error(`Remote media must be ${formatBytes(MAX_REMOTE_MEDIA_BYTES)} or smaller.`);
-  }
-  if (!isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES)) {
-    throw new Error("Unsupported remote media type.");
-  }
-  const bytes = await readResponseBytes(response, MAX_REMOTE_MEDIA_BYTES);
-
-  return {
-    mimeType,
-    bytes,
-  };
+  return downloadRemoteMedia(parsed);
 }
 
 function assertAllowedMedia(mimeType: string, sizeBytes: number) {
@@ -180,30 +163,68 @@ function assertAllowedMedia(mimeType: string, sizeBytes: number) {
   }
 }
 
-async function readResponseBytes(response: Response, maxBytes: number) {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength > maxBytes) {
-      throw new Error(`Remote media must be ${formatBytes(maxBytes)} or smaller.`);
-    }
-    return new Uint8Array(buffer);
+async function downloadRemoteMedia(url: URL, redirectCount = 0): Promise<{ mimeType: string; bytes: Uint8Array }> {
+  if (redirectCount > 3) throw new Error("Remote media redirected too many times.");
+  const addresses = await resolveSafeRemoteAddresses(url);
+  const selected = addresses[0];
+  const response = await requestPinnedUrl(url, selected.address, selected.family);
+  const status = response.statusCode ?? 0;
+  if ([301, 302, 303, 307, 308].includes(status)) {
+    const location = response.headers.location;
+    response.destroy();
+    if (!location) throw new Error("Remote media redirect is missing a location.");
+    return downloadRemoteMedia(new URL(location, url), redirectCount + 1);
   }
-
-  const chunks: Uint8Array[] = [];
+  if (status < 200 || status >= 300) {
+    response.destroy();
+    throw new Error(`Could not download remote media (HTTP ${status}).`);
+  }
+  const mimeType = normalizeMimeType(String(response.headers["content-type"] ?? "application/octet-stream"));
+  const contentLength = Number(response.headers["content-length"] ?? 0);
+  if (contentLength > MAX_REMOTE_MEDIA_BYTES) {
+    response.destroy();
+    throw new Error(`Remote media must be ${formatBytes(MAX_REMOTE_MEDIA_BYTES)} or smaller.`);
+  }
+  if (!isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES)) {
+    response.destroy();
+    throw new Error("Unsupported remote media type.");
+  }
+  const chunks: Buffer[] = [];
   let total = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    total += value.byteLength;
-    if (total > maxBytes) {
-      throw new Error(`Remote media must be ${formatBytes(maxBytes)} or smaller.`);
+  for await (const chunk of response) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += bytes.length;
+    if (total > MAX_REMOTE_MEDIA_BYTES) {
+      response.destroy();
+      throw new Error(`Remote media must be ${formatBytes(MAX_REMOTE_MEDIA_BYTES)} or smaller.`);
     }
-    chunks.push(value);
+    chunks.push(bytes);
   }
+  return { mimeType, bytes: new Uint8Array(Buffer.concat(chunks)) };
+}
 
-  return new Uint8Array(Buffer.concat(chunks));
+function requestPinnedUrl(url: URL, address: string, family: number) {
+  return new Promise<IncomingMessage>((resolve, reject) => {
+    const options: RequestOptions = {
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port || undefined,
+      path: `${url.pathname}${url.search}`,
+      headers: { Host: url.host, Accept: "image/*,video/*,audio/*" },
+      lookup: (_hostname, _options, callback) => callback(null, address, family),
+    };
+    const request = (url.protocol === "https:" ? httpsGet : httpGet)(options, resolve);
+    request.setTimeout(15_000, () => request.destroy(new Error("Remote media request timed out.")));
+    request.once("error", reject);
+  });
+}
+
+async function resolveSafeRemoteAddresses(url: URL) {
+  await assertSafeRemoteMediaUrl(url);
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const version = isIP(hostname);
+  if (version) return [{ address: hostname, family: version }];
+  return lookup(hostname, { all: true });
 }
 
 export async function assertSafeRemoteMediaUrl(url: URL) {
@@ -253,13 +274,19 @@ function isPublicIpAddress(address: string, family: number) {
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
+      (a === 192 && b === 0) ||
+      (a === 192 && b === 88) ||
       (a === 198 && (b === 18 || b === 19)) ||
+      (a === 192 && b === 0 && parts[2] === 2) ||
+      (a === 198 && b === 51 && parts[2] === 100) ||
+      (a === 203 && b === 0 && parts[2] === 113) ||
       (a >= 224)
     );
   }
 
   const normalized = address.toLowerCase();
-  return !(
+  const first = Number.parseInt(normalized.split(":")[0] || "0", 16);
+  return first >= 0x2000 && first <= 0x3fff && !(
     normalized === "::1" ||
     normalized === "::" ||
     normalized.startsWith("fc") ||
@@ -267,7 +294,11 @@ function isPublicIpAddress(address: string, family: number) {
     normalized.startsWith("fe8") ||
     normalized.startsWith("fe9") ||
     normalized.startsWith("fea") ||
-    normalized.startsWith("feb")
+    normalized.startsWith("feb") ||
+    normalized.startsWith("2001:db8") ||
+    normalized.startsWith("2001:0002") ||
+    normalized.startsWith("2001:0010") ||
+    normalized.startsWith("2002:")
   );
 }
 

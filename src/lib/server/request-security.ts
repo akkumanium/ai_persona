@@ -1,5 +1,8 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
+import { env, hasSupabaseEnv } from "@/lib/env";
 import { MAX_JSON_BODY_BYTES, formatBytes } from "@/lib/media-limits";
+import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
 type RateLimitOptions = {
   key: string;
@@ -74,10 +77,32 @@ export async function readJsonRequest(request: Request, maxBytes = MAX_JSON_BODY
   }
 }
 
-export function rateLimitRequest(request: Request, options: RateLimitOptions) {
+export async function rateLimitRequest(request: Request, options: RateLimitOptions) {
   const now = Date.now();
   const clientIp = getClientIp(request);
-  const bucketKey = `${options.key}:${clientIp}`;
+  const bucketKey = createHash("sha256").update(`${options.key}:${clientIp}`).digest("hex");
+  if (hasSupabaseEnv() && env.supabaseServiceRoleKey) {
+    const supabase = createServiceSupabaseClient();
+    const { data, error } = await supabase.rpc("consume_rate_limit", {
+      p_bucket_key: bucketKey,
+      p_limit: options.limit,
+      p_window_seconds: Math.max(1, Math.ceil(options.windowMs / 1000)),
+    });
+    if (error) {
+      return NextResponse.json({ error: "Request protection is temporarily unavailable." }, { status: 503 });
+    }
+    if (data === false) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait a moment and try again." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(options.windowMs / 1000)) } },
+      );
+    }
+    return null;
+  }
+
+  for (const [key, bucket] of buckets) {
+    if (bucket.resetAt <= now) buckets.delete(key);
+  }
   const current = buckets.get(bucketKey);
 
   if (!current || current.resetAt <= now) {
@@ -102,6 +127,8 @@ export function rateLimitRequest(request: Request, options: RateLimitOptions) {
 }
 
 function getClientIp(request: Request) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwardedFor || request.headers.get("x-real-ip") || "unknown";
+  if (process.env.VERCEL === "1") {
+    return request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  }
+  return request.headers.get("x-real-ip") || "local";
 }

@@ -54,6 +54,7 @@ export function aspectRatiosForImageModel(modelId: string) {
 }
 
 export function supportsImageSize(modelId: string) {
+  void modelId;
   return true;
 }
 
@@ -68,6 +69,7 @@ export function supportsImageQuality(modelId: string) {
 }
 
 export function supportsImageReferences(modelId: string) {
+  void modelId;
   return true;
 }
 

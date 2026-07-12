@@ -52,6 +52,28 @@ export async function persistPendingGenerationJob({
   }
 }
 
+export async function recordProviderAcceptance({
+  userId,
+  jobId,
+  providerJobId,
+  raw,
+}: {
+  userId?: string;
+  jobId: string;
+  providerJobId?: string;
+  raw: unknown;
+}) {
+  if (!hasSupabaseEnv() || !userId) return;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to record provider acceptance.");
+  const { error } = await createServiceSupabaseClient().from("generation_jobs").update({
+    status: "running",
+    provider_job_id: providerJobId ?? null,
+    raw_provider_response: sanitizeProviderPayload(raw),
+    updated_at: new Date().toISOString(),
+  }).eq("id", jobId).eq("user_id", userId).eq("status", "queued");
+  if (error) throw new Error(`Failed to record provider acceptance: ${error.message}`);
+}
+
 export async function persistGenerationRecords({
   userId,
   job,
@@ -63,6 +85,9 @@ export async function persistGenerationRecords({
   const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY
     ? createServiceSupabaseClient()
     : await createServerSupabaseClient();
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required to finalize generation records.");
+  }
   const outputAssetIds = assets.map((asset) => asset.id);
   await assertOwnedReferences(
     supabase,
@@ -71,7 +96,7 @@ export async function persistGenerationRecords({
     assets.flatMap((asset) => asset.referenceAssetIds ?? []),
   );
 
-  const { error: jobError } = await supabase.from("generation_jobs").upsert({
+  const jobPayload = {
     id: job.id,
     user_id: userId,
     persona_id: job.personaId ?? null,
@@ -87,17 +112,8 @@ export async function persistGenerationRecords({
     error_message: job.errorMessage ?? null,
     created_at: job.createdAt,
     updated_at: job.updatedAt,
-  }, {
-    onConflict: "id",
-  });
-
-  if (jobError) {
-    throw new Error(`Failed to persist generation job: ${jobError.message}`);
-  }
-
-  if (assets.length) {
-    const { error: assetsError } = await supabase.from("assets").insert(
-      assets.map((asset) => ({
+  };
+  const assetPayload = assets.map((asset) => ({
         id: asset.id,
         user_id: userId,
         persona_id: asset.personaId ?? null,
@@ -117,13 +133,22 @@ export async function persistGenerationRecords({
         mime_type: asset.mimeType,
         provider_asset_id: asset.providerAssetId,
         created_at: asset.createdAt,
-      })),
-    );
-
-    if (assetsError) {
-      throw new Error(`Failed to persist generated assets: ${assetsError.message}`);
-    }
+      }));
+  let lastError: { message: string } | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { error } = await supabase.rpc("finalize_generation_job", {
+      p_user_id: userId,
+      p_job: jobPayload,
+      p_assets: assetPayload,
+    });
+    if (!error) return;
+    lastError = error;
   }
+  await Promise.all(assets.map(async (asset) => {
+    if (!asset.storageBucket || !asset.storagePath) return;
+    await supabase.storage.from(asset.storageBucket).remove([asset.storagePath]);
+  }));
+  throw new Error(`Failed to finalize generation records transactionally: ${lastError?.message ?? "unknown database error"}`);
 }
 
 export async function markPendingGenerationJobFailed({
@@ -162,8 +187,9 @@ export async function cleanupStalePendingGenerationJobs(
   userId: string,
   maxAgeMs = 45 * 60 * 1000,
 ) {
+  const writer = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceSupabaseClient() : supabase;
   const stalePendingCutoff = new Date(Date.now() - maxAgeMs).toISOString();
-  const { error } = await supabase
+  const { error } = await writer
     .from("generation_jobs")
     .update({
       status: "failed",

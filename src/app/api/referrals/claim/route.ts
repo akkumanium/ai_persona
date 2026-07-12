@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const rateLimited = rateLimitRequest(request, { key: "referral-claim", limit: 10, windowMs: 10 * 60 * 1000 });
+  const rateLimited = await rateLimitRequest(request, { key: "referral-claim", limit: 10, windowMs: 10 * 60 * 1000 });
   if (rateLimited) return rateLimited;
 
   if (!hasSupabaseEnv()) {

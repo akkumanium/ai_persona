@@ -139,7 +139,7 @@ export function StudioWorkspace({
       cancelled = true;
       document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
-  }, [supabaseReady, userId, view]);
+  }, [supabaseReady, userId]);
 
   function addJob(job: GenerationJob) {
     setJobs((current) => [job, ...current.filter((currentJob) => currentJob.id !== job.id)]);
@@ -713,7 +713,11 @@ export function StudioWorkspace({
               }}
               onToggleReferenceDefault={toggleReferenceDefault}
               onDeleteReference={deleteReferenceAsset}
-              onEditReference={launchImageEdit}
+              onReferenceEdited={(nextAssets, job) => {
+                addGeneratedReferenceAssets(nextAssets, job);
+                addJob(job);
+                setNotice(`${nextAssets.length} edited reference${nextAssets.length === 1 ? "" : "s"} saved.`);
+              }}
               onNavigateToGenerate={(slotId, personaId) => {
                 if (personaId) setSelectedPersonaId(personaId);
                 setGenerateInitialSlotId(slotId);

@@ -144,7 +144,7 @@ export function BillingPlans({
     }
   }, [checkoutState, config.clientToken, config.environment, pollBillingStatus]);
 
-  function openCheckout(plan: BillingPlan & { priceId: string }) {
+  async function openCheckout(plan: BillingPlan & { priceId: string }) {
     if (!userId) {
       setCheckoutState("error");
       setMessage("Sign in before choosing a studio plan.");
@@ -165,6 +165,7 @@ export function BillingPlans({
     setMessage("Opening secure Paddle checkout...");
 
     try {
+      const checkoutIntentId = await createCheckoutIntent(plan.id);
       window.Paddle.Checkout.open({
         settings: {
           displayMode: "overlay",
@@ -174,9 +175,7 @@ export function BillingPlans({
         items: [{ priceId: plan.priceId, quantity: 1 }],
         customer: userEmail ? { email: userEmail } : undefined,
         customData: {
-          app_user_id: userId,
-          plan_id: plan.id,
-          source: "persona_studio",
+          checkout_intent_id: checkoutIntentId,
         },
       });
     } catch {
@@ -279,7 +278,7 @@ export function BillingPlans({
 
               <button
                 type="button"
-                onClick={() => openCheckout(plan)}
+                onClick={() => void openCheckout(plan)}
                 disabled={isBusy || !supabaseReady || !scriptReady}
                 className={styles.button}
               >
@@ -417,7 +416,7 @@ export function TokenTopUps({
     }
   }, [checkoutState, config.clientToken, config.environment, pollBillingStatus]);
 
-  function openCheckout(topUp: BillingTopUp & { priceId: string }) {
+  async function openCheckout(topUp: BillingTopUp & { priceId: string }) {
     if (!userId) {
       setCheckoutState("error");
       setMessage("Sign in before buying tokens.");
@@ -442,6 +441,7 @@ export function TokenTopUps({
     setMessage("Opening secure Paddle checkout...");
 
     try {
+      const checkoutIntentId = await createCheckoutIntent(topUp.id);
       window.Paddle.Checkout.open({
         settings: {
           displayMode: "overlay",
@@ -451,9 +451,7 @@ export function TokenTopUps({
         items: [{ priceId: topUp.priceId, quantity: 1 }],
         customer: userEmail ? { email: userEmail } : undefined,
         customData: {
-          app_user_id: userId,
-          plan_id: topUp.id,
-          source: "persona_studio_settings_topup",
+          checkout_intent_id: checkoutIntentId,
         },
       });
     } catch {
@@ -513,7 +511,7 @@ export function TokenTopUps({
 
       <button
         type="button"
-        onClick={() => selectedTopUp && openCheckout(selectedTopUp)}
+        onClick={() => selectedTopUp && void openCheckout(selectedTopUp)}
         disabled={!selectedTopUp || isBusy || !supabaseReady || !scriptReady || !selectedTopUp.priceId || !hasActiveSubscription}
         className="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white transition hover:bg-emerald-900 disabled:bg-stone-300"
       >
@@ -547,4 +545,17 @@ export function TokenTopUps({
       ) : null}
     </section>
   );
+}
+
+async function createCheckoutIntent(optionId: string) {
+  const response = await fetch("/api/billing/checkout-intent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ optionId }),
+  });
+  const payload = await response.json().catch(() => ({})) as { checkoutIntentId?: string; error?: string };
+  if (!response.ok || !payload.checkoutIntentId) {
+    throw new Error(payload.error ?? "Could not prepare secure checkout.");
+  }
+  return payload.checkoutIntentId;
 }

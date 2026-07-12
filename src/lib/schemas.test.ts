@@ -4,7 +4,8 @@ import { videoGenerationSchema } from "@/lib/schemas";
 const requiredVideoInput = {
   personaId: "persona-1",
   personaName: "Test Persona",
-  model: "kling-3.0-motion-control-standard",
+  model: "kling-v3-0-motion-std",
+  startFrameImageUrl: "/api/media/object?bucket=uploads&path=user/start.png",
 };
 
 describe("videoGenerationSchema", () => {
@@ -29,11 +30,20 @@ describe("videoGenerationSchema", () => {
   it("still requires at least 10 prompt characters for normal generation", () => {
     const result = videoGenerationSchema.safeParse({
       ...requiredVideoInput,
+      model: "wan-2.7",
       mode: "normal",
       prompt: "short",
     });
 
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.issues[0]?.path).toEqual(["prompt"]);
+  });
+
+  it("rejects arbitrary provider model identifiers", () => {
+    expect(videoGenerationSchema.safeParse({
+      ...requiredVideoInput,
+      model: "attacker/expensive-model",
+      mode: "motion",
+    }).success).toBe(false);
   });
 });

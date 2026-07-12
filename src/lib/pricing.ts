@@ -50,6 +50,9 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
     };
   }
 
+  if (request.model !== "gemini-3-pro-image") {
+    throw new Error(`No authorized price is configured for image model ${request.model}.`);
+  }
   const outputUsd = nanoBananaOutputUsd(request.imageSize);
   const inputUsd = referenceCount * 0.0011;
   const rawUsd = outputUsd * count + inputUsd;
@@ -113,10 +116,7 @@ export function estimateVideoGenerationPricing(request: VideoGenerationRequest):
     };
   }
 
-  return {
-    rawUsd: 0.06 * duration,
-    tokens: usdToTokens(0.06 * duration),
-  };
+  throw new Error(`No authorized price is configured for video model ${model}.`);
 }
 
 export function estimateSpeechGenerationPricing(request: Pick<SpeechGenerationRequest, "text">): PricingBreakdown {
@@ -131,6 +131,9 @@ export function estimateAvatarGenerationPricing(
   request: Pick<AvatarGenerationRequest, "durationSeconds" | "resolution" | "model">,
 ): PricingBreakdown {
   const billedSeconds = Math.min(600, Math.max(5, Math.ceil(request.durationSeconds)));
+  if (!["wavespeed-ai/longcat-avatar", "wavespeed-ai/infinitetalk"].includes(request.model ?? "")) {
+    throw new Error(`No authorized price is configured for avatar model ${request.model}.`);
+  }
   const isLongcat = request.model === "wavespeed-ai/longcat-avatar";
   const perSecondUsd = request.resolution === "720p"
     ? isLongcat ? 0.08 : 0.06
