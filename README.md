@@ -1,3 +1,4 @@
+# THIS MIGHT BE OUTDATED, ALWAYS RE-CHECK/ASK USER BEFORE MAKING CONCLUSIONS
 # Idolborn
 
 Idolborn is a Next.js SaaS MVP for creating AI-influencer personas and generating reference avatars, campaign images, and short videos from those references.

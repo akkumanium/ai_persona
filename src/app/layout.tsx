@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://idolborn.ai"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://idolborn.com"),
   title: "Idolborn",
   description: "Create AI-influencer personas, reference avatars, images, and videos.",
   icons: {
