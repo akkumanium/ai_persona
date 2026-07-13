@@ -19,7 +19,7 @@
 122. How are videos and first frame loaded
 123. Handle error in generation
 125. How does upgrading work
-126. Make videos expire
+126. Make videos and images expire
 130. We've generated a candidate and another one disappeared (to verify)
 136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
@@ -28,29 +28,13 @@
 144. Create a PDF to send to people
 145. When we delete a video, we shouldn't delete assets from them
 146. Some npm issue
-147. Request protection is temporarily unavailable., Could not save persona: Request protection is temporarily unavailable. (to verify)
 148. Extra security check of GLM edits
 149. Check if Email asks for confirmation
 152. Change to only have one subscription
 156. Change public contact email. (and create it)
-157. Prediction timed out after 90 seconds (task_id: 647d6691f28e43cba14e48d1b1f68519)
-158. Also bug: Error: Request failed. Please check your input parameters and try again: Request failed. Please check your input parameters and try again., {
-  "code": 1405,
-  "created_at": "2026-07-12T14:56:56.797676047Z",
-  "error": "Request failed. Please check your input parameters and try again: Request failed. Please check your input parameters and try again.",
-  "id": "647d6691f28e43cba14e48d1b1f68519",
-  "model": "alibaba/wan-2.7/image-edit",
-  "outputs": [],
-  "status": "failed",
-  "timings": {
-    "inference": 0
-  },
-  "urls": {
-    "get": "https://api.wavespeed.ai/api/v3/predictions/647d6691f28e43cba14e48d1b1f68519/result"
-  }
-}
-159.
-160.
+163.
+164.
+165.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

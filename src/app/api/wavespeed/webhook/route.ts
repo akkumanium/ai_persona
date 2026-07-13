@@ -20,14 +20,15 @@ export async function POST(request: Request) {
   let payload: { id?: unknown; status?: unknown };
   try { payload = JSON.parse(rawBody) as { id?: unknown; status?: unknown }; }
   catch { return NextResponse.json({ error: "Invalid JSON." }, { status: 400 }); }
-  if (payload.id !== webhookId || !["completed", "failed"].includes(String(payload.status))) {
+  const providerJobId = typeof payload.id === "string" ? payload.id : "";
+  if (!providerJobId || !["completed", "failed"].includes(String(payload.status))) {
     return NextResponse.json({ ok: true });
   }
   if (!env.supabaseServiceRoleKey) return NextResponse.json({ error: "Service database access is not configured." }, { status: 503 });
   const service = createServiceSupabaseClient();
   const { data: job, error } = await service.from("generation_jobs")
     .select("id,user_id,persona_id,status,provider,provider_job_id,model,generation_type,input_params,cost_estimate_cents,created_at")
-    .eq("provider", "wavespeed").eq("provider_job_id", webhookId).maybeSingle();
+    .eq("provider", "wavespeed").eq("provider_job_id", providerJobId).maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!job || ["succeeded", "failed"].includes(job.status)) return NextResponse.json({ ok: true });
   try {

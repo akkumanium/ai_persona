@@ -211,7 +211,16 @@ function requestPinnedUrl(url: URL, address: string, family: number) {
       port: url.port || undefined,
       path: `${url.pathname}${url.search}`,
       headers: { Host: url.host, Accept: "image/*,video/*,audio/*" },
-      lookup: (_hostname, _options, callback) => callback(null, address, family),
+      lookup: (_hostname, options, callback) => {
+        // Modern Node enables autoSelectFamily for HTTP clients and requests all
+        // lookup results. Preserve the pinned address while honoring the lookup
+        // callback shape expected for that mode.
+        if (typeof options === "object" && options.all) {
+          callback(null, [{ address, family }]);
+          return;
+        }
+        callback(null, address, family);
+      },
     };
     const request = (url.protocol === "https:" ? httpsGet : httpGet)(options, resolve);
     request.setTimeout(15_000, () => request.destroy(new Error("Remote media request timed out.")));

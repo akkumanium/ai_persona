@@ -10,13 +10,14 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    const isDevelopment = process.env.NODE_ENV === "development";
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self' https://*.paddle.com",
-      "script-src 'self' 'unsafe-inline' https://cdn.paddle.com",
+      `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://cdn.paddle.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "media-src 'self' blob: https:",
