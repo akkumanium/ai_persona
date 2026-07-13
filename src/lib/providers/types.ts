@@ -21,6 +21,7 @@ export type ImageGenerationRequest = {
   count: number;
   referenceImages?: ProviderImageInput[];
   generationType: GenerationType;
+  onProviderContact?: () => void;
 };
 
 export type GeneratedAssetPayload = {
@@ -67,6 +68,7 @@ export type VideoGenerationRequest = {
   referenceVideoUrl?: string;
   referenceAudio?: ProviderMediaInput;
   referenceAudioUrl?: string;
+  onProviderContact?: () => void;
 };
 
 export type VideoGenerationResult = {
@@ -91,6 +93,7 @@ export type SpeechGenerationRequest = {
   useSpeakerBoost?: boolean;
   seed?: number;
   languageCode?: string;
+  onProviderContact?: () => void;
 };
 
 export type SpeechGenerationResult = {
@@ -112,6 +115,7 @@ export type AvatarGenerationRequest = {
   seed?: number;
   durationSeconds: number;
   model?: string;
+  onProviderContact?: () => void;
 };
 
 export type AvatarGenerationResult = {

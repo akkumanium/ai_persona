@@ -1,6 +1,7 @@
 import { AudioLines, Clapperboard, Loader2, MessageSquareText, Trash2, Upload, Video } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { SourceAudioInput, SourceImageInput } from "@/components/studio/types";
 import {
   DeferredAudio,
@@ -61,18 +62,25 @@ export function SpeechView({
   const [speed, setSpeed] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
+  const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const latestAudio = useMemo(
     () => assets.filter((asset) => asset.personaId === selectedPersona?.id && asset.kind === "audio"),
     [assets, selectedPersona?.id],
   );
-  const costLabel = formatTokens(estimateSpeechGenerationPricing({ text }).tokens);
+  const costTokens = estimateSpeechGenerationPricing({ text }).tokens;
+  const costLabel = formatTokens(costTokens);
   const effectiveVoiceId = voiceMode === "preset" ? presetVoiceId : voiceId.trim();
 
   async function generateSpeech(event: FormEvent) {
     event.preventDefault();
     if (!selectedPersona || !effectiveVoiceId || !text.trim()) return;
+    if (!tryReserveTokens(costTokens)) {
+      setError(`Insufficient token balance. This generation costs ${costTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
     setIsGenerating(true);
     setError("");
+    let balanceReconciled = false;
     try {
       const response = await fetch("/api/generate/speech", {
         method: "POST",
@@ -92,6 +100,10 @@ export function SpeechView({
         }),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) {
         throw new Error(payload.error ?? "Speech generation failed.");
       }
@@ -99,6 +111,7 @@ export function SpeechView({
     } catch (speechError) {
       setError(speechError instanceof Error ? speechError.message : "Speech generation failed.");
     } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
       setIsGenerating(false);
     }
   }
@@ -262,6 +275,7 @@ export function AvatarView({
   const [isGenerating, setIsGenerating] = useState(false);
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
+  const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const selectedImage = imageAssets.find((asset) => asset.id === imageAssetId);
   const selectedAudio = audioAssets.find((asset) => asset.id === audioAssetId) ?? audioAssets[0];
   const selectedImageUrl = uploadedImage ? sourceImageToDataUrl(uploadedImage) : selectedImage?.url;
@@ -272,9 +286,10 @@ export function AvatarView({
       : undefined;
   const selectedAudioSource = uploadedAudio?.url ?? (uploadedAudio?.data ? `data:${uploadedAudio.mimeType};base64,${uploadedAudio.data}` : selectedAudio?.url);
   const effectiveDurationSeconds = audioDurationSeconds ? Math.max(1, Math.ceil(audioDurationSeconds)) : 0;
-  const costLabel = audioDurationSeconds
-    ? formatTokens(estimateAvatarGenerationPricing({ model, resolution, durationSeconds: effectiveDurationSeconds }).tokens)
+  const costTokens = audioDurationSeconds
+    ? estimateAvatarGenerationPricing({ model, resolution, durationSeconds: effectiveDurationSeconds }).tokens
     : undefined;
+  const costLabel = costTokens === undefined ? undefined : formatTokens(costTokens);
 
   const [appliedInitialImageNonce, setAppliedInitialImageNonce] = useState<number | undefined>();
   if (initialImage && initialImage.nonce !== appliedInitialImageNonce) {
@@ -349,8 +364,15 @@ export function AvatarView({
   async function generateAvatar(event: FormEvent) {
     event.preventDefault();
     if (!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds) return;
+    if (costTokens === undefined || !tryReserveTokens(costTokens)) {
+      if (costTokens !== undefined) {
+        setError(`Insufficient token balance. This generation costs ${costTokens} tokens, but your balance is ${balanceTokens}.`);
+      }
+      return;
+    }
     setIsGenerating(true);
     setError("");
+    let balanceReconciled = false;
     try {
       const response = await fetch("/api/generate/avatar", {
         method: "POST",
@@ -371,6 +393,10 @@ export function AvatarView({
         }),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) {
         throw new Error(payload.error ?? "Avatar generation failed.");
       }
@@ -378,6 +404,7 @@ export function AvatarView({
     } catch (avatarError) {
       setError(avatarError instanceof Error ? avatarError.message : "Avatar generation failed.");
     } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
       setIsGenerating(false);
     }
   }

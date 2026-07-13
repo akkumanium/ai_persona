@@ -2,9 +2,11 @@ import { ArrowLeft, Loader2, Pencil, Star, Trash2, Upload, UserRound, WandSparkl
 import { FormEvent, useState } from "react";
 import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { ReferenceSlotId } from "@/components/studio/types";
 import { CardImage, DeferredVideo, PanelTitle, SubmitButton, TextArea, TextField } from "@/components/studio/ui";
 import { NANO_BANANA_PRO_MODEL_ID } from "@/lib/image-model-options";
+import { estimateImageGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { cn, initials } from "@/lib/utils";
 
@@ -606,6 +608,7 @@ function ReferenceEditor({
   const [instructions, setInstructions] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
+  const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const slotId: ReferenceSlotId = asset.referenceSlot === "chest-up" || asset.referenceSlot === "body" || asset.referenceSlot === "face-grid"
     ? asset.referenceSlot
     : "face";
@@ -615,9 +618,23 @@ function ReferenceEditor({
     event.preventDefault();
     const requestedChanges = instructions.trim();
     if (requestedChanges.length < 10) return;
+    const requiredTokens = estimateImageGenerationPricing({
+      prompt: requestedChanges,
+      model: NANO_BANANA_PRO_MODEL_ID,
+      aspectRatio: slot.aspectRatio,
+      imageSize: "2K",
+      count: 1,
+      referenceImages: [{ name: asset.title, mimeType: asset.mimeType, data: "x" }],
+      generationType: "image_from_reference",
+    }).tokens;
+    if (!tryReserveTokens(requiredTokens)) {
+      setError(`Insufficient token balance. This generation costs ${requiredTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
 
     setIsGenerating(true);
     setError("");
+    let balanceReconciled = false;
     try {
       const response = await fetch("/api/generate/image", {
         method: "POST",
@@ -644,12 +661,17 @@ function ReferenceEditor({
         }),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) throw new Error(payload.error ?? "Reference edit failed.");
       onAssetsCreated(payload.assets, payload.job);
       onClose();
     } catch (generationError) {
       setError(generationError instanceof Error ? generationError.message : "Reference edit failed.");
     } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
       setIsGenerating(false);
     }
   }

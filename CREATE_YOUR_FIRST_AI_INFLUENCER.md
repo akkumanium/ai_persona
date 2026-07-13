@@ -64,6 +64,6 @@ As with any source material, make sure you have the right to use the video and a
 
 ## A simple first-week workflow
 
-Once your references are ready, keep it easy: generate a small set of images in a few different settings, choose your favourites, then animate one or two into short videos. Try Reel Maker when you find a format that suits your persona, and use Talking Avatar when you want her to speak directly to the audience.
+Once your references are ready, keep it easy: generate a small set of images in a few different settings, choose your favorites, then animate one or two into short videos. Try Reel Maker when you find a format that suits your persona, and use Talking Avatar when you want her to speak directly to the audience.
 
 The more consistently you use the same strong references and a clear style direction, the more recognisable your influencer will become.

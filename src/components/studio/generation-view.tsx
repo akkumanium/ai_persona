@@ -1,6 +1,7 @@
 import { AudioLines, Check, Clapperboard, Film, ImageIcon, Loader2, Pencil, Play, Trash2, Upload, Video, WandSparkles } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
+import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   CheckboxField,
@@ -115,6 +116,7 @@ export function GenerationView({
   const [activeVideoGenerations, setActiveVideoGenerations] = useState(0);
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
+  const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const personaOptions = useMemo(() => personas, [personas]);
   const imageModelOptions = modelsForCapability("image-prompt");
   const videoModelOptions = modelsForCapability("video-normal");
@@ -208,8 +210,7 @@ export function GenerationView({
   // at which point the request falls through to prompt-only generation.
   const useImageReferences = imageModelSupportsReferences;
   const totalReferenceCount = selectedReferenceSelection.length + uploadedImageReferences.length;
-  const imageCostLabel = formatTokens(
-    estimateImageGenerationPricing({
+  const imageCostTokens = estimateImageGenerationPricing({
       prompt: imagePrompt,
       model: imageModel,
       aspectRatio: safeImageAspectRatio,
@@ -224,10 +225,9 @@ export function GenerationView({
           }))
         : [],
       generationType: useImageReferences && totalReferenceCount > 0 ? "image_from_reference" : "image_from_prompt",
-    }).tokens,
-  );
-  const normalVideoCostLabel = formatTokens(
-    estimateVideoGenerationPricing({
+    }).tokens;
+  const imageCostLabel = formatTokens(imageCostTokens);
+  const normalVideoCostTokens = estimateVideoGenerationPricing({
       prompt: videoPrompt,
       model: videoModel,
       mode: "normal",
@@ -240,8 +240,8 @@ export function GenerationView({
       resolution: safeVideoResolution,
       returnLastFrame: videoReturnLastFrame,
       endFrameImageUrl: normalVideoSupportsEndFrame ? uploadedVideoEndFrame?.url : undefined,
-    }).tokens,
-  );
+    }).tokens;
+  const normalVideoCostLabel = formatTokens(normalVideoCostTokens);
 
   const [appliedImageReferenceNonce, setAppliedImageReferenceNonce] = useState<number | undefined>();
   if (initialImageReference && initialImageReference.nonce !== appliedImageReferenceNonce) {
@@ -261,8 +261,7 @@ export function GenerationView({
       });
     }
   }
-  const motionVideoCostLabel = formatTokens(
-    estimateVideoGenerationPricing({
+  const motionVideoCostTokens = estimateVideoGenerationPricing({
       prompt: videoPrompt,
       model: motionVideoModel,
       mode: "motion",
@@ -274,8 +273,8 @@ export function GenerationView({
       characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
       keepOriginalSound: motionControls.supportsKeepOriginalSound ? motionKeepOriginalSound : false,
       negativePrompt: motionControls.supportsNegativePrompt ? motionNegativePrompt : "",
-    }).tokens,
-  );
+    }).tokens;
+  const motionVideoCostLabel = formatTokens(motionVideoCostTokens);
 
   const [appliedVideoStartFrameNonce, setAppliedVideoStartFrameNonce] = useState<number | undefined>();
   if (initialVideoStartFrame && initialVideoStartFrame.nonce !== appliedVideoStartFrameNonce) {
@@ -297,6 +296,7 @@ export function GenerationView({
 
   function changeImageModel(modelId: string) {
     setImageModel(modelId);
+    setGenerationError("");
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(imageAspectRatio)) {
       setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
@@ -379,8 +379,13 @@ export function GenerationView({
       .filter((image) => image.data)
       .map((image) => ({ name: image.name, mimeType: image.mimeType, data: image.data ?? "" }));
     const referenceImageUrls = [...referenceAssets.map((asset) => asset.url), ...uploadedReferenceUrls];
+    if (!tryReserveTokens(imageCostTokens)) {
+      setGenerationError(`Insufficient token balance. This generation costs ${imageCostTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
     setActiveImageGenerations((current) => current + 1);
     setGenerationError("");
+    let balanceReconciled = false;
     try {
       const requestBody = {
         personaId: selectedPersona.id,
@@ -403,6 +408,10 @@ export function GenerationView({
         body: JSON.stringify(requestBody),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) {
         throw new Error(payload.error ?? "Image generation failed.");
       }
@@ -415,6 +424,7 @@ export function GenerationView({
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Generation failed.");
     } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
       setActiveImageGenerations((current) => Math.max(0, current - 1));
     }
   }
@@ -441,8 +451,14 @@ export function GenerationView({
       mode === "motion" ? motionReferenceImage?.url : uploadedStartFrameUrl ?? startFrameAsset?.url;
     const requestReferenceImageUrl = uploadedStartFrameInput ? undefined : referenceImageUrl;
     if (mode === "motion" && !referenceImageUrl) return;
+    const requiredTokens = mode === "normal" ? normalVideoCostTokens : motionVideoCostTokens;
+    if (!tryReserveTokens(requiredTokens)) {
+      setGenerationError(`Insufficient token balance. This generation costs ${requiredTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
     setActiveVideoGenerations((current) => current + 1);
     setGenerationError("");
+    let balanceReconciled = false;
     try {
       const requestBody = {
         personaId: selectedPersona.id,
@@ -493,6 +509,10 @@ export function GenerationView({
         body: JSON.stringify(requestBody),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) {
         throw new Error(payload.error ?? "Video generation failed.");
       }
@@ -512,6 +532,7 @@ export function GenerationView({
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Generation failed.");
     } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
       setActiveVideoGenerations((current) => Math.max(0, current - 1));
     }
   }

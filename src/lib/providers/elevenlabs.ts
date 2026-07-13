@@ -14,6 +14,7 @@ export class ElevenLabsSpeechProvider implements SpeechProvider {
       throw new Error("ELEVENLABS_API_KEY is not configured. ElevenLabs speech generation is not connected.");
     }
 
+    request.onProviderContact?.();
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(request.voiceId)}?output_format=${encodeURIComponent(request.outputFormat)}`, {
       method: "POST",
       headers: { "xi-api-key": env.elevenLabsApiKey, "Content-Type": "application/json", Accept: "audio/*" },

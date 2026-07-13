@@ -10,17 +10,19 @@ import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/sch
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
+import { assertSufficientTokens, getTokenBalance, InsufficientTokensError, refundTokens, reserveTokens, shouldRefundUnsubmittedGeneration } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob, GenerationType } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
+  let userId: string | undefined;
   try {
     const rateLimited = await rateLimitRequest(request, { key: "generate-avatar", limit: 20, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
+    userId = auth.user?.id;
 
     const body = await readJsonRequest(request);
     if (body && typeof body === "object" && "mode" in body) {
@@ -32,11 +34,13 @@ export async function POST(request: Request) {
     const requestErrorResponse = requestBodyErrorResponse(error);
     if (requestErrorResponse) return requestErrorResponse;
     if (error instanceof InsufficientTokensError) {
-      return NextResponse.json({ error: error.message }, { status: 402 });
+      return NextResponse.json({ error: error.message, balanceTokens: error.balanceTokens }, { status: 402 });
     }
 
+    const balanceTokens = await getTokenBalance(userId).catch(() => undefined);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Avatar generation failed." },
+      { error: error instanceof Error ? error.message : "Avatar generation failed.", balanceTokens },
       { status: 500 },
     );
   }
@@ -160,11 +164,16 @@ async function generateAvatarReference(body: unknown, userId?: string) {
     },
     inputParams,
   });
-  let providerCompleted = false;
+  let tokensReserved = false;
+  let providerContactAttempted = false;
+  let balanceTokens: number | undefined;
   try {
-    await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
-    const result = await imageProvider.submit(providerRequest);
-    providerCompleted = true;
+    balanceTokens = await reserveTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} generation`);
+    tokensReserved = true;
+    const result = await imageProvider.submit({
+      ...providerRequest,
+      onProviderContact: () => { providerContactAttempted = true; },
+    });
     await recordProviderAcceptance({ userId, jobId, providerJobId: result.providerJobId, raw: result.raw });
     const updatedAt = nowIso();
     const job: GenerationJob = {
@@ -182,9 +191,12 @@ async function generateAvatarReference(body: unknown, userId?: string) {
       updatedAt,
     };
 
-    return NextResponse.json({ assets: [], job, providerJobId: result.providerJobId }, { status: 202 });
+    return NextResponse.json({ assets: [], job, providerJobId: result.providerJobId, balanceTokens }, { status: 202 });
   } catch (error) {
-    if (!providerCompleted) await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
+    await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
+    if (shouldRefundUnsubmittedGeneration(tokensReserved, providerContactAttempted)) {
+      await refundTokens(userId, estimatedPricing.tokens, jobId, `${generationType.replaceAll("_", " ")} refund: provider was not contacted`);
+    }
     throw error;
   }
 }
@@ -254,11 +266,16 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
     },
     inputParams,
   });
-  let providerCompleted = false;
+  let tokensReserved = false;
+  let providerContactAttempted = false;
+  let balanceTokens: number | undefined;
   try {
-    await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
-    const result = await avatarProvider.submit(providerRequest);
-    providerCompleted = true;
+    balanceTokens = await reserveTokens(userId, estimatedPricing.tokens, jobId, "avatar talking generation");
+    tokensReserved = true;
+    const result = await avatarProvider.submit({
+      ...providerRequest,
+      onProviderContact: () => { providerContactAttempted = true; },
+    });
     await recordProviderAcceptance({ userId, jobId, providerJobId: result.providerJobId, raw: result.raw });
     const updatedAt = nowIso();
     const asset: Asset | undefined = result.asset
@@ -302,9 +319,12 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
       inputParams,
     });
 
-    return NextResponse.json({ asset, job, providerJobId: result.providerJobId }, { status: result.status === "queued" || result.status === "running" ? 202 : 200 });
+    return NextResponse.json({ asset, job, providerJobId: result.providerJobId, balanceTokens }, { status: result.status === "queued" || result.status === "running" ? 202 : 200 });
   } catch (error) {
-    if (!providerCompleted) await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
+    await markPendingGenerationJobFailed({ userId, jobId, error }).catch(() => undefined);
+    if (shouldRefundUnsubmittedGeneration(tokensReserved, providerContactAttempted)) {
+      await refundTokens(userId, estimatedPricing.tokens, jobId, "avatar talking refund: provider was not contacted");
+    }
     throw error;
   }
 }

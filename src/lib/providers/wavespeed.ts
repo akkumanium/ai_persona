@@ -56,7 +56,7 @@ export class WavespeedMediaProvider implements VideoProvider {
     const isSeedream45 = request.model === SEEDREAM_4_5_MODEL_ID;
     const isWan27Image = request.model === WAN_2_7_IMAGE_MODEL_ID || request.model === WAN_2_7_IMAGE_EDIT_MODEL_ID;
     const isWan27ImageEdit = request.model === WAN_2_7_IMAGE_EDIT_MODEL_ID;
-    const uploadedReferenceUrls = await uploadProviderImages(client, request.referenceImages ?? []);
+    const uploadedReferenceUrls = await uploadProviderImages(client, request.referenceImages ?? [], request.onProviderContact);
     if (isWan27ImageEdit && !uploadedReferenceUrls.length) {
       throw new Error("Wan 2.7 image edit requires at least one reference image.");
     }
@@ -72,7 +72,7 @@ export class WavespeedMediaProvider implements VideoProvider {
       isChatGptImage,
       isSeedream45,
       isWan27Image,
-    }));
+    }), request.onProviderContact);
     const assets = outputsFromResult(result)
       .map((url, index): GeneratedAssetPayload => ({
         url,
@@ -115,19 +115,19 @@ export class WavespeedMediaProvider implements VideoProvider {
   async submit(request: VideoGenerationRequest): Promise<VideoGenerationResult> {
     const client = wavespeedClient();
     const startFrame = request.startFrameImage
-      ? await uploadProviderInput(client, request.startFrameImage, "image")
+      ? await uploadProviderInput(client, request.startFrameImage, "image", request.onProviderContact)
       : request.startFrameImageUrl || request.referenceImageUrl;
     const endFrame = request.endFrameImage
-      ? await uploadProviderInput(client, request.endFrameImage, "image")
+      ? await uploadProviderInput(client, request.endFrameImage, "image", request.onProviderContact)
       : request.endFrameImageUrl;
     const motionVideo = request.motionReferenceVideo
-      ? await uploadProviderInput(client, request.motionReferenceVideo, "video")
+      ? await uploadProviderInput(client, request.motionReferenceVideo, "video", request.onProviderContact)
       : request.motionReferenceVideoUrl;
     const referenceVideo = request.referenceVideo
-      ? await uploadProviderInput(client, request.referenceVideo, "video")
+      ? await uploadProviderInput(client, request.referenceVideo, "video", request.onProviderContact)
       : request.referenceVideoUrl;
     const referenceAudio = request.referenceAudio
-      ? await uploadProviderInput(client, request.referenceAudio, "audio")
+      ? await uploadProviderInput(client, request.referenceAudio, "audio", request.onProviderContact)
       : request.referenceAudioUrl;
     const usesSeedanceMultimodalReferences = isSeedanceModel(request.model) && Boolean(referenceVideo || referenceAudio);
     const model = wavespeedVideoModel(request);
@@ -166,7 +166,7 @@ export class WavespeedMediaProvider implements VideoProvider {
           shot_type: request.model.startsWith("kling-v3-0") ? "customize" : undefined,
           seed: -1,
         };
-    const result = await submitWavespeedPrediction(model, input);
+    const result = await submitWavespeedPrediction(model, input, request.onProviderContact);
     const outputUrl = outputsFromResult(result)[0];
     const providerJobId = taskIdFromResult(result);
 
@@ -202,10 +202,10 @@ export class WavespeedAvatarProvider {
   async submit(request: AvatarGenerationRequest): Promise<AvatarGenerationResult> {
     const client = wavespeedClient();
     const image = request.image
-      ? await uploadProviderInput(client, request.image, "image")
+      ? await uploadProviderInput(client, request.image, "image", request.onProviderContact)
       : request.imageUrl;
     const audio = request.audio
-      ? await uploadProviderInput(client, request.audio, "audio")
+      ? await uploadProviderInput(client, request.audio, "audio", request.onProviderContact)
       : request.audioUrl;
 
     if (!image || !audio) {
@@ -220,7 +220,7 @@ export class WavespeedAvatarProvider {
       resolution: request.resolution,
       seed: request.seed ?? -1,
       mask_image: request.maskImageUrl,
-    });
+    }, request.onProviderContact);
     const outputUrl = outputsFromResult(result)[0];
     const providerJobId = taskIdFromResult(result);
 
@@ -306,15 +306,15 @@ export function wavespeedImageInput(options: WavespeedImageInputOptions): Record
   };
 }
 
-async function uploadProviderImages(client: Client, images: ProviderImageInput[]) {
+async function uploadProviderImages(client: Client, images: ProviderImageInput[], onProviderContact?: () => void) {
   const urls: string[] = [];
   for (const image of images) {
-    urls.push(await uploadProviderInput(client, image, "image"));
+    urls.push(await uploadProviderInput(client, image, "image", onProviderContact));
   }
   return urls;
 }
 
-async function uploadProviderInput(client: Client, input: ProviderImageInput | ProviderMediaInput, fallbackKind: "image" | "audio" | "video") {
+async function uploadProviderInput(client: Client, input: ProviderImageInput | ProviderMediaInput, fallbackKind: "image" | "audio" | "video", onProviderContact?: () => void) {
   const bytes = Buffer.from(input.data, "base64");
   const extension = extensionFromMimeType(input.mimeType, fallbackKind);
   const tempDir = join(tmpdir(), "persona-studio-wavespeed");
@@ -323,6 +323,7 @@ async function uploadProviderInput(client: Client, input: ProviderImageInput | P
   await mkdir(tempDir, { recursive: true });
   await writeFile(tempPath, bytes);
   try {
+    onProviderContact?.();
     return await client.upload(tempPath, { timeout: 30 });
   } finally {
     await unlink(tempPath).catch(() => undefined);
@@ -384,13 +385,13 @@ function wavespeedVideoModel(request: VideoGenerationRequest) {
   throw new Error(`WaveSpeed video model is not allowlisted: ${request.model}`);
 }
 
-async function submitWavespeedPrediction(model: string, input: Record<string, unknown>) {
+async function submitWavespeedPrediction(model: string, input: Record<string, unknown>, onProviderContact?: () => void) {
   if (!env.wavespeedWebhookUrl) throw new Error("WAVESPEED_WEBHOOK_URL is not configured.");
   if (!env.wavespeedWebhookSecret) throw new Error("WAVESPEED_WEBHOOK_SECRET is not configured.");
   return wavespeedApiRequest(`${WAVESPEED_API_BASE_URL}/api/v3/${model}`, {
     method: "POST",
     body: JSON.stringify({ ...input, webhook_url: env.wavespeedWebhookUrl }),
-  });
+  }, onProviderContact);
 }
 
 async function getWavespeedPrediction(providerJobId: string) {
@@ -403,8 +404,9 @@ async function getWavespeedPrediction(providerJobId: string) {
   );
 }
 
-async function wavespeedApiRequest(url: string, init: RequestInit): Promise<WavespeedRunResult> {
+async function wavespeedApiRequest(url: string, init: RequestInit, onProviderContact?: () => void): Promise<WavespeedRunResult> {
   if (!env.wavespeedApiKey) throw new Error("WAVESPEED_API_KEY is not configured.");
+  onProviderContact?.();
   const response = await fetch(url, {
     ...init,
     headers: {

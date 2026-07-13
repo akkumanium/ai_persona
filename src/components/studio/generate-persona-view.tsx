@@ -2,6 +2,7 @@ import { ArrowLeft, ImageIcon, Loader2, Pencil, Upload, WandSparkles } from "luc
 import { FormEvent, useMemo, useState } from "react";
 import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
 import { encodeFiles } from "@/components/studio/media";
+import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
   CheckboxField,
@@ -72,6 +73,7 @@ export function GeneratePersonaView({
   const [activeGenerations, setActiveGenerations] = useState(0);
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
+  const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
 
   const activeSlot = referenceSlots.find((slot) => slot.id === selectedSlotId) ?? referenceSlots[0];
@@ -141,8 +143,7 @@ export function GeneratePersonaView({
     : selectedSlotId === "face"
       ? 0
       : selectedReferenceSelection.length;
-  const referenceCostLabel = formatTokens(
-    estimateImageGenerationPricing({
+  const referenceCostTokens = estimateImageGenerationPricing({
       prompt: isScratchFace ? scratchPrompt : referencePrompt,
       model: safeSelectedModel,
       aspectRatio: safeAspectRatio,
@@ -159,8 +160,8 @@ export function GeneratePersonaView({
         : selectedSlotId === "face"
           ? "avatar_prompt"
           : "image_from_reference",
-    }).tokens,
-  );
+    }).tokens;
+  const referenceCostLabel = formatTokens(referenceCostTokens);
 
   function selectSlot(slotId: ReferenceSlotId) {
     const nextSlot = referenceSlots.find((slot) => slot.id === slotId) ?? referenceSlots[0];
@@ -248,9 +249,14 @@ export function GeneratePersonaView({
     if (isScratchFace && imageModelRequiresReferences && scratchSources.length === 0) return;
     if (isHybridFace && hybridSources.length < 2) return;
     if (selectedSlotId !== "face" && selectedReferenceSelection.length === 0) return;
+    if (!tryReserveTokens(referenceCostTokens)) {
+      setGenerationError(`Insufficient token balance. This generation costs ${referenceCostTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
 
     setActiveGenerations((current) => current + 1);
     setGenerationError("");
+    let balanceReconciled = false;
     try {
       const hasDefault = selectedReferenceAssets.some((asset) => asset.isDefaultReference);
       const titlePrefix = `${activeSlot.label} reference ${slotAssets.length + 1}`;
@@ -294,6 +300,10 @@ export function GeneratePersonaView({
           }),
         });
         const payload = await response.json();
+        if (typeof payload.balanceTokens === "number") {
+          reconcileTokenBalance(payload.balanceTokens);
+          balanceReconciled = true;
+        }
         if (!response.ok) throw new Error(payload.error ?? "Reference generation failed.");
         onAssetsCreated(payload.assets, payload.job);
       } else {
@@ -321,6 +331,10 @@ export function GeneratePersonaView({
           }),
         });
         const payload = await response.json();
+        if (typeof payload.balanceTokens === "number") {
+          reconcileTokenBalance(payload.balanceTokens);
+          balanceReconciled = true;
+        }
         if (!response.ok) throw new Error(payload.error ?? "Reference generation failed.");
         onAssetsCreated(payload.assets, payload.job);
       }
@@ -332,6 +346,7 @@ export function GeneratePersonaView({
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : "Reference generation failed.");
     } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
       setActiveGenerations((current) => Math.max(0, current - 1));
     }
   }

@@ -32,7 +32,7 @@
 149. Check if Email asks for confirmation
 152. Change to only have one subscription
 156. Change public contact email. (and create it)
-163.
+163. We can't use elevenlabs without a subscription
 164.
 165.
 

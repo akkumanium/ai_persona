@@ -7,17 +7,20 @@ import { speechGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
+import { assertSufficientTokens, getTokenBalance, InsufficientTokensError, refundTokens, reserveTokens, shouldRefundUnsubmittedGeneration } from "@/lib/server/token-billing";
 import type { Asset, GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
+  let userId: string | undefined;
+  let responseBalanceTokens: number | undefined;
   try {
     const rateLimited = await rateLimitRequest(request, { key: "generate-speech", limit: 20, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
+    userId = auth.user?.id;
 
     const input = speechGenerationSchema.parse(await readJsonRequest(request));
     const providerRequest: SpeechGenerationRequest = {
@@ -59,11 +62,15 @@ export async function POST(request: Request) {
       },
       inputParams,
     });
-    let providerCompleted = false;
+    let tokensReserved = false;
+    let providerContactAttempted = false;
     try {
-      await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
-      const result = await speechProvider.generate(providerRequest);
-      providerCompleted = true;
+      responseBalanceTokens = await reserveTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text generation");
+      tokensReserved = true;
+      const result = await speechProvider.generate({
+        ...providerRequest,
+        onProviderContact: () => { providerContactAttempted = true; },
+      });
       await recordProviderAcceptance({ userId: auth.user?.id, jobId, raw: result.raw });
       const updatedAt = nowIso();
       const asset: Asset = await materializeGeneratedAsset({
@@ -99,20 +106,25 @@ export async function POST(request: Request) {
         inputParams,
       });
 
-      return NextResponse.json({ asset, job });
+      return NextResponse.json({ asset, job, balanceTokens: responseBalanceTokens });
     } catch (error) {
-      if (!providerCompleted) await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+      if (shouldRefundUnsubmittedGeneration(tokensReserved, providerContactAttempted)) {
+        responseBalanceTokens = await refundTokens(auth.user?.id, estimatedPricing.tokens, jobId, "speech text refund: provider was not contacted");
+      }
       throw error;
     }
   } catch (error) {
     const requestErrorResponse = requestBodyErrorResponse(error);
     if (requestErrorResponse) return requestErrorResponse;
     if (error instanceof InsufficientTokensError) {
-      return NextResponse.json({ error: error.message }, { status: 402 });
+      return NextResponse.json({ error: error.message, balanceTokens: error.balanceTokens }, { status: 402 });
     }
 
+    responseBalanceTokens ??= await getTokenBalance(userId).catch(() => undefined);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Speech generation failed." },
+      { error: error instanceof Error ? error.message : "Speech generation failed.", balanceTokens: responseBalanceTokens },
       { status: 500 },
     );
   }

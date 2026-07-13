@@ -71,6 +71,10 @@ export async function refundTokens(userId: string | undefined, amountTokens: num
   return Number(data);
 }
 
+export function shouldRefundUnsubmittedGeneration(tokensReserved: boolean, providerContactAttempted: boolean) {
+  return tokensReserved && !providerContactAttempted;
+}
+
 export class InsufficientTokensError extends Error {
   constructor(
     public readonly requiredTokens: number,

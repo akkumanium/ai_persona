@@ -9,17 +9,20 @@ import { imageGenerationSchema } from "@/lib/schemas";
 import { sanitizeProviderPayload } from "@/lib/server/media-storage";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { markPendingGenerationJobFailed, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
-import { assertSufficientTokens, InsufficientTokensError, reserveTokens } from "@/lib/server/token-billing";
+import { assertSufficientTokens, getTokenBalance, InsufficientTokensError, refundTokens, reserveTokens, shouldRefundUnsubmittedGeneration } from "@/lib/server/token-billing";
 import type { GenerationJob } from "@/lib/types";
 import { nowIso } from "@/lib/utils";
 
 export async function POST(request: Request) {
+  let userId: string | undefined;
+  let responseBalanceTokens: number | undefined;
   try {
     const rateLimited = await rateLimitRequest(request, { key: "generate-image", limit: 20, windowMs: 60 * 1000 });
     if (rateLimited) return rateLimited;
 
     const auth = await requireUserWhenSupabaseIsConfigured();
     if (auth.response) return auth.response;
+    userId = auth.user?.id;
 
     const input = imageGenerationSchema.parse(await readJsonRequest(request));
 
@@ -84,6 +87,7 @@ export async function POST(request: Request) {
 
     const finalPrompt = [basePrompt, input.additionalPrompt.trim()].filter(Boolean).join("\n");
     const visiblePrompt = basePrompt;
+    let providerContactAttempted = false;
 
     const providerRequest: ImageGenerationRequest = {
       prompt: [
@@ -100,6 +104,7 @@ export async function POST(request: Request) {
       count: input.count,
       referenceImages,
       generationType,
+      onProviderContact: () => { providerContactAttempted = true; },
     };
     const estimatedPricing = estimateImageGenerationPricing(providerRequest);
     const jobId = crypto.randomUUID();
@@ -134,17 +139,17 @@ export async function POST(request: Request) {
       },
       inputParams,
     });
-    let providerCompleted = false;
+    let tokensReserved = false;
     try {
-      await reserveTokens(
+      responseBalanceTokens = await reserveTokens(
         auth.user?.id,
         estimatedPricing.tokens,
         jobId,
         `${generationType.replaceAll("_", " ")} generation`,
       );
+      tokensReserved = true;
 
       const result = await imageProvider.submit(providerRequest);
-      providerCompleted = true;
       await recordProviderAcceptance({ userId: auth.user?.id, jobId, providerJobId: result.providerJobId, raw: result.raw });
       const updatedAt = nowIso();
       const job: GenerationJob = {
@@ -166,20 +171,31 @@ export async function POST(request: Request) {
         assets: [],
         job,
         providerJobId: result.providerJobId,
+        balanceTokens: responseBalanceTokens,
       }, { status: 202 });
     } catch (error) {
-      if (!providerCompleted) await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+      if (shouldRefundUnsubmittedGeneration(tokensReserved, providerContactAttempted)) {
+        responseBalanceTokens = await refundTokens(
+          auth.user?.id,
+          estimatedPricing.tokens,
+          jobId,
+          `${generationType.replaceAll("_", " ")} refund: provider was not contacted`,
+        );
+      }
       throw error;
     }
   } catch (error) {
     const requestErrorResponse = requestBodyErrorResponse(error);
     if (requestErrorResponse) return requestErrorResponse;
     if (error instanceof InsufficientTokensError) {
-      return NextResponse.json({ error: error.message }, { status: 402 });
+      return NextResponse.json({ error: error.message, balanceTokens: error.balanceTokens }, { status: 402 });
     }
 
+    responseBalanceTokens ??= await getTokenBalance(userId).catch(() => undefined);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Image generation failed." },
+      { error: error instanceof Error ? error.message : "Image generation failed.", balanceTokens: responseBalanceTokens },
       { status: 500 },
     );
   }

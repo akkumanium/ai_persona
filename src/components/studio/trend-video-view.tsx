@@ -18,6 +18,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl, uploadSourceImage } from "@/components/studio/media";
+import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   CardImage,
@@ -149,6 +150,7 @@ export function TrendVideoView({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState("");
+  const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const [previewMedia, setPreviewMedia] = useState<{ src: string; title: string; kind?: "image" | "video" } | undefined>();
 
   const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
@@ -215,8 +217,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
   const detectedDuration = editingItem?.video.durationSeconds ? Math.round(editingItem.video.durationSeconds) : 5;
   const safeMotionDuration = Math.min(15, Math.max(3, detectedDuration));
 
-  const faceCostLabel = formatTokens(
-    estimateImageGenerationPricing({
+  const faceCostTokens = estimateImageGenerationPricing({
       prompt: facePrompt,
       model: imageModel,
       aspectRatio: safeImageAspectRatio,
@@ -230,10 +231,9 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           : []),
       ],
       generationType: "image_from_reference",
-    }).tokens,
-  );
-  const motionCostLabel = formatTokens(
-    estimateVideoGenerationPricing({
+    }).tokens;
+  const faceCostLabel = formatTokens(faceCostTokens);
+  const motionCostTokens = estimateVideoGenerationPricing({
       prompt: motionPrompt,
       model: motionModel,
       mode: "motion",
@@ -245,8 +245,8 @@ Delete the tattoos. No text, no logos, no watermarks.`);
       characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
       keepOriginalSound: motionControls.supportsKeepOriginalSound ? keepOriginalSound : false,
       negativePrompt: motionControls.supportsNegativePrompt ? motionNegativePrompt : "",
-    }).tokens,
-  );
+    }).tokens;
+  const motionCostLabel = formatTokens(motionCostTokens);
 
   const updateLibraryItem = useCallback((id: string, updates: Partial<LibraryItem>) => {
     onLibraryChange((current) => current.map((item) => (item.id === id ? { ...item, ...updates } : item)));
@@ -387,8 +387,13 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     event.preventDefault();
     const item = editingItem;
     if (!item || !item.firstFrame || !selectedPersona || !personaReferences.length || !supportsImageReferences(imageModel)) return;
+    if (!tryReserveTokens(faceCostTokens)) {
+      setError(`Insufficient token balance. This generation costs ${faceCostTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
     updateLibraryItem(item.id, { isGeneratingFaces: true });
     setError("");
+    let balanceReconciled = false;
     try {
       const uploadedFrame = await uploadSourceImage(item.firstFrame, {
         enabled: supabaseReady,
@@ -424,6 +429,10 @@ Delete the tattoos. No text, no logos, no watermarks.`);
         }),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) {
         throw new Error(payload.error ?? "Face frame generation failed.");
       }
@@ -447,6 +456,8 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     } catch (generationError) {
       updateLibraryItem(item.id, { isGeneratingFaces: false });
       setError(generationError instanceof Error ? generationError.message : "Face frame generation failed.");
+    } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
     }
   }
 
@@ -454,8 +465,13 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     event.preventDefault();
     const item = editingItem;
     if (!item || !selectedPersona || !selectedCandidate) return;
+    if (!tryReserveTokens(motionCostTokens)) {
+      setError(`Insufficient token balance. This generation costs ${motionCostTokens} tokens, but your balance is ${balanceTokens}.`);
+      return;
+    }
     updateLibraryItem(item.id, { isGeneratingVideo: true });
     setError("");
+    let balanceReconciled = false;
     try {
       const candidateInput = await assetToProviderImageInput(selectedCandidate);
       const response = await fetch("/api/generate/video", {
@@ -488,6 +504,10 @@ Delete the tattoos. No text, no logos, no watermarks.`);
         }),
       });
       const payload = await response.json();
+      if (typeof payload.balanceTokens === "number") {
+        reconcileTokenBalance(payload.balanceTokens);
+        balanceReconciled = true;
+      }
       if (!response.ok) {
         throw new Error(payload.error ?? "Trend video generation failed.");
       }
@@ -497,6 +517,8 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     } catch (generationError) {
       updateLibraryItem(item.id, { isGeneratingVideo: false });
       setError(generationError instanceof Error ? generationError.message : "Trend video generation failed.");
+    } finally {
+      if (!balanceReconciled) reconcileTokenBalance();
     }
   }
 

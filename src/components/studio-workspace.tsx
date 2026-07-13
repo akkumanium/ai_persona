@@ -10,6 +10,7 @@ import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
 import { TrendVideoView, trendLibraryItemsFromAssets, type LibraryItem } from "@/components/studio/trend-video-view";
+import { reserveOptimisticBalance, StudioTokenBalanceProvider } from "@/components/studio/token-balance-context";
 import type { ReferenceSlotId, SourceImageInput, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -60,6 +61,8 @@ export function StudioWorkspace({
     trendLibraryItemsFromAssets(initialData?.assets ?? demoAssets),
   );
   const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 500));
+  const balanceCentsRef = useRef(balanceCents);
+  const pendingBalanceReservationsRef = useRef(0);
   const [currentPersonaLimit, setCurrentPersonaLimit] = useState<number | null>(personaLimit);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(!previewMode);
   const [userId, setUserId] = useState<string | undefined>(initialUserId);
@@ -81,6 +84,30 @@ export function StudioWorkspace({
   const selectedPersona = personas.find((persona) => persona.id === selectedPersonaId) ?? personas[0];
   const displayedBalanceCents = Math.max(0, balanceCents);
   const activeJobCount = jobs.filter((job) => job.status === "queued" || job.status === "running").length;
+
+  function setAuthoritativeBalance(nextBalance: number) {
+    const normalizedBalance = Math.max(0, nextBalance);
+    balanceCentsRef.current = normalizedBalance;
+    setBalanceCents(normalizedBalance);
+  }
+
+  function tryReserveTokens(requiredTokens: number) {
+    const reservation = reserveOptimisticBalance(balanceCentsRef.current, requiredTokens);
+    if (!reservation.accepted) return false;
+    pendingBalanceReservationsRef.current += 1;
+    setAuthoritativeBalance(reservation.balanceTokens);
+    return true;
+  }
+
+  function reconcileTokenBalance(nextBalance?: number) {
+    pendingBalanceReservationsRef.current = Math.max(0, pendingBalanceReservationsRef.current - 1);
+    if (pendingBalanceReservationsRef.current > 0) return;
+    if (typeof nextBalance === "number") {
+      setAuthoritativeBalance(nextBalance);
+      return;
+    }
+    void refreshBillingStatus();
+  }
 
   useEffect(() => {
     if (!transientAlert) return;
@@ -147,9 +174,7 @@ export function StudioWorkspace({
 
   function addAssets(nextAssets: Asset[], job?: GenerationJob) {
     setAssets((current) => [...nextAssets, ...current.filter((asset) => !nextAssets.some((nextAsset) => nextAsset.id === asset.id))]);
-    if (job?.costEstimateCents) {
-      setBalanceCents((current) => Math.max(0, current - job.costEstimateCents));
-    }
+    void job;
   }
 
   function addGeneratedReferenceAssets(nextAssets: Asset[], job: GenerationJob) {
@@ -247,7 +272,7 @@ export function StudioWorkspace({
       };
       if (!response.ok) throw new Error(status.error ?? "Could not refresh billing status.");
       if (typeof status.balanceCents === "number") {
-        setBalanceCents(status.balanceCents);
+        if (pendingBalanceReservationsRef.current === 0) setAuthoritativeBalance(status.balanceCents);
       }
       if ("personaLimit" in status) {
         setCurrentPersonaLimit(status.personaLimit ?? null);
@@ -538,6 +563,7 @@ export function StudioWorkspace({
   }
 
   return (
+    <StudioTokenBalanceProvider value={{ balanceTokens: displayedBalanceCents, tryReserveTokens, reconcileTokenBalance }}>
     <div className="min-h-screen">
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-stone-200 bg-white/82 px-3 py-4 backdrop-blur lg:flex">
         <div className="flex items-center gap-2.5 px-1.5">
@@ -842,7 +868,7 @@ export function StudioWorkspace({
               userEmail={initialUserEmail}
               paddleConfig={paddleConfig}
               onBalanceRefresh={(nextBalance) => {
-                setBalanceCents(nextBalance);
+                if (pendingBalanceReservationsRef.current === 0) setAuthoritativeBalance(nextBalance);
                 setNotice("Your balance was refreshed after checkout.");
               }}
       onBillingStatusRefresh={(status) => {
@@ -859,6 +885,7 @@ export function StudioWorkspace({
         </div>
       </main>
     </div>
+    </StudioTokenBalanceProvider>
   );
 }
 
