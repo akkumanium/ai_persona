@@ -43,6 +43,7 @@ export type Asset = {
   model: string;
   mimeType: string;
   createdAt: string;
+  expiresAt?: string;
 };
 
 export type GenerationJob = {

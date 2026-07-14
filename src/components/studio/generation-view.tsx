@@ -2,6 +2,7 @@ import { AudioLines, Check, Clapperboard, Film, ImageIcon, Loader2, Pencil, Play
 import { FormEvent, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
+import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import type { GenerationMode, SourceAudioInput, SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
   CheckboxField,
@@ -693,6 +694,7 @@ export function GenerationView({
                       <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
                     ) : null}
                     <p className="mt-0.5 text-xs text-stone-500">{asset.model}</p>
+                    <AssetExpiryCaption asset={asset} className="mt-1" />
                     {asset.prompt ? (
                       <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-stone-600">{asset.prompt}</p>
                     ) : null}

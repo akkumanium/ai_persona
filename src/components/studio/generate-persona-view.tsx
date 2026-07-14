@@ -3,6 +3,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
 import { encodeFiles } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
+import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
   CheckboxField,
@@ -393,6 +394,7 @@ export function GeneratePersonaView({
                   </div>
                   <div className="p-3">
                     <p className="mt-1 text-xs text-stone-500">{asset.isDefaultReference ? "Default" : asset.model}</p>
+                    <AssetExpiryCaption asset={asset} className="mt-1" />
                   </div>
                 </article>
               ))}

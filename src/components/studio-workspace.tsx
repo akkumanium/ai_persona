@@ -914,5 +914,6 @@ function assetToInsert(asset: Asset, userId: string) {
     mime_type: asset.mimeType,
     provider_asset_id: asset.providerAssetId ?? null,
     created_at: asset.createdAt,
+    expires_at: asset.expiresAt ?? null,
   };
 }

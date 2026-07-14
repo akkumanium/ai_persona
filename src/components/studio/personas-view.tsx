@@ -1,5 +1,6 @@
 import { ArrowLeft, Loader2, Pencil, Star, Trash2, Upload, UserRound, WandSparkles, X } from "lucide-react";
 import { FormEvent, useState } from "react";
+import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
@@ -161,6 +162,7 @@ export function PersonasView({
                   <p className="mt-3 text-xs font-medium uppercase text-stone-400">
                     {personaAssets.length} asset{personaAssets.length === 1 ? "" : "s"}
                   </p>
+                  {reference ? <AssetExpiryCaption asset={reference} className="mt-1" /> : null}
                 </div>
               </button>
             );
@@ -448,6 +450,7 @@ function ReferenceSlotCard({
           <span className="text-sm font-medium text-stone-400">Empty</span>
         )}
       </div>
+      {displayAsset ? <AssetExpiryCaption asset={displayAsset} className="mt-1.5" /> : null}
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -518,6 +521,7 @@ function AssetSection({ title, assets }: { title: string; assets: Asset[] }) {
                   <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
                 ) : null}
                 <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
+                <AssetExpiryCaption asset={asset} className="mt-1" />
               </div>
             </article>
           ))}
@@ -560,6 +564,7 @@ function ReferenceAssetRow({
             Preview image
           </button>
           <p className="mt-1 text-[11px] text-stone-500"></p>
+          <AssetExpiryCaption asset={asset} className="mt-1" />
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"

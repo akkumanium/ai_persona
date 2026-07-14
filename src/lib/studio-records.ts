@@ -29,6 +29,7 @@ type AssetRow = {
   model: string;
   mime_type: string;
   created_at: string;
+  expires_at?: string | null;
 };
 
 type JobRow = {
@@ -103,6 +104,7 @@ export function mapAsset(row: AssetRow): Asset {
     model: row.model,
     mimeType: row.mime_type,
     createdAt: row.created_at,
+    expiresAt: row.expires_at ?? undefined,
   };
 }
 

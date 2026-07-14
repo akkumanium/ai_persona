@@ -2,6 +2,7 @@ import { AudioLines, Clapperboard, Loader2, MessageSquareText, Trash2, Upload, V
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
+import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import type { SourceAudioInput, SourceImageInput } from "@/components/studio/types";
 import {
   DeferredAudio,
@@ -145,6 +146,7 @@ export function SpeechView({
                     </button>
                   </div>
                   <DeferredAudio src={asset.url} title={asset.title} className="mt-4 w-full" />
+                  <AssetExpiryCaption asset={asset} className="mt-2" />
                   {asset.prompt ? <p className="mt-3 line-clamp-3 text-xs leading-5 text-stone-600">{asset.prompt}</p> : null}
                 </article>
               ))}
@@ -431,6 +433,7 @@ export function AvatarView({
                       <div className="min-w-0">
                         <p className="line-clamp-1 text-sm font-semibold text-stone-950">{asset.title}</p>
                         <p className="mt-1 text-xs text-stone-500">{asset.model}</p>
+                        <AssetExpiryCaption asset={asset} className="mt-1" />
                       </div>
                       <button
                         type="button"

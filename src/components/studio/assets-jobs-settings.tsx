@@ -2,6 +2,7 @@ import { Coins, Copy, Gift, Trash2, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { TokenTopUps } from "@/components/billing-plans";
 import { BillingManagement } from "@/components/billing-management";
+import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import type { AssetFilter } from "@/components/studio/types";
 import { CardImage, DeferredAudio, DeferredVideo, ModeToggle, PanelTitle } from "@/components/studio/ui";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -65,6 +66,7 @@ export function AssetsView({
                   <p className="mt-1 text-xs text-stone-500">
                     {persona?.name ?? "Unassigned"} / {asset.kind}
                   </p>
+                  <AssetExpiryCaption asset={asset} className="mt-1" />
                   {asset.prompt ? (
                     <p className="mt-3 line-clamp-3 text-xs leading-5 text-stone-600">{asset.prompt}</p>
                   ) : null}

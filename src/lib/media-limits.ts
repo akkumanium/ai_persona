@@ -4,7 +4,7 @@ export const MAX_DIRECT_UPLOAD_BYTES = 100 * 1024 * 1024;
 export const MAX_REMOTE_MEDIA_BYTES = 100 * 1024 * 1024;
 export const MAX_INLINE_IMAGE_BYTES = 2_500_000;
 export const MAX_INLINE_MEDIA_BYTES = 3_250_000;
-export const TEMP_MEDIA_TTL_MS = 6 * 60 * 60 * 1000;
+export const TEMP_MEDIA_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const ALLOWED_IMAGE_MIME_TYPES = [
   "image/jpeg",

@@ -51,7 +51,7 @@
     at async SupabaseAuthClient._getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6441:20)
     at async SupabaseAuthClient.getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6425:22) (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1012:17)
     166.
-    167. Move from Wavespeed to Fal.ai
+    167.
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

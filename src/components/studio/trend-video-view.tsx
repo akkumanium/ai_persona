@@ -18,6 +18,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { encodeFiles, sourceImageToDataUrl, uploadSourceImage } from "@/components/studio/media";
+import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
 import {
@@ -65,6 +66,8 @@ export type LibraryItem = {
   candidates: Asset[];
   selectedCandidateId: string;
   finalVideo?: Asset;
+  createdAt: string;
+  expiresAt?: string;
   isGeneratingFaces?: boolean;
   isGeneratingVideo?: boolean;
 };
@@ -115,6 +118,8 @@ export function trendLibraryItemsFromAssets(assets: Asset[]): LibraryItem[] {
       candidates,
       selectedCandidateId: finalCandidateId || candidates[0]?.id || "",
       finalVideo,
+      createdAt: asset.createdAt,
+      expiresAt: asset.expiresAt,
     };
   });
 }
@@ -289,7 +294,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     }
   }
 
-  function addImportedVideo(video: ImportedVideo, id = crypto.randomUUID()) {
+  function addImportedVideo(video: ImportedVideo, id = crypto.randomUUID(), createdAt = new Date().toISOString(), expiresAt?: string) {
     onLibraryChange((current) => [
       {
         id,
@@ -297,6 +302,8 @@ Delete the tattoos. No text, no logos, no watermarks.`);
         importState: "capturing",
         candidates: [],
         selectedCandidateId: "",
+        createdAt,
+        expiresAt,
       },
       ...current,
     ]);
@@ -338,7 +345,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           url: video.url,
           storageBucket: video.storageBucket,
           storagePath: video.storagePath,
-        }, sourceAsset?.id);
+        }, sourceAsset?.id, sourceAsset?.createdAt, sourceAsset?.expiresAt);
       });
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Video upload failed.");
@@ -583,6 +590,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     <DeferredVideo src={sourceVideoToUrl(editingItem.video)} title={editingItem.video.name} className="h-full w-full object-cover" />
                   </div>
                   <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Source reel</p>
+                  <AssetExpiryCaption asset={editingItem} className="mt-0.5 justify-center" />
                 </div>
                 <div>
                   <div className="aspect-[9/16] overflow-hidden rounded-lg border-2 border-emerald-800 bg-stone-900">
@@ -723,6 +731,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                           <p className="px-1.5 py-1 text-[9px] font-semibold text-stone-700">
                             {isPicked ? "Selected" : `#${index + 1}`}
                           </p>
+                          <AssetExpiryCaption asset={asset} className="px-1.5 pb-1 text-[9px]" />
                         </button>
                         <button
                           type="button"
@@ -774,12 +783,14 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     )}
                   </div>
                   <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Identity frame</p>
+                  {selectedCandidate ? <AssetExpiryCaption asset={selectedCandidate} className="mt-0.5 justify-center" /> : null}
                 </div>
                 <div>
                   <div className="aspect-[9/16] overflow-hidden rounded-lg border border-stone-200 bg-stone-900">
                     <DeferredVideo src={sourceVideoToUrl(editingItem.video)} title={editingItem.video.name} className="h-full w-full object-cover" />
                   </div>
                   <p className="mt-1.5 text-center text-[11px] font-medium text-stone-500">Motion source</p>
+                  <AssetExpiryCaption asset={editingItem} className="mt-0.5 justify-center" />
                 </div>
               </div>
 
@@ -804,6 +815,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     <TilePlaceholder icon={Play} label="Output" />
                   )}
                 </div>
+                {editingItem.finalVideo ? <AssetExpiryCaption asset={editingItem.finalVideo} className="mt-1" /> : null}
               </div>
 
               {/* Settings */}
@@ -985,6 +997,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     <p className="line-clamp-1 text-[11px] font-medium text-stone-950" title={item.video.name}>
                       {item.video.name}
                     </p>
+                    <AssetExpiryCaption asset={item} className="mt-0.5" />
                     <button
                       type="button"
                       onClick={() => openEditor(item)}

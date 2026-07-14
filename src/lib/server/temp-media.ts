@@ -92,6 +92,15 @@ export async function readTempMedia(tempKey: string, userId?: string) {
   };
 }
 
+export async function deleteTempMedia(tempKey: string) {
+  if (!TEMP_KEY_PATTERN.test(tempKey)) return false;
+  const results = await Promise.allSettled([
+    fs.unlink(path.join(TEMP_MEDIA_DIR, `${tempKey}.bin`)),
+    fs.unlink(path.join(TEMP_MEDIA_DIR, `${tempKey}.json`)),
+  ]);
+  return results.some((result) => result.status === "fulfilled");
+}
+
 async function cleanupExpiredTempMedia() {
   const entries = await fs.readdir(TEMP_MEDIA_DIR, { withFileTypes: true }).catch(() => []);
   const now = Date.now();
