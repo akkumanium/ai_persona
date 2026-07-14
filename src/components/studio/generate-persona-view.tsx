@@ -4,6 +4,7 @@ import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
 import { encodeFiles } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
+import { ReferenceEditor } from "@/components/studio/personas-view";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
   CheckboxField,
@@ -44,7 +45,6 @@ export function GeneratePersonaView({
   onAssetsCreated,
   onSelectPersona,
   onBack,
-  onEditReference,
 }: {
   personas: Persona[];
   assets: Asset[];
@@ -54,7 +54,6 @@ export function GeneratePersonaView({
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onBack: () => void;
-  onEditReference: (asset: Asset) => void;
 }) {
   const initialSlot = referenceSlots.find((slot) => slot.id === (initialSlotId ?? "face")) ?? referenceSlots[0];
   const [selectedSlotId, setSelectedSlotId] = useState<ReferenceSlotId>(initialSlot.id);
@@ -76,6 +75,7 @@ export function GeneratePersonaView({
   const [generationError, setGenerationError] = useState("");
   const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
   const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
+  const [editingReference, setEditingReference] = useState<Asset | undefined>();
 
   const activeSlot = referenceSlots.find((slot) => slot.id === selectedSlotId) ?? referenceSlots[0];
   const allImageModelOptions = modelsForCapability("image-prompt");
@@ -384,9 +384,9 @@ export function GeneratePersonaView({
                     <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => onEditReference(asset)}
+                      onClick={() => setEditingReference(asset)}
                       className="absolute left-2 top-2 flex h-8 items-center gap-1.5 rounded-md bg-black/55 px-2 text-xs font-semibold text-white opacity-0 transition hover:bg-emerald-800 group-hover:opacity-100"
-                      aria-label="Edit this reference in Images"
+                      aria-label="Edit this reference"
                     >
                       <Pencil size={14} />
                       Edit
@@ -410,6 +410,15 @@ export function GeneratePersonaView({
           ) : null}
         </div>
       </section>
+
+      {editingReference && selectedPersona ? (
+        <ReferenceEditor
+          asset={editingReference}
+          persona={selectedPersona}
+          onAssetsCreated={onAssetsCreated}
+          onClose={() => setEditingReference(undefined)}
+        />
+      ) : null}
 
       <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
         <form onSubmit={generateReference}>

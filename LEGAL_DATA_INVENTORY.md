@@ -9,7 +9,7 @@ Scope reviewed:
 ## High-Level Findings
 
 - The website uses Supabase for authentication, session cookies, Postgres data, and private Storage buckets.
-- The website uses Paddle for checkout, billing webhooks, billing portal sessions, and refund requests when configured.
+- The website uses Whop for checkout, billing webhooks, membership management links, and refund requests when configured.
 - Generation workflows may send prompts, uploaded images, uploaded audio, uploaded video, generated/selected media URLs, model settings, and job IDs to external AI/media providers.
 - The current default provider router sends image, video, and avatar generation through WaveSpeed unless legacy provider env flags are set. ElevenLabs is used for speech generation.
 - Legacy or optional adapters exist for OpenAI image generation, Google Gemini/Nano Banana, Wan, Kling, and Seedance/BytePlus.
@@ -20,7 +20,7 @@ Scope reviewed:
 
 ## Runtime Configuration Observed
 
-Code supports these env vars: Supabase, Paddle, Gemini, OpenAI, Wan, Kling, Seedance/BytePlus, WaveSpeed, ElevenLabs, and contact email.
+Code supports these env vars: Supabase, Whop, Gemini, OpenAI, Wan, Kling, Seedance/BytePlus, WaveSpeed, ElevenLabs, and contact email.
 
 The local `.env.local` file contains only variable names for:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -155,43 +155,43 @@ Uncertainty:
 
 ### Billing checkout and top-up controls
 
-Evidence: `src/components/billing-plans.tsx`, `src/components/studio-paywall.tsx`, `src/components/studio/assets-jobs-settings.tsx`, `src/app/api/paddle/webhook/route.ts`, `src/app/api/billing/*`
+Evidence: `src/components/billing-plans.tsx`, `src/components/studio-paywall.tsx`, `src/components/studio/assets-jobs-settings.tsx`, `src/app/api/whop/webhook/route.ts`, `src/app/api/billing/*`, `src/lib/server/whop-billing-events.ts`, `supabase/migrations/021_whop_billing.sql`
 
 Collected or sent:
 - Signed-in user ID.
-- Signed-in user email, sent to Paddle checkout as `customer.email` when available.
-- Paddle price ID.
-- `customData`: `app_user_id`, `plan_id`, and `source`.
-- Paddle checkout event status in browser callback.
-- Paddle webhook event ID, type, entity/transaction/subscription/customer IDs, status, full raw webhook payload.
+- Whop plan ID.
+- Checkout metadata: `app_user_id`, `checkout_intent_id`, `option_id`, and `return_path`.
+- Whop checkout session ID and checkout return status in the browser.
+- Whop webhook event ID, type, entity ID, company ID, timestamp, and event payload. Supported payment, membership, refund, and dispute events are normalized before processing.
 - Refund request transaction ID and amount.
 
 Sent to:
-- Browser loads `https://cdn.paddle.com/paddle/v2/paddle.js`.
-- Paddle checkout overlay.
-- Paddle API for portal sessions and refund adjustments.
+- Whop checkout configuration/API, which returns a hosted checkout session.
+- Whop API for membership-management links and payment refunds.
 - Supabase tables and functions for billing state.
 
 Purpose:
 - Subscriptions, token top-ups, billing status, billing portal access, refunds, referral rewards.
 
 Stored:
-- `account_profiles.billing_customer_id`, `credit_balance_cents`, `account_metadata.paddle`.
-- `billing_subscriptions.subscription_id`, `user_id`, `paddle_customer_id`, `status`, `plan_id`, `price_id`, billing period timestamps.
-- `billing_webhook_events.event_id`, `event_type`, `user_id`, `paddle_entity_id`, `payload`, `error_message`, `processed_at`.
+- `account_profiles.provider_customer_id`, `credit_balance_cents`, and `account_metadata` (the migration removes the legacy `paddle` metadata key).
+- `billing_checkout_intents.user_id`, `option_id`, `provider`, `provider_plan_id`, `provider_checkout_session_id`, `return_path`, expiry/status/failure fields.
+- `billing_subscriptions.subscription_id`, `user_id`, `provider_user_id`, `provider_member_id`, `provider`, `status`, `plan_id`, `provider_plan_id`, management URL, and billing-period timestamps.
+- `billing_webhook_events.event_id`, `event_type`, `user_id`, `provider`, `provider_entity_id`, `occurred_at`, `payload`, processing/retry fields, error message, and `processed_at`.
+- `billing_payments` and `billing_adjustments` retain payment, membership, provider-plan, refund/dispute, amount, and event-payload records used for credits and reversals.
 - `credit_ledger.user_id`, `job_id`, `amount_cents`, `description`, `created_at`.
-- `billing_refund_requests.user_id`, `transaction_id`, `amount_cents`, `status`, `paddle_adjustment_id`, `failure_message`, timestamps.
+- `billing_refund_requests.user_id`, `transaction_id`, `amount_cents`, `status`, `provider_refund_id`, `failure_message`, timestamps.
 
 Retention behavior visible in code:
 - Most billing rows referencing `user_id` cascade on auth user deletion.
 - `billing_webhook_events.user_id references auth.users(id) on delete set null`, so webhook records can remain after user deletion with `user_id` nulled.
 - No automatic deletion schedule found.
-- Raw Paddle webhook payloads are stored as JSONB without field-level minimization in this repo.
+- Raw Whop webhook payloads are stored as JSONB without field-level minimization in this repo.
 
 Uncertainty:
-- Paddle production vs sandbox mode in production.
-- Paddle account retention, tax/invoice data, payment-method handling, and cookie behavior.
-- Whether raw webhook payload includes buyer address, tax, invoice, or payment details depending on Paddle event configuration.
+- Whop production vs sandbox mode in production.
+- Whop account retention, tax/invoice data, payment-method handling, and cookie behavior.
+- Whether raw webhook payload includes buyer address, tax, invoice, or payment details for the enabled Whop event types.
 
 ### Referral features
 
@@ -447,7 +447,7 @@ Retention behavior visible in code:
 
 Uncertainty:
 - Exact cookie names, max-age, SameSite/Secure attributes in production.
-- Whether Paddle.js sets cookies or local storage during checkout; this is external to the repo.
+- Whether Whop checkout sets cookies or local storage; this is external to the repo.
 
 ## Analytics, Advertising, and Error Monitoring
 
@@ -461,7 +461,7 @@ Advertising:
 
 Error monitoring:
 - No Sentry, LogRocket, Datadog RUM, Bugsnag, or similar error-monitoring SDK was found.
-- `console.error` is used for Paddle webhook processing errors.
+- `console.error` is used for Whop webhook processing errors.
 
 Uncertainty:
 - Hosting platform logs and infrastructure analytics are not visible in this repo.
@@ -479,16 +479,16 @@ Purpose:
 Retention visible:
 - Database foreign keys define cascade/set-null behavior, but no timed retention schedule.
 
-### Paddle
+### Whop
 
 Data involved:
-- User email, app user ID, plan/top-up ID, checkout events, customer/subscription/transaction IDs, raw webhook payload, refund requests.
+- App user ID, plan/top-up ID, checkout-intent metadata, checkout session ID, Whop user/membership/payment IDs, management link, raw webhook payload, and refund requests.
 
 Purpose:
-- Payments, billing portal, subscription/top-up confirmation, refunds.
+- Hosted checkout, membership management, subscription/top-up confirmation, refunds, and dispute handling.
 
 Retention visible:
-- App stores raw webhook payloads with no deletion schedule. Paddle retention not specified.
+- App stores raw webhook payloads with no deletion schedule. Whop retention is not specified in this repository.
 
 ### WaveSpeed
 
@@ -626,8 +626,8 @@ Fields:
 - `avatar_url`: initialized from OAuth metadata.
 - `credit_balance_cents`: account balance.
 - `default_currency`: billing/account preference.
-- `billing_customer_id`: Paddle customer ID.
-- `account_metadata`: Paddle customer/subscription/status/event metadata.
+- `provider_customer_id`: payment-provider customer/user ID.
+- `account_metadata`: account/billing metadata; the current Whop migration removes the legacy Paddle metadata key.
 - `referral_code`: user referral code.
 - `referred_by_user_id`: referrer relationship.
 - `created_at`, `updated_at`.
@@ -671,15 +671,20 @@ Fields:
 ### `billing_subscriptions`
 
 Fields:
-- `subscription_id`, `user_id`, `paddle_customer_id`, `status`, `plan_id`, `price_id`, period timestamps, created/updated timestamps.
+- `subscription_id`, `user_id`, `provider`, `provider_user_id`, `provider_member_id`, `status`, `plan_id`, `provider_plan_id`, `manage_url`, cancellation flag, provider-update and period timestamps, created/updated timestamps.
+
+### `billing_checkout_intents`
+
+Fields:
+- `user_id`, `option_id`, `provider`, `provider_plan_id`, `provider_checkout_session_id`, `return_path`, `expires_at`, `status`, `failure_message`, `consumed_at`, timestamps.
 
 ### `billing_webhook_events`
 
 Fields:
-- `event_id`, `event_type`, `user_id`, `paddle_entity_id`, `processed_at`, `payload`, `error_message`.
+- `event_id`, `event_type`, `user_id`, `provider`, `provider_entity_id`, `occurred_at`, `processing_status`, retry/attempt fields, `processed_at`, `payload`, `error_message`.
 
 Notes:
-- `payload` stores the full Paddle event.
+- `payload` stores the full Whop event.
 - `user_id` is set null on user deletion, so some billing event data can remain detached from the auth user.
 
 ### `contact_messages`
@@ -695,7 +700,7 @@ Fields:
 ### `billing_refund_requests`
 
 Fields:
-- `user_id`, `transaction_id`, `amount_cents`, `status`, `paddle_adjustment_id`, `failure_message`, timestamps.
+- `user_id`, `transaction_id`, `amount_cents`, `status`, `provider_refund_id`, `failure_message`, timestamps.
 
 ### `guide_articles`
 
@@ -718,8 +723,8 @@ Fields:
 2. Which jurisdictions are targeted or excluded?
 3. Are minors prohibited, and what minimum age applies?
 4. Is the product intended for adult-content creator workflows, and should generated personas/content be restricted to adults?
-5. Which third-party providers are enabled in production: Supabase, Paddle, WaveSpeed, ElevenLabs, OpenAI, Google/Gemini, Wan, Kling, Seedance/BytePlus, Telegram?
-6. Is Paddle in sandbox or production for the live website?
+5. Which third-party providers are enabled in production: Supabase, Whop, WaveSpeed, ElevenLabs, OpenAI, Google/Gemini, Wan, Kling, Seedance/BytePlus, Telegram?
+6. Is Whop in sandbox or production for the live website?
 7. What are Supabase Auth session/cookie settings and enabled OAuth providers in production?
 8. Do you have hosting/CDN logs, server logs, WAF logs, or platform analytics outside this repo?
 9. Are there any Supabase Storage lifecycle rules, backups, database PITR/backups, or log retention policies outside this repo?
@@ -731,4 +736,196 @@ Fields:
 15. Are generated assets public, shareable, or only private to the signed-in user?
 16. Should a just-in-time notice be shown before sending prompts/uploads to AI providers?
 17. Should terms acceptance be required at signup, checkout, or before first generation?
-18. Does Paddle.js set cookies or similar storage requiring a cookie notice in your target jurisdictions?
+18. Does Whop checkout set cookies or similar storage requiring a cookie notice in your target jurisdictions?
+
+## Owner Answers for Idolborn Terms and Privacy Policy - 14.07.26
+
+1. **Operator and contact information**
+
+Idolborn is operated by **[FULL LEGAL NAME]**, an individual software creator based in Kazakhstan, trading under the name “Idolborn.” Idolborn is not currently operated through an incorporated company.
+
+Contact email: **[idolborn.support@gmail.com](mailto:idolborn.support@gmail.com)**
+
+Mailing or business address: **[ADD A VALID MAILING OR BUSINESS ADDRESS BEFORE PUBLISHING]**
+
+2. **Targeted and excluded jurisdictions**
+
+Idolborn is an online service that may be accessed internationally. It is not specifically marketed toward one particular country or jurisdiction.
+
+The service is unavailable where its use would be prohibited by applicable law or where the payment provider, Whop, does not support accounts, payments, or subscriptions. Whop currently maintains a list of sanctioned and restricted countries, which may change over time.
+
+The policies should not claim that Idolborn complies with every law worldwide. They should instead state that users are responsible for complying with laws applicable to them and that Idolborn may restrict availability in particular locations.
+
+3. **Minimum age**
+
+Recommended policy decision: Idolborn should be restricted to users who are **at least 18 years old**.
+
+Users under 18 should not be permitted to create an account, purchase a subscription, upload media, or use the generation features. If Idolborn learns that an account belongs to a minor, the account may be suspended or deleted and associated personal data should be removed where reasonably possible, subject to legal, security, billing, and backup-retention requirements.
+
+This restriction is recommended even though Idolborn is a SFW service because allowing minors would create additional consent, age-verification, privacy, and contractual requirements.
+
+4. **Adult content and generated persons**
+
+Idolborn is a **strictly SFW service**. It is not intended for pornography, sexually explicit content, sexual services, or adult-content creator workflows.
+
+Any realistic person, persona, voice, or character generated through Idolborn must represent an adult aged 18 or older.
+
+Users may not create, upload, request, or distribute content that sexualizes minors, depicts minors in inappropriate situations, exploits children, or attempts to make an adult appear to be a minor for sexual or exploitative purposes.
+
+5. **Production service providers**
+
+The third-party providers currently used in production are:
+
+* Supabase, for authentication, database, and storage infrastructure;
+* WaveSpeedAI, for AI media-generation processing;
+* ElevenLabs, for audio or voice-generation functionality; and
+* Whop, for subscriptions, checkout, billing, and payment-related services.
+
+Paddle is no longer used.
+
+Idolborn does not directly integrate with OpenAI, Google/Gemini, Telegram, Kling, Wan, Seedance, or BytePlus unless one of those technologies is made available indirectly through WaveSpeedAI or another listed provider. The policies should distinguish direct providers from underlying models or subprocessors used by those providers.
+
+6. **Payment environment**
+
+Paddle is not used on the live website.
+
+Whop is the active payment and subscription provider. The live website uses Whop’s production payment environment. Any development or test environment, if maintained, must be kept separate from production.
+
+7. **Supabase authentication settings**
+
+Supabase Auth is used for user authentication.
+
+The following details still need to be verified in the production Supabase dashboard before the policies are finalized:
+
+* enabled login methods and OAuth providers;
+* whether authentication data is stored in browser local storage, cookies, or server-side cookies;
+* access-token expiry;
+* session inactivity timeout;
+* maximum session lifetime; and
+* whether multiple simultaneous sessions are permitted.
+
+Unless they have been changed, Supabase sessions are active until the user signs out or another configured termination event occurs, and Supabase permits configurable session limits.
+
+The privacy policy may generally state that essential authentication tokens or cookies are used, but it should not name Google or another OAuth provider unless that provider is actually enabled.
+
+8. **Hosting, analytics, and operational logs**
+
+No separate analytics, advertising analytics, WAF, or custom logging system is intentionally used unless it is discovered in the hosting or production configuration.
+
+However, infrastructure providers such as the website host, Supabase, Whop, WaveSpeedAI, and ElevenLabs may automatically create operational, security, authentication, fraud-prevention, request, IP-address, device, and billing logs.
+
+The hosting provider and its log-retention settings still need to be identified. The privacy policy should not state that no logs exist.
+
+9. **Backups, storage lifecycle, and provider retention**
+
+Idolborn deletes temporary user media from its active application storage after seven days.
+
+It has not yet been confirmed whether the Supabase project has:
+
+* daily backups;
+* Point-in-Time Recovery;
+* backup snapshots;
+* custom Storage lifecycle rules;
+* audit-log retention settings; or
+* copies retained by the hosting provider.
+
+These settings must be checked in the Supabase and hosting dashboards. Supabase offers database backups and optional Point-in-Time Recovery, and restored or backup copies may exist separately from active application data.
+
+The privacy policy should explain that deletion from active storage may not immediately delete information from security logs or backup systems, and that backup copies may remain until they expire or are overwritten.
+
+10. **Temporary media deletion**
+
+Yes. Temporary uploaded and generated media stored by Idolborn should be automatically deleted after **seven days**.
+
+This period should apply to active temporary storage controlled by Idolborn. Users should be informed that they must download any asset they want to retain.
+
+Deletion schedules operated by third-party providers may differ. WaveSpeedAI currently states that generated content is retained for seven days, while account information and billing logs use different retention periods.
+
+11. **Contact form**
+
+Idolborn does not currently intend to collect contact submissions through the unused contact form or API.
+
+The unused contact form and endpoint should be removed or disabled. The privacy policy should only describe email support through **[idolborn.support@gmail.com](mailto:idolborn.support@gmail.com)**, unless the contact form is later activated.
+
+12. **Privacy requests**
+
+Users may request access, export, correction, or deletion of their Idolborn account and associated data by emailing:
+
+**[idolborn.support@gmail.com](mailto:idolborn.support@gmail.com)**
+
+Idolborn may request reasonable information to verify that the requester owns the relevant account.
+
+Requests may cover account details, personas, stored media, generation records, and other data controlled directly by Idolborn.
+
+Billing and payment data controlled by Whop may need to be requested from Whop directly. Certain billing, fraud-prevention, dispute, tax, security, and legal records may be retained where required or permitted by law. Whop states that it may retain information to comply with legal obligations, resolve disputes, maintain business records, and enforce agreements.
+
+13. **AI training and provider retention**
+
+Idolborn itself does not use user prompts, uploads, generated media, or voices to train its own AI models.
+
+However, the policy must not promise that every third-party provider is contractually prohibited from training on data unless the relevant provider setting or agreement has been verified.
+
+For WaveSpeedAI, its published documentation states that outputs are not used for AI training and generated content is deleted after seven days.
+
+For ElevenLabs, the account’s **“Improve the models for everyone”** data-use setting must be disabled before Idolborn claims that newly submitted data is opted out of model improvement. ElevenLabs indicates that this opt-out is available in its account settings.
+
+ElevenLabs zero-retention mode should not be claimed unless Idolborn has an eligible Enterprise account and has enabled the required setting for each API request.
+
+There should not be a general statement that all data is deleted after seven weeks. Retention should be explained separately for temporary media, accounts, generation metadata, billing records, provider logs, and backups.
+
+14. **Uploading other people’s media**
+
+Users may upload an image, video, or audio recording of another adult only when they have all necessary permission, consent, licenses, and legal rights to do so.
+
+Idolborn does not require users to upload proof of consent with every generation. However, users must represent and warrant that they have valid consent and authority, and Idolborn should reserve the right to request evidence when a complaint, dispute, or safety concern arises.
+
+Users may not use another person’s likeness or voice for:
+
+* impersonation or identity fraud;
+* deceptive endorsements;
+* harassment, threats, humiliation, or defamation;
+* non-consensual intimate or sexual content;
+* blackmail or extortion;
+* misleading political or commercial communications;
+* violating privacy or publicity rights; or
+* making a real person appear to have said or done something harmful or unlawful.
+
+15. **Visibility and sharing of assets**
+
+Generated assets are accessible to the signed-in user and are not intentionally published in a public Idolborn gallery by default.
+
+Users may download, export, or share their generated assets themselves, subject to the Terms, applicable law, third-party rights, and any model-specific restrictions.
+
+A user’s decision to share an asset outside Idolborn does not make Idolborn responsible for the user’s publication or distribution of it.
+
+16. **Notice before AI processing**
+
+Yes. A concise just-in-time notice should be shown **before the user’s first upload or first generation request**, not only during signup.
+
+The notice should explain that prompts, uploaded media, and related generation instructions will be sent to third-party AI providers such as WaveSpeedAI or ElevenLabs to perform the requested generation.
+
+The notice can include a link to the full Privacy Policy and should require a clear affirmative action such as “Continue” or “I understand.”
+
+17. **Acceptance of Terms and Privacy Policy**
+
+Users should be required to affirmatively accept the Terms of Service and acknowledge the Privacy Policy during signup.
+
+Acceptance should be recorded with the policy version and timestamp.
+
+The checkout flow should also link clearly to the Terms, Privacy Policy, subscription conditions, refund rules, and Whop’s applicable payment terms. If a user can reach generation functionality without completing signup, acceptance should instead be required before the first generation.
+
+18. **Cookies and similar storage**
+
+Supabase authentication may use essential browser storage or authentication cookies. These are necessary for account login and session management.
+
+Whop states that its services use cookies, pixels, JavaScript, and similar technologies for functionality, security, analytics, and activity tracking.
+
+Whether Whop technology places cookies directly on the Idolborn domain depends on the checkout implementation:
+
+* A redirect to a Whop-hosted page may primarily place cookies on Whop’s domain.
+* An embedded Whop checkout may create third-party cookies or similar storage while the user remains on Idolborn.
+
+This must be tested on the production website using browser developer tools or a cookie scanner.
+
+The privacy or cookie notice should disclose essential authentication and payment technologies. In jurisdictions that require consent for non-essential analytics or advertising cookies, those technologies should not load until consent is obtained. Strictly necessary authentication and technical cookies are generally treated differently from optional tracking cookies, although they should still be disclosed.
+

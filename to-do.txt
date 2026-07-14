@@ -27,14 +27,12 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 142. Finish the FAQ
 144. Create a PDF to send to people
 145. When we delete a video, we shouldn't delete assets from them
-146. Some npm issue
-148. Extra security check of GLM edits
 149. Check if Email asks for confirmation
 152. Rethink subscriptions
 156. Change public contact email. (and create it)
 163. We can't use elevenlabs without a subscription
 168. We can't see references in full screen
-169.
+169. Add deleting accounts
 170.
 
 Things to tell about in PDF:

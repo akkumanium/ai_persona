@@ -73,7 +73,6 @@ export function StudioWorkspace({
   const launchNonce = useRef(0);
   const pollingJobIds = useRef(new Set<string>());
   const [initialVideoStartFrame, setInitialVideoStartFrame] = useState<{ id: string; nonce: number } | undefined>();
-  const [initialImageReference, setInitialImageReference] = useState<{ id: string; nonce: number } | undefined>();
   const [initialMotionImage, setInitialMotionImage] = useState<{ image: SourceImageInput; nonce: number } | undefined>();
   const [initialAvatarImage, setInitialAvatarImage] = useState<{ id: string; nonce: number } | undefined>();
   const [notice, setNotice] = useState(
@@ -379,28 +378,21 @@ export function StudioWorkspace({
   }
 
   function removeTrendSource(sourceId: string) {
-    const relatedAssets = assets.filter(
-      (asset) => asset.id === sourceId || asset.referenceAssetIds?.includes(sourceId),
-    );
-    const relatedIds = new Set(relatedAssets.map((asset) => asset.id));
+    const sourceAsset = assets.find((asset) => asset.id === sourceId);
     setTrendLibrary((current) => current.filter((item) => item.id !== sourceId));
-    setAssets((current) => current.filter((asset) => !relatedIds.has(asset.id)));
+    setAssets((current) => current.filter((asset) => asset.id !== sourceId));
 
     const client = supabaseClient();
     if (!client) return;
     void (async () => {
-      const { error } = await client.from("assets").delete().in("id", [...relatedIds]);
+      const { error } = await client.from("assets").delete().eq("id", sourceId);
       if (error) {
         setNotice(`Could not delete reel video: ${error.message}`);
         return;
       }
-      const storagePaths = relatedAssets
-        .filter((asset): asset is Asset & { storageBucket: string; storagePath: string } => Boolean(asset.storageBucket && asset.storagePath))
-        .reduce<Record<string, string[]>>((pathsByBucket, asset) => {
-          (pathsByBucket[asset.storageBucket] ??= []).push(asset.storagePath);
-          return pathsByBucket;
-        }, {});
-      await Promise.all(Object.entries(storagePaths).map(([bucket, paths]) => client.storage.from(bucket).remove(paths)));
+      if (sourceAsset?.storageBucket && sourceAsset.storagePath) {
+        await client.storage.from(sourceAsset.storageBucket).remove([sourceAsset.storagePath]);
+      }
     })();
   }
 
@@ -542,13 +534,6 @@ export function StudioWorkspace({
     launchNonce.current += 1;
     setInitialVideoStartFrame({ id: asset.id, nonce: launchNonce.current });
     setView("videos");
-  }
-
-  function launchImageEdit(asset: Asset) {
-    launchNonce.current += 1;
-    if (asset.personaId) setSelectedPersonaId(asset.personaId);
-    setInitialImageReference({ id: asset.id, nonce: launchNonce.current });
-    setView("images");
   }
 
   function launchMotionFromImage(asset: Asset) {
@@ -778,7 +763,6 @@ export function StudioWorkspace({
                 setGenerateInitialSlotId(undefined);
                 setView("personas");
               }}
-              onEditReference={launchImageEdit}
             />
           )}
           {(view === "images" || view === "videos" || view === "motion") && (
@@ -790,7 +774,6 @@ export function StudioWorkspace({
               selectedPersona={selectedPersona}
               supabaseReady={supabaseReady}
               imagePromptSuggestions={imagePromptSuggestions}
-              initialImageReference={initialImageReference}
               initialVideoStartFrame={initialVideoStartFrame}
               initialMotionImage={initialMotionImage}
               onGenerateVideoFromImage={launchVideoFromImage}

@@ -5,7 +5,7 @@ import { referenceSlots } from "@/components/studio/constants";
 import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { ReferenceSlotId } from "@/components/studio/types";
-import { CardImage, DeferredVideo, PanelTitle, SubmitButton, TextArea, TextField } from "@/components/studio/ui";
+import { CardImage, DeferredVideo, MediaLightbox, PanelTitle, SubmitButton, TextArea, TextField } from "@/components/studio/ui";
 import { NANO_BANANA_PRO_MODEL_ID } from "@/lib/image-model-options";
 import { estimateImageGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
@@ -226,6 +226,7 @@ function PersonaManagementView({
   const [personaNameDraft, setPersonaNameDraft] = useState(persona.name);
   const [personaDescriptionDraft, setPersonaDescriptionDraft] = useState(persona.description);
   const [previewAssetId, setPreviewAssetId] = useState<string | undefined>();
+  const [fullscreenReference, setFullscreenReference] = useState<Asset | undefined>();
   const [uploadingSlotId, setUploadingSlotId] = useState<ReferenceSlotId | undefined>();
   const [uploadError, setUploadError] = useState("");
   const [editingReference, setEditingReference] = useState<Asset | undefined>();
@@ -392,6 +393,7 @@ function PersonaManagementView({
             onDeleteReference={(assetId) => onDeleteReference(persona.id, assetId)}
             onEditReference={setEditingReference}
             onPreviewReference={(asset) => setPreviewAssetId(asset.id)}
+            onOpenPreview={setFullscreenReference}
           />
         ))}
       </div>
@@ -403,6 +405,14 @@ function PersonaManagementView({
           persona={persona}
           onAssetsCreated={onReferenceEdited}
           onClose={() => setEditingReference(undefined)}
+        />
+      ) : null}
+
+      {fullscreenReference ? (
+        <MediaLightbox
+          src={fullscreenReference.url}
+          title={fullscreenReference.title}
+          onClose={() => setFullscreenReference(undefined)}
         />
       ) : null}
 
@@ -423,6 +433,7 @@ function ReferenceSlotCard({
   onDeleteReference,
   onEditReference,
   onPreviewReference,
+  onOpenPreview,
 }: {
   slot: (typeof referenceSlots)[number];
   assets: Asset[];
@@ -434,6 +445,7 @@ function ReferenceSlotCard({
   onDeleteReference: (assetId: string) => void;
   onEditReference: (asset: Asset) => void;
   onPreviewReference: (asset: Asset) => void;
+  onOpenPreview: (asset: Asset) => void;
 }) {
   const latestAsset = assets[0];
   const displayAsset = previewAsset ?? latestAsset;
@@ -445,7 +457,14 @@ function ReferenceSlotCard({
       </div>
       <div className="mt-3 flex aspect-[4/5] items-center justify-center overflow-hidden rounded-md bg-white">
         {displayAsset ? (
-          <CardImage src={displayAsset.url} alt={displayAsset.title} className="h-full w-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onOpenPreview(displayAsset)}
+            className="h-full w-full"
+            aria-label={`Open ${displayAsset.title} fullscreen`}
+          >
+            <CardImage src={displayAsset.url} alt={displayAsset.title} className="h-full w-full object-cover" />
+          </button>
         ) : (
           <span className="text-sm font-medium text-stone-400">Empty</span>
         )}
@@ -599,7 +618,7 @@ function ReferenceAssetRow({
   );
 }
 
-function ReferenceEditor({
+export function ReferenceEditor({
   asset,
   persona,
   onAssetsCreated,
