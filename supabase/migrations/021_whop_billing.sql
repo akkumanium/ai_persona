@@ -23,9 +23,15 @@ revoke select on public.billing_checkout_intents from authenticated;
 alter table public.billing_subscriptions rename column paddle_customer_id to provider_user_id;
 alter table public.billing_subscriptions rename column price_id to provider_plan_id;
 alter table public.billing_subscriptions add column provider text;
+-- Legacy Paddle rows can contain the former pro/plus/starter plan aliases. Drop
+-- the pre-provider constraint before backfilling, otherwise PostgreSQL rechecks
+-- it during this unrelated update and rejects those historical records.
+alter table public.billing_subscriptions drop constraint if exists billing_subscriptions_plan_check;
 update public.billing_subscriptions set provider='legacy_paddle' where provider is null;
 alter table public.billing_subscriptions alter column provider set default 'whop';
 alter table public.billing_subscriptions alter column provider set not null;
+alter table public.billing_subscriptions add constraint billing_subscriptions_plan_check
+  check (provider = 'legacy_paddle' or plan_id in ('solo', 'creator', 'agency')) not valid;
 alter table public.billing_subscriptions add column provider_member_id text;
 alter table public.billing_subscriptions add column manage_url text;
 alter table public.billing_subscriptions add column cancel_at_period_end boolean not null default false;
