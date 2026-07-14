@@ -19,7 +19,7 @@ import {
   UploadBox,
 } from "@/components/studio/ui";
 import { SPEECH_VOICE_PRESETS } from "@/data/speech-voices";
-import { estimateAvatarGenerationPricing, estimateSpeechGenerationPricing } from "@/lib/pricing";
+import { avatarMaximumDurationSeconds, estimateAvatarGenerationPricing, estimateSpeechGenerationPricing } from "@/lib/pricing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { formatTokens } from "@/lib/utils";
 
@@ -286,7 +286,9 @@ export function AvatarView({
       : undefined;
   const selectedAudioSource = uploadedAudio?.url ?? (uploadedAudio?.data ? `data:${uploadedAudio.mimeType};base64,${uploadedAudio.data}` : selectedAudio?.url);
   const effectiveDurationSeconds = audioDurationSeconds ? Math.max(1, Math.ceil(audioDurationSeconds)) : 0;
-  const costTokens = audioDurationSeconds
+  const maximumDurationSeconds = avatarMaximumDurationSeconds(model);
+  const audioExceedsModelLimit = effectiveDurationSeconds > maximumDurationSeconds;
+  const costTokens = audioDurationSeconds && !audioExceedsModelLimit
     ? estimateAvatarGenerationPricing({ model, resolution, durationSeconds: effectiveDurationSeconds }).tokens
     : undefined;
   const costLabel = costTokens === undefined ? undefined : formatTokens(costTokens);
@@ -363,7 +365,7 @@ export function AvatarView({
 
   async function generateAvatar(event: FormEvent) {
     event.preventDefault();
-    if (!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds) return;
+    if (!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds || audioExceedsModelLimit) return;
     if (costTokens === undefined || !tryReserveTokens(costTokens)) {
       if (costTokens !== undefined) {
         setError(`Insufficient token balance. This generation costs ${costTokens} tokens, but your balance is ${balanceTokens}.`);
@@ -494,7 +496,9 @@ export function AvatarView({
               ? isReadingDuration
                 ? "Reading audio length..."
                 : audioDurationSeconds
-                  ? `Duration: ${formatDuration(audioDurationSeconds)}. The avatar video will match the audio length.`
+                  ? audioExceedsModelLimit
+                    ? `${model === "wavespeed-ai/longcat-avatar" ? "Longcat Avatar" : "InfiniteTalk"} supports up to ${formatDuration(maximumDurationSeconds)}. Choose shorter audio${model === "wavespeed-ai/longcat-avatar" ? " or switch to InfiniteTalk" : ""}.`
+                    : `Duration: ${formatDuration(audioDurationSeconds)}. The avatar video will match the audio length.`
                   : "The selected audio length could not be read. Try another WAV or MP3 file."
               : "Choose or upload audio before generating an avatar."}
           </div>
@@ -505,7 +509,7 @@ export function AvatarView({
             icon={Video}
             label="Generate avatar"
             costLabel={costLabel}
-            disabled={!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds}
+            disabled={!selectedPersona || !selectedImageUrl || !selectedAudioSource || !effectiveDurationSeconds || audioExceedsModelLimit}
           />
         </form>
       </aside>

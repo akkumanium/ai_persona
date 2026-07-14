@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ALLOWED_AUDIO_MIME_TYPES,
   ALLOWED_IMAGE_MIME_TYPES,
   ALLOWED_MEDIA_MIME_TYPES,
   MAX_INLINE_IMAGE_BYTES,
@@ -192,7 +193,7 @@ export const talkingAvatarGenerationSchema = z.object({
   uploadedAudio: z.object({
     name: z.string().max(200).optional(),
     mimeType: z.string().min(3).max(120).refine(
-      (mimeType) => isAllowedMimeType(mimeType, ALLOWED_MEDIA_MIME_TYPES),
+      (mimeType) => isAllowedMimeType(mimeType, ALLOWED_AUDIO_MIME_TYPES),
       "Unsupported audio type.",
     ),
     data: z.string().min(1).refine(

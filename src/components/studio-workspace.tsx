@@ -10,7 +10,7 @@ import { GenerationView } from "@/components/studio/generation-view";
 import { PersonasView } from "@/components/studio/personas-view";
 import { AvatarView, SpeechView } from "@/components/studio/speech-avatar-view";
 import { TrendVideoView, trendLibraryItemsFromAssets, type LibraryItem } from "@/components/studio/trend-video-view";
-import { reserveOptimisticBalance, StudioTokenBalanceProvider } from "@/components/studio/token-balance-context";
+import { reserveOptimisticBalance, settleOptimisticBalance, StudioTokenBalanceProvider } from "@/components/studio/token-balance-context";
 import type { ReferenceSlotId, SourceImageInput, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
 import type { PublicPaddleConfig } from "@/lib/billing";
@@ -100,13 +100,17 @@ export function StudioWorkspace({
   }
 
   function reconcileTokenBalance(nextBalance?: number) {
-    pendingBalanceReservationsRef.current = Math.max(0, pendingBalanceReservationsRef.current - 1);
-    if (pendingBalanceReservationsRef.current > 0) return;
-    if (typeof nextBalance === "number") {
-      setAuthoritativeBalance(nextBalance);
-      return;
+    const settlement = settleOptimisticBalance(
+      pendingBalanceReservationsRef.current,
+      nextBalance,
+      Boolean(supabaseReady),
+    );
+    pendingBalanceReservationsRef.current = settlement.pendingReservations;
+    if (settlement.shouldRefresh) {
+      void refreshBillingStatus();
+    } else if (typeof settlement.balanceTokens === "number") {
+      setAuthoritativeBalance(settlement.balanceTokens);
     }
-    void refreshBillingStatus();
   }
 
   useEffect(() => {

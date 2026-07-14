@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { videoGenerationSchema } from "@/lib/schemas";
+import { talkingAvatarGenerationSchema, videoGenerationSchema } from "@/lib/schemas";
 
 const requiredVideoInput = {
   personaId: "persona-1",
@@ -45,5 +45,25 @@ describe("videoGenerationSchema", () => {
       model: "attacker/expensive-model",
       mode: "motion",
     }).success).toBe(false);
+  });
+});
+
+describe("talkingAvatarGenerationSchema", () => {
+  it("rejects a non-audio uploaded media type", () => {
+    const result = talkingAvatarGenerationSchema.safeParse({
+      personaId: "persona-1",
+      personaName: "Test Persona",
+      imageAssetUrl: "/api/media/object?bucket=uploads&path=user/portrait.png",
+      uploadedAudio: {
+        name: "clip.mp4",
+        mimeType: "video/mp4",
+        url: "/api/media/object?bucket=uploads&path=user/clip.mp4",
+      },
+      model: "wavespeed-ai/longcat-avatar",
+      resolution: "480p",
+      durationSeconds: 10,
+    });
+
+    expect(result.success).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reserveOptimisticBalance } from "@/components/studio/token-balance-context";
+import { reserveOptimisticBalance, settleOptimisticBalance } from "@/components/studio/token-balance-context";
 import { shouldRefundUnsubmittedGeneration } from "@/lib/server/token-billing";
 
 describe("generation token reservations", () => {
@@ -19,6 +19,15 @@ describe("generation token reservations", () => {
     expect(nano).toEqual({ accepted: true, balanceTokens: 11 });
     expect(secondNano).toEqual({ accepted: false, balanceTokens: 11 });
     expect(wan).toEqual({ accepted: true, balanceTokens: 8 });
+  });
+
+  it("refreshes after concurrent responses instead of applying the last stale snapshot", () => {
+    const newerResponse = settleOptimisticBalance(2, 2, true);
+    const olderResponse = settleOptimisticBalance(newerResponse.pendingReservations, 16, true);
+
+    expect(newerResponse).toEqual({ pendingReservations: 1, shouldRefresh: false });
+    expect(olderResponse).toEqual({ pendingReservations: 0, shouldRefresh: true });
+    expect(olderResponse).not.toHaveProperty("balanceTokens");
   });
 
   it("refunds only a reserved job that never attempted provider contact", () => {

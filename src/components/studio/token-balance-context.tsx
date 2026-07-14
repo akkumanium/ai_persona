@@ -34,3 +34,24 @@ export function reserveOptimisticBalance(balanceTokens: number, requiredTokens: 
   }
   return { accepted: true, balanceTokens: normalizedBalance - normalizedRequired };
 }
+
+export function settleOptimisticBalance(
+  pendingReservations: number,
+  responseBalanceTokens: number | undefined,
+  hasAuthoritativeBalanceSource: boolean,
+): { pendingReservations: number; shouldRefresh: boolean; balanceTokens?: number } {
+  const remainingReservations = Math.max(0, pendingReservations - 1);
+  if (remainingReservations > 0) {
+    return { pendingReservations: remainingReservations, shouldRefresh: false };
+  }
+  if (hasAuthoritativeBalanceSource) {
+    return { pendingReservations: 0, shouldRefresh: true };
+  }
+  return {
+    pendingReservations: 0,
+    shouldRefresh: false,
+    balanceTokens: typeof responseBalanceTokens === "number"
+      ? Math.max(0, responseBalanceTokens)
+      : undefined,
+  };
+}

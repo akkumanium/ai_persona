@@ -16,6 +16,9 @@ export type PricingBreakdown = {
   notes?: string;
 };
 
+export const LONGCAT_AVATAR_MAX_DURATION_SECONDS = 120;
+export const INFINITETALK_MAX_DURATION_SECONDS = 600;
+
 export function usdToTokens(rawUsd: number) {
   const chargeCents = Math.ceil(Math.max(0, rawUsd) * USD_CENTS_PER_DOLLAR - FLOATING_POINT_EPSILON);
   return Math.max(1, Math.ceil((chargeCents * TOKENS_PER_USD) / USD_CENTS_PER_DOLLAR - FLOATING_POINT_EPSILON));
@@ -130,10 +133,11 @@ export function estimateSpeechGenerationPricing(request: Pick<SpeechGenerationRe
 export function estimateAvatarGenerationPricing(
   request: Pick<AvatarGenerationRequest, "durationSeconds" | "resolution" | "model">,
 ): PricingBreakdown {
-  const billedSeconds = Math.min(600, Math.max(5, Math.ceil(request.durationSeconds)));
   if (!["wavespeed-ai/longcat-avatar", "wavespeed-ai/infinitetalk"].includes(request.model ?? "")) {
     throw new Error(`No authorized price is configured for avatar model ${request.model}.`);
   }
+  const maximumDurationSeconds = avatarMaximumDurationSeconds(request.model);
+  const billedSeconds = Math.min(maximumDurationSeconds, Math.max(5, Math.ceil(request.durationSeconds)));
   const isLongcat = request.model === "wavespeed-ai/longcat-avatar";
   const perSecondUsd = request.resolution === "720p"
     ? isLongcat ? 0.08 : 0.06
@@ -142,8 +146,14 @@ export function estimateAvatarGenerationPricing(
   return {
     rawUsd,
     tokens: usdToTokens(rawUsd),
-    notes: `${isLongcat ? "Longcat Avatar" : "InfiniteTalk"} is billed with a 5 second minimum and 10 minute cap.`,
+    notes: `${isLongcat ? "Longcat Avatar" : "InfiniteTalk"} is billed with a 5 second minimum and ${isLongcat ? "2 minute" : "10 minute"} cap.`,
   };
+}
+
+export function avatarMaximumDurationSeconds(model: AvatarGenerationRequest["model"]) {
+  if (model === "wavespeed-ai/longcat-avatar") return LONGCAT_AVATAR_MAX_DURATION_SECONDS;
+  if (model === "wavespeed-ai/infinitetalk") return INFINITETALK_MAX_DURATION_SECONDS;
+  throw new Error(`No authorized duration limit is configured for avatar model ${model}.`);
 }
 
 function nanoBananaOutputUsd(imageSize: string) {

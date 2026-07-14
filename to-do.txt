@@ -33,8 +33,25 @@
 152. Change to only have one subscription
 156. Change public contact email. (and create it)
 163. We can't use elevenlabs without a subscription
-164.
-165.
+164. We still have Could not save reference assets: new row for relation "assets" violates check constraint "assets_reference_slot_check" bug
+165. TypeError: Failed to fetch
+    at <unknown> (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:621:23)
+    at _handleRequest (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1010:24)
+    at _request (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:997:24)
+    at <unknown> (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6456:220)
+    at SupabaseAuthClient._useSession (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6225:26)
+    at async SupabaseAuthClient._getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6441:20)
+    at async SupabaseAuthClient.getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6425:22) (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1012:17)
+[browser] TypeError: Failed to fetch
+    at <unknown> (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:621:23)
+    at _handleRequest (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1010:24)
+    at _request (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:997:24)
+    at <unknown> (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6456:220)
+    at SupabaseAuthClient._useSession (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6225:26)
+    at async SupabaseAuthClient._getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6441:20)
+    at async SupabaseAuthClient.getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6425:22) (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1012:17)
+    166.
+    167. Move from Wavespeed to Fal.ai
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

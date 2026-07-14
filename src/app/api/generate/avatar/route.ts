@@ -4,10 +4,11 @@ import { avatarProvider, imageProvider } from "@/lib/providers";
 import { imageUrlToProviderInput } from "@/lib/providers/image-inputs";
 import { mediaUrlToProviderInput } from "@/lib/providers/media-inputs";
 import type { AvatarGenerationRequest, ImageGenerationRequest, ProviderImageInput } from "@/lib/providers/types";
-import { estimateAvatarGenerationPricing, estimateImageGenerationPricing } from "@/lib/pricing";
+import { avatarMaximumDurationSeconds, estimateAvatarGenerationPricing, estimateImageGenerationPricing } from "@/lib/pricing";
 import { DEFAULT_PROMPTS, promptForReferenceSlot } from "@/lib/reference-prompts";
 import { avatarGenerationSchema, talkingAvatarGenerationSchema } from "@/lib/schemas";
 import { materializeGeneratedAsset, sanitizeProviderPayload } from "@/lib/server/media-storage";
+import { measureAudioDurationSeconds } from "@/lib/server/audio-duration";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { markPendingGenerationJobFailed, persistGenerationRecords, persistPendingGenerationJob, recordProviderAcceptance } from "@/lib/server/studio-persistence";
 import { assertSufficientTokens, getTokenBalance, InsufficientTokensError, refundTokens, reserveTokens, shouldRefundUnsubmittedGeneration } from "@/lib/server/token-billing";
@@ -210,42 +211,65 @@ async function generateTalkingAvatar(body: unknown, userId?: string) {
     return NextResponse.json({ error: "Choose or upload audio for the avatar." }, { status: 400 });
   }
 
+  const audio = input.uploadedAudio
+    ? input.uploadedAudio.data
+      ? {
+          name: input.uploadedAudio.name,
+          mimeType: input.uploadedAudio.mimeType,
+          data: input.uploadedAudio.data,
+        }
+      : input.uploadedAudio.url
+        ? await mediaUrlToProviderInput(input.uploadedAudio.url, input.uploadedAudio.name ?? `${input.personaName}-uploaded-audio`, userId)
+        : undefined
+    : input.audioAssetUrl
+      ? await mediaUrlToProviderInput(input.audioAssetUrl, `${input.personaName}-avatar-audio`, userId)
+      : undefined;
+  if (!audio) {
+    return NextResponse.json({ error: "The selected audio could not be loaded." }, { status: 400 });
+  }
+
+  let measuredDurationSeconds: number;
+  try {
+    measuredDurationSeconds = await measureAudioDurationSeconds(audio);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not determine the audio duration." },
+      { status: 400 },
+    );
+  }
+  const authoritativeDurationSeconds = Math.max(1, Math.ceil(measuredDurationSeconds));
+  const maximumDurationSeconds = avatarMaximumDurationSeconds(input.model);
+  if (authoritativeDurationSeconds > maximumDurationSeconds) {
+    const modelName = input.model === "wavespeed-ai/longcat-avatar" ? "Longcat Avatar" : "InfiniteTalk";
+    return NextResponse.json(
+      { error: `${modelName} supports audio up to ${maximumDurationSeconds} seconds. Choose a shorter audio file${input.model === "wavespeed-ai/longcat-avatar" ? " or switch to InfiniteTalk" : ""}.` },
+      { status: 400 },
+    );
+  }
+
   const estimatedPricing = estimateAvatarGenerationPricing({
     model: input.model,
     resolution: input.resolution,
-    durationSeconds: input.durationSeconds,
+    durationSeconds: authoritativeDurationSeconds,
   });
   await assertSufficientTokens(userId, Math.max(1, estimatedPricing.tokens));
 
-  const [image, audio] = await Promise.all([
-    imageUrlToProviderInput(input.imageAssetUrl, `${input.personaName}-avatar-image`, userId),
-      input.uploadedAudio
-        ? input.uploadedAudio.data
-          ? Promise.resolve({
-              name: input.uploadedAudio.name,
-              mimeType: input.uploadedAudio.mimeType,
-              data: input.uploadedAudio.data,
-            })
-          : input.uploadedAudio.url
-            ? mediaUrlToProviderInput(input.uploadedAudio.url, input.uploadedAudio.name ?? `${input.personaName}-uploaded-audio`, userId)
-            : Promise.resolve(undefined)
-        : input.audioAssetUrl
-          ? mediaUrlToProviderInput(input.audioAssetUrl, `${input.personaName}-avatar-audio`, userId)
-          : Promise.resolve(undefined),
-  ]);
+  const image = await imageUrlToProviderInput(input.imageAssetUrl, `${input.personaName}-avatar-image`, userId);
   const providerRequest: AvatarGenerationRequest = {
     image,
     audio,
     model: input.model,
     prompt: input.prompt,
     resolution: input.resolution,
-    durationSeconds: input.durationSeconds,
+    durationSeconds: authoritativeDurationSeconds,
     seed: input.seed,
   };
   const jobId = crypto.randomUUID();
   const createdAt = nowIso();
   const inputParams = {
     ...input,
+    durationSeconds: authoritativeDurationSeconds,
+    reportedDurationSeconds: input.durationSeconds,
     uploadedAudio: input.uploadedAudio
       ? { name: input.uploadedAudio.name, mimeType: input.uploadedAudio.mimeType }
       : undefined,

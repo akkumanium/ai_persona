@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { modelsForCapability } from "@/lib/model-registry";
-import { estimateImageGenerationPricing, estimateVideoGenerationPricing, usdToTokens } from "@/lib/pricing";
+import { avatarMaximumDurationSeconds, estimateAvatarGenerationPricing, estimateImageGenerationPricing, estimateVideoGenerationPricing, usdToTokens } from "@/lib/pricing";
 import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
 import { wavespeedImageInput } from "@/lib/providers/wavespeed";
 
@@ -149,6 +149,31 @@ describe("token pricing", () => {
         resolution: "1080p",
       }).tokens,
     ).toBe(168);
+  });
+
+  it("uses separate Longcat and InfiniteTalk duration caps", () => {
+    expect(avatarMaximumDurationSeconds("wavespeed-ai/longcat-avatar")).toBe(120);
+    expect(avatarMaximumDurationSeconds("wavespeed-ai/infinitetalk")).toBe(600);
+
+    expect(estimateAvatarGenerationPricing({
+      model: "wavespeed-ai/longcat-avatar",
+      resolution: "480p",
+      durationSeconds: 600,
+    })).toMatchObject({ rawUsd: 4.8, tokens: 480 });
+
+    expect(estimateAvatarGenerationPricing({
+      model: "wavespeed-ai/infinitetalk",
+      resolution: "480p",
+      durationSeconds: 600,
+    })).toMatchObject({ rawUsd: 18, tokens: 1800 });
+  });
+
+  it("keeps the five-second avatar billing minimum", () => {
+    expect(estimateAvatarGenerationPricing({
+      model: "wavespeed-ai/longcat-avatar",
+      resolution: "720p",
+      durationSeconds: 1,
+    })).toMatchObject({ rawUsd: 0.4, tokens: 40 });
   });
 });
 
