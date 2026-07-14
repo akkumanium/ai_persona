@@ -30,7 +30,7 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 146. Some npm issue
 148. Extra security check of GLM edits
 149. Check if Email asks for confirmation
-152. Change to only have one subscription
+152. Rethink subscriptions
 156. Change public contact email. (and create it)
 163. We can't use elevenlabs without a subscription
 164. We still have Could not save reference assets: new row for relation "assets" violates check constraint "assets_reference_slot_check" bug
@@ -51,7 +51,11 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
     at async SupabaseAuthClient._getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6441:20)
     at async SupabaseAuthClient.getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6425:22) (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1012:17)
     166. The studio can't be loaded
-    167.
+    167. ERROR: duplicate key value violates unique constraint "schema_migrations_pkey" (SQLSTATE 23505)
+Key (version)=(018) already exists.
+At statement: 3
+INSERT INTO supabase_migrations.schema_migrations(version, name, statements) VALUES($1, $2, $3)
+168.
 
 Things to tell about in PDF:
 1. Check guides out

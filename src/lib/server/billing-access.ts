@@ -32,12 +32,7 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
       .select("credit_balance_cents")
       .eq("user_id", userId)
       .maybeSingle<AccountProfileRow>(),
-    billingSupabase
-      .from("billing_subscriptions")
-      .select("subscription_id, status, plan_id, current_period_ends_at")
-      .eq("user_id", userId)
-      .eq("provider", "whop")
-      .returns<BillingSubscriptionRow[]>(),
+    loadSubscriptions(billingSupabase, userId),
   ]);
 
   if (profile.error) throw new Error(`Could not load billing profile: ${profile.error.message}`);
@@ -57,6 +52,30 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
     activePlanId,
     personaLimit: activePlanId ? getPersonaLimitForPlan(activePlanId) : 0,
   };
+}
+
+async function loadSubscriptions(supabase: SupabaseClient, userId: string) {
+  const select = "subscription_id, status, plan_id, current_period_ends_at";
+  const providerAwareResult = await supabase
+    .from("billing_subscriptions")
+    .select(select)
+    .eq("user_id", userId)
+    .eq("provider", "whop")
+    .returns<BillingSubscriptionRow[]>();
+
+  // Existing deployments from before migration 021 do not have provider yet.
+  // Keep Studio available during the schema rollout; new deployments use Whop only.
+  if (!isMissingProviderColumn(providerAwareResult.error)) return providerAwareResult;
+
+  return supabase
+    .from("billing_subscriptions")
+    .select(select)
+    .eq("user_id", userId)
+    .returns<BillingSubscriptionRow[]>();
+}
+
+function isMissingProviderColumn(error: { code?: string | null; message?: string | null } | null) {
+  return error?.code === "42703" && /billing_subscriptions\.provider/i.test(error.message ?? "");
 }
 
 function isActiveSubscriptionRow(row: BillingSubscriptionRow) {
