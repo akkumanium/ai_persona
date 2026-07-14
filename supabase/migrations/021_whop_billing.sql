@@ -1,16 +1,23 @@
--- Replace Paddle with Whop while retaining balances, ledger history, and billing audit rows.
+-- Replace Paddle with Whop. Paddle billing records are intentionally discarded.
 
 drop function if exists public.apply_paddle_billing_event(text,text,uuid,text,text,text,text,text,text,integer,jsonb) cascade;
 drop function if exists public.apply_paddle_billing_event(text,text,uuid,text,text,text,text,text,text,integer,jsonb,boolean) cascade;
 drop function if exists public.apply_paddle_billing_event_v2(text,text,timestamptz,uuid,uuid,text,text,text,text,text,text,integer,integer,jsonb,boolean) cascade;
 drop function if exists public.apply_paddle_adjustment_event(text,text,timestamptz,text,text,text,text,text,integer,jsonb) cascade;
 
+delete from public.billing_refund_requests;
+delete from public.billing_adjustments;
+delete from public.billing_operations_outbox;
+delete from public.billing_payments;
+delete from public.billing_subscriptions;
+delete from public.billing_checkout_intents;
+delete from public.billing_webhook_events;
+
 alter table public.account_profiles rename column billing_customer_id to provider_customer_id;
 update public.account_profiles set account_metadata = coalesce(account_metadata, '{}'::jsonb) - 'paddle';
 
 alter table public.billing_checkout_intents rename column price_id to provider_plan_id;
 alter table public.billing_checkout_intents add column provider text;
-update public.billing_checkout_intents set provider='legacy_paddle' where provider is null;
 alter table public.billing_checkout_intents alter column provider set default 'whop';
 alter table public.billing_checkout_intents alter column provider set not null;
 alter table public.billing_checkout_intents add column provider_checkout_session_id text unique;
@@ -23,15 +30,8 @@ revoke select on public.billing_checkout_intents from authenticated;
 alter table public.billing_subscriptions rename column paddle_customer_id to provider_user_id;
 alter table public.billing_subscriptions rename column price_id to provider_plan_id;
 alter table public.billing_subscriptions add column provider text;
--- Legacy Paddle rows can contain the former pro/plus/starter plan aliases. Drop
--- the pre-provider constraint before backfilling, otherwise PostgreSQL rechecks
--- it during this unrelated update and rejects those historical records.
-alter table public.billing_subscriptions drop constraint if exists billing_subscriptions_plan_check;
-update public.billing_subscriptions set provider='legacy_paddle' where provider is null;
 alter table public.billing_subscriptions alter column provider set default 'whop';
 alter table public.billing_subscriptions alter column provider set not null;
-alter table public.billing_subscriptions add constraint billing_subscriptions_plan_check
-  check (provider = 'legacy_paddle' or plan_id in ('solo', 'creator', 'agency')) not valid;
 alter table public.billing_subscriptions add column provider_member_id text;
 alter table public.billing_subscriptions add column manage_url text;
 alter table public.billing_subscriptions add column cancel_at_period_end boolean not null default false;
@@ -46,13 +46,11 @@ create unique index one_active_subscription_per_user on public.billing_subscript
 
 alter table public.billing_payments rename column price_id to provider_plan_id;
 alter table public.billing_payments add column provider text;
-update public.billing_payments set provider='legacy_paddle' where provider is null;
 alter table public.billing_payments alter column provider set default 'whop';
 alter table public.billing_payments alter column provider set not null;
 
 alter table public.billing_webhook_events rename column paddle_entity_id to provider_entity_id;
 alter table public.billing_webhook_events add column provider text;
-update public.billing_webhook_events set provider='legacy_paddle' where provider is null;
 alter table public.billing_webhook_events alter column provider set default 'whop';
 alter table public.billing_webhook_events alter column provider set not null;
 alter table public.billing_webhook_events add column processing_status text not null default 'pending' check (processing_status in ('pending','processing','processed','failed','ignored'));
@@ -67,7 +65,6 @@ create index billing_webhook_retry_idx on public.billing_webhook_events(processi
 
 alter table public.billing_adjustments add column provider text;
 alter table public.billing_adjustments add column previous_subscription_status text;
-update public.billing_adjustments set provider='legacy_paddle' where provider is null;
 alter table public.billing_adjustments alter column provider set default 'whop';
 alter table public.billing_adjustments alter column provider set not null;
 
