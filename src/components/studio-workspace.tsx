@@ -13,7 +13,7 @@ import { TrendVideoView, trendLibraryItemsFromAssets, type LibraryItem } from "@
 import { reserveOptimisticBalance, settleOptimisticBalance, StudioTokenBalanceProvider } from "@/components/studio/token-balance-context";
 import type { ReferenceSlotId, SourceImageInput, View } from "@/components/studio/types";
 import { demoAssets, demoJobs, demoPersonas } from "@/lib/demo-data";
-import type { PublicPaddleConfig } from "@/lib/billing";
+import type { PublicBillingConfig } from "@/lib/billing";
 import { mapJob, type StudioInitialData } from "@/lib/studio-records";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
@@ -39,7 +39,7 @@ export function StudioWorkspace({
   supabaseReady,
   initialUserId,
   initialUserEmail,
-  paddleConfig,
+  billingConfig,
   personaLimit = 0,
   imagePromptSuggestions = [],
   previewMode = false,
@@ -48,7 +48,7 @@ export function StudioWorkspace({
   supabaseReady?: boolean;
   initialUserId?: string;
   initialUserEmail?: string;
-  paddleConfig: PublicPaddleConfig;
+  billingConfig: PublicBillingConfig;
   personaLimit?: number | null;
   imagePromptSuggestions?: PromptSuggestion[];
   previewMode?: boolean;
@@ -870,7 +870,7 @@ export function StudioWorkspace({
               supabaseReady={Boolean(supabaseReady)}
               userId={userId}
               userEmail={initialUserEmail}
-              paddleConfig={paddleConfig}
+              billingConfig={billingConfig}
               onBalanceRefresh={(nextBalance) => {
                 if (pendingBalanceReservationsRef.current === 0) setAuthoritativeBalance(nextBalance);
                 setNotice("Your balance was refreshed after checkout.");

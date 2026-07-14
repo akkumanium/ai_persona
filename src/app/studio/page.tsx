@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getPublicPaddleConfig } from "@/lib/billing";
+import { getPublicBillingConfig } from "@/lib/billing";
 import { StudioPaywall } from "@/components/studio-paywall";
 import { StudioWorkspace } from "@/components/studio-workspace";
 import { hasSupabaseEnv } from "@/lib/env";
@@ -26,10 +26,10 @@ export const dynamic = "force-dynamic";
 export default async function StudioPage() {
   let initialData: StudioInitialData = emptyStudioData;
   const supabaseReady = hasSupabaseEnv();
-  const paddleConfig = getPublicPaddleConfig();
+  const billingConfig = getPublicBillingConfig();
 
   if (!supabaseReady) {
-    return <StudioPaywall supabaseReady={false} paddleConfig={paddleConfig} />;
+    return <StudioPaywall supabaseReady={false} billingConfig={billingConfig} />;
   }
 
   const supabase = await createServerSupabaseClient();
@@ -76,7 +76,7 @@ export default async function StudioPage() {
       supabaseReady={supabaseReady}
       initialUserId={user.id}
       initialUserEmail={user.email}
-      paddleConfig={paddleConfig}
+      billingConfig={billingConfig}
       personaLimit={access.personaLimit}
       imagePromptSuggestions={imagePromptSuggestions}
       previewMode={!access.hasActiveSubscription}

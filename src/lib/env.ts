@@ -18,28 +18,20 @@ export const env = {
   wavespeedWebhookSecret: process.env.WAVESPEED_WEBHOOK_SECRET,
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "imblueop@gmail.com",
-  paddleClientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN,
-  paddleEnvironment: process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "sandbox",
-  paddleTwoDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_2,
-  paddleFiveDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_5,
-  paddleTenDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_10,
-  paddleTwentyDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_20,
-  paddleFiftyDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_50,
-  paddleHundredDollarPriceId: process.env.NEXT_PUBLIC_PADDLE_PRICE_ID_100,
-  paddleSoloSubscriptionPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_10,
-  paddleCreatorSubscriptionPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_50,
-  paddleAgencySubscriptionPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_100,
-  paddleTenDollarTopUpPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_10,
-  paddleFiftyDollarTopUpPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_50,
-  paddleHundredDollarTopUpPriceId:
-    process.env.NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_100,
-  paddleWebhookSecretKey: process.env.PADDLE_WEBHOOK_SECRET_KEY,
-  paddleApiKey: process.env.PADDLE_API_KEY,
+  whopApiKey: process.env.WHOP_API_KEY,
+  whopWebhookSecret: process.env.WHOP_WEBHOOK_SECRET,
+  whopCompanyId: process.env.WHOP_COMPANY_ID,
+  whopEnvironment: process.env.WHOP_ENVIRONMENT ?? "sandbox",
+  whopSoloPlanId: process.env.WHOP_SOLO_PLAN_ID,
+  whopCreatorPlanId: process.env.WHOP_CREATOR_PLAN_ID,
+  whopAgencyPlanId: process.env.WHOP_AGENCY_PLAN_ID,
+  whopTwoDollarTopUpPlanId: process.env.WHOP_TOPUP_PLAN_ID_2,
+  whopFiveDollarTopUpPlanId: process.env.WHOP_TOPUP_PLAN_ID_5,
+  whopTenDollarTopUpPlanId: process.env.WHOP_TOPUP_PLAN_ID_10,
+  whopTwentyDollarTopUpPlanId: process.env.WHOP_TOPUP_PLAN_ID_20,
+  whopFiftyDollarTopUpPlanId: process.env.WHOP_TOPUP_PLAN_ID_50,
+  whopHundredDollarTopUpPlanId: process.env.WHOP_TOPUP_PLAN_ID_100,
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   cronSecret: process.env.CRON_SECRET,
 };
 

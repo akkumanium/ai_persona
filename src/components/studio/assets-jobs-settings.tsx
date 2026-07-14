@@ -5,7 +5,7 @@ import { BillingManagement } from "@/components/billing-management";
 import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import type { AssetFilter } from "@/components/studio/types";
 import { CardImage, DeferredAudio, DeferredVideo, ModeToggle, PanelTitle } from "@/components/studio/ui";
-import type { PublicPaddleConfig } from "@/lib/billing";
+import type { PublicBillingConfig } from "@/lib/billing";
 import type { Asset, GenerationJob, Persona } from "@/lib/types";
 import { formatTokens } from "@/lib/utils";
 
@@ -141,7 +141,7 @@ export function SettingsView({
   supabaseReady,
   userId,
   userEmail,
-  paddleConfig,
+  billingConfig,
   hasActiveSubscription,
   onBalanceRefresh,
   onBillingStatusRefresh,
@@ -150,7 +150,7 @@ export function SettingsView({
   supabaseReady: boolean;
   userId?: string;
   userEmail?: string;
-  paddleConfig: PublicPaddleConfig;
+  billingConfig: PublicBillingConfig;
   hasActiveSubscription: boolean;
   onBalanceRefresh?: (balanceCents: number) => void;
   onBillingStatusRefresh?: (status: { balanceCents?: number; personaLimit?: number | null; hasActiveSubscription?: boolean }) => void;
@@ -217,7 +217,7 @@ export function SettingsView({
             userId={userId}
             userEmail={userEmail}
             supabaseReady={supabaseReady}
-            config={paddleConfig}
+            config={billingConfig}
             hasActiveSubscription={hasActiveSubscription}
             onStatusResolved={(status) => {
               onBillingStatusRefresh?.(status);

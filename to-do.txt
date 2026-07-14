@@ -1,3 +1,4 @@
+DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 6. Come up with a name
 7. Google oauth settings fix 
 12. Email fix
@@ -19,7 +20,6 @@
 122. How are videos and first frame loaded
 123. Handle error in generation
 125. How does upgrading work
-126. Make videos and images expire
 130. We've generated a candidate and another one disappeared (to verify)
 136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
@@ -50,8 +50,11 @@
     at SupabaseAuthClient._useSession (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6225:26)
     at async SupabaseAuthClient._getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6441:20)
     at async SupabaseAuthClient.getUser (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:6425:22) (file://C:/Users/Наргиз/Desktop/Persona/ai_persona/.next/dev/static/chunks/node_modules_%40supabase_auth-js_dist_module_1vqrmkg._.js:1012:17)
-    166.
+    166. The studio can't be loaded
     167.
+
+Things to tell about in PDF:
+1. Check guides out
 
 Things to tell about in articles:
 1. SIM card, proxy, etc.

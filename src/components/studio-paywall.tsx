@@ -2,18 +2,18 @@ import { LockKeyhole, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { AuthButton } from "@/components/auth/auth-button";
 import { BillingPlans } from "@/components/billing-plans";
-import type { getPublicPaddleConfig } from "@/lib/billing";
+import type { getPublicBillingConfig } from "@/lib/billing";
 
 export function StudioPaywall({
   userId,
   userEmail,
   supabaseReady,
-  paddleConfig,
+  billingConfig,
 }: {
   userId?: string;
   userEmail?: string;
   supabaseReady: boolean;
-  paddleConfig: ReturnType<typeof getPublicPaddleConfig>;
+  billingConfig: ReturnType<typeof getPublicBillingConfig>;
 }) {
   return (
     <main className="min-h-screen bg-[#fff9fc] text-[#19141a]">
@@ -35,7 +35,7 @@ export function StudioPaywall({
           Studio access starts with an active plan.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#695c66]">
-          Choose a Paddle subscription to unlock the workspace. Every plan includes one-time welcome credits and a persona management limit.
+          Choose a Whop subscription to unlock the workspace. Every plan includes one-time welcome credits and a persona management limit.
         </p>
       </section>
 
@@ -44,12 +44,13 @@ export function StudioPaywall({
         copy={
           userId
             ? "Pick the persona capacity that fits your production pace."
-            : "Authentication connects the Paddle payment to your saved workspace and welcome credits."
+            : "Authentication connects the Whop payment to your saved workspace and welcome credits."
         }
         userId={userId}
         userEmail={userEmail}
         supabaseReady={supabaseReady}
-        config={paddleConfig}
+        config={billingConfig}
+        returnPath="/studio"
         compact
       />
     </main>

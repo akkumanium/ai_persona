@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { PublicHeader } from "@/components/public-header";
 import { BillingPlans } from "@/components/billing-plans";
 import { BillingManagement } from "@/components/billing-management";
-import { getPublicPaddleConfig } from "@/lib/billing";
+import { getPublicBillingConfig } from "@/lib/billing";
 import { hasSupabaseEnv } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -76,12 +76,12 @@ export default async function PricingPage() {
           copy={
             initialUserId
               ? "Your subscription connects to your saved workspace, persona capacity, and one-time welcome credits."
-              : "Authentication connects the Paddle payment to your workspace before checkout."
+              : "Authentication connects the Whop payment to your workspace before checkout."
           }
           userId={initialUserId}
           userEmail={initialUserEmail}
           supabaseReady={supabaseReady}
-          config={getPublicPaddleConfig()}
+          config={getPublicBillingConfig()}
           compact
           theme="dark"
         />

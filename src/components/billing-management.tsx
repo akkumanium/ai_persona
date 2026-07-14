@@ -57,7 +57,7 @@ export function BillingManagement({ dark = false }: { dark?: boolean }) {
   return (
     <section className={`rounded-lg border p-5 shadow-sm ${shell}`}>
       <h2 className="text-xl font-semibold">Manage membership</h2>
-      <p className={`mt-2 text-sm leading-6 ${muted}`}>Cancel or update your membership securely in Paddle. Cancellation stops future renewals.</p>
+      <p className={`mt-2 text-sm leading-6 ${muted}`}>Cancel or update your membership securely in Whop. Whop may ask you to sign in before showing billing details.</p>
       <div className="mt-5 flex flex-wrap gap-3">
         <button type="button" onClick={() => void openPortal()} disabled={Boolean(busy)} className={`inline-flex h-11 items-center gap-2 rounded-md border px-4 text-sm font-semibold transition disabled:opacity-60 ${secondary}`}>
           {busy === "portal" ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}

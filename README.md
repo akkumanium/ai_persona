@@ -79,19 +79,19 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=
-NEXT_PUBLIC_PADDLE_ENVIRONMENT=sandbox
-PADDLE_API_KEY=
-PADDLE_WEBHOOK_SECRET_KEY=
-NEXT_PUBLIC_PADDLE_PRICE_ID_2=
-NEXT_PUBLIC_PADDLE_PRICE_ID_5=
-NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_10=
-NEXT_PUBLIC_PADDLE_PRICE_ID_20=
-NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_50=
-NEXT_PUBLIC_PADDLE_TOPUP_PRICE_ID_100=
-NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_10=
-NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_50=
-NEXT_PUBLIC_PADDLE_SUBSCRIPTION_PRICE_ID_100=
+WHOP_API_KEY=
+WHOP_WEBHOOK_SECRET=
+WHOP_COMPANY_ID=
+WHOP_ENVIRONMENT=sandbox
+WHOP_SOLO_PLAN_ID=
+WHOP_CREATOR_PLAN_ID=
+WHOP_AGENCY_PLAN_ID=
+WHOP_TOPUP_PLAN_ID_2=
+WHOP_TOPUP_PLAN_ID_5=
+WHOP_TOPUP_PLAN_ID_10=
+WHOP_TOPUP_PLAN_ID_20=
+WHOP_TOPUP_PLAN_ID_50=
+WHOP_TOPUP_PLAN_ID_100=
 
 WAVESPEED_API_KEY=
 # Public HTTPS endpoint, for example https://app.example.com/api/wavespeed/webhook
@@ -119,7 +119,7 @@ SEEDANCE_API_KEY=
 SEEDANCE_MODEL=dreamina-seedance-2-0-260128
 ```
 
-Every Paddle price ID must be nonempty and unique. Subscription prices and top-up prices must never share an ID. Production billing refuses ambiguous or incomplete catalogs.
+Every Whop plan ID must be nonempty and unique. Subscription plans and top-up plans must never share an ID. Sandbox and production require separate keys, company IDs, catalogs, plan IDs, and webhook endpoints. Production billing refuses ambiguous or incomplete catalogs. See `DEPLOYMENT.md` for catalog and rollout checks.
 
 ## Supabase
 
@@ -135,9 +135,9 @@ The initial schema is in `supabase/migrations/001_initial_schema.sql`. It define
 
 `supabase/migrations/002_auth_account_security.sql` adds account profiles, token balances stored in the existing balance column, auth user profile creation, stronger storage path policies, and asset metadata needed for persisted references.
 
-Apply all migrations through `018_direct_media_uploads.sql` before deploying this release. Migration 017 adds checkout intents, ordered and idempotent billing state, durable rate limits, storage quotas, service-only job writes, transactional generation finalization, and refund/adjustment handling. Migration 018 adds the short-lived upload intents used for direct browser-to-Supabase media uploads and stale-reservation cleanup.
+Apply all migrations through `021_whop_billing.sql` before deploying this release. Migration 021 preserves balances and ledger history while moving billing identifiers, webhook processing, refunds, disputes, and recovery to Whop.
 
-When Supabase is configured, `/studio` and generation routes require an authenticated user, while active subscription state is enforced by the database when credits are reserved. Configure Vercel Cron with the same `CRON_SECRET` used by the protected reconciliation routes in `vercel.json`.
+When Supabase is configured, `/studio` and generation routes require an authenticated user, while active subscription state is enforced by the database when credits are reserved. The Vercel Hobby-compatible schedule runs generation-job recovery once daily. Billing recovery is manual through the protected `/api/internal/billing/reconcile` endpoint; both use `CRON_SECRET` authorization.
 
 ### Supabase Auth Setup
 
@@ -174,4 +174,4 @@ npm run test    # run Vitest
 
 ## Current Status
 
-This is an MVP codebase with a complete frontend workflow, authenticated entry points, validated generation API routes, provider adapters, and database schema. Supabase-backed workspace persistence and production billing are planned follow-up work rather than fully wired runtime behavior.
+This is an MVP codebase with a complete frontend workflow, authenticated entry points, validated generation API routes, provider adapters, Supabase-backed workspace persistence, and Whop-backed billing. Production billing still requires the external catalog, webhook, environment values, and smoke tests described in `DEPLOYMENT.md`.

@@ -10,7 +10,7 @@ const questions = [
   ["What can I make in Studio?", "Create a persona, build consistent references, and turn them into images, videos, speech, and talking-avatar clips."],
   ["Can I explore before subscribing?", "Yes. Sign in to browse the entire Studio in preview mode. A paid plan adds the tokens required to generate."],
   ["Why should I choose Idolborn over Higgsfield or Wavespeed or other tools?", "These are great tools, but they are not specifically designed for creating AI influencers. They do not provide a streamlined way to create a single, consistent persona, produce short 9:16 videos within minutes, or offer guidance on managing social media accounts."],
-  ["Can I cancel or request a refund?", "You can cancel from Studio settings or the pricing page. Your latest subscription payment is eligible for an automatic full refund only when none of its credits have been used."],
+  ["Can I cancel or request a refund?", "You can open your Whop billing portal from Studio settings or the pricing page. Your latest subscription payment is eligible for an automatic full refund only when none of its credits have been used."],
 ];
 
 export default async function FaqPage() {

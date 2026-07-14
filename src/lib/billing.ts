@@ -4,11 +4,6 @@ export type BillingPlanId = "solo" | "creator" | "agency";
 export type BillingTopUpId = "topup_2" | "topup_5" | "topup_10" | "topup_20" | "topup_50" | "topup_100";
 export const WELCOME_CREDIT_CENTS = 300;
 export const UNLIMITED_PERSONAS = null;
-const legacyPlanAliases: Partial<Record<string, BillingPlanId>> = {
-  starter: "solo",
-  plus: "creator",
-  pro: "agency",
-};
 
 export type BillingPlan = {
   id: BillingPlanId;
@@ -18,7 +13,7 @@ export type BillingPlan = {
   tokenLabel: string;
   creditCents: number;
   personaLimit: number | null;
-  priceId?: string;
+  providerPlanId?: string;
   description: string;
 };
 
@@ -29,15 +24,15 @@ export type BillingTopUp = {
   priceLabel: string;
   tokenLabel: string;
   creditCents: number;
-  priceId?: string;
+  providerPlanId?: string;
   description: string;
 };
 
-export type PublicPaddleConfig = {
-  clientToken: string;
+export type PublicBillingConfig = {
   environment: "sandbox" | "production";
-  plans: Array<BillingPlan & { priceId: string }>;
-  topUps: Array<BillingTopUp & { priceId: string }>;
+  configured: boolean;
+  plans: Array<Omit<BillingPlan, "providerPlanId">>;
+  topUps: Array<Omit<BillingTopUp, "providerPlanId">>;
 };
 
 export const billingPlans: BillingPlan[] = [
@@ -49,7 +44,7 @@ export const billingPlans: BillingPlan[] = [
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: 1,
-    priceId: env.paddleSoloSubscriptionPriceId,
+    providerPlanId: env.whopSoloPlanId,
     description: "For one creator persona with the full generation workspace.",
   },
   {
@@ -60,7 +55,7 @@ export const billingPlans: BillingPlan[] = [
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: 5,
-    priceId: env.paddleCreatorSubscriptionPriceId,
+    providerPlanId: env.whopCreatorPlanId,
     description: "For managing a small portfolio of up to five personas.",
   },
   {
@@ -71,7 +66,7 @@ export const billingPlans: BillingPlan[] = [
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: UNLIMITED_PERSONAS,
-    priceId: env.paddleAgencySubscriptionPriceId,
+    providerPlanId: env.whopAgencyPlanId,
     description: "For teams and operators who need limitless personas.",
   },
 ];
@@ -84,7 +79,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$2",
     tokenLabel: "200 tokens",
     creditCents: 200,
-    priceId: env.paddleTwoDollarPriceId,
+    providerPlanId: env.whopTwoDollarTopUpPlanId,
     description: "A quick bump for a few image iterations.",
   },
   {
@@ -94,7 +89,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$5",
     tokenLabel: "500 tokens",
     creditCents: 500,
-    priceId: env.paddleFiveDollarPriceId,
+    providerPlanId: env.whopFiveDollarTopUpPlanId,
     description: "Enough for references and lighter still-image work.",
   },
   {
@@ -104,7 +99,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$10",
     tokenLabel: "1,000 tokens",
     creditCents: 1000,
-    priceId: env.paddleTenDollarTopUpPriceId,
+    providerPlanId: env.whopTenDollarTopUpPlanId,
     description: "A comfortable refill for daily generation.",
   },
   {
@@ -114,7 +109,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$20",
     tokenLabel: "2,000 tokens",
     creditCents: 2000,
-    priceId: env.paddleTwentyDollarPriceId,
+    providerPlanId: env.whopTwentyDollarTopUpPlanId,
     description: "More room for image sets and video tests.",
   },
   {
@@ -124,7 +119,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$50",
     tokenLabel: "5,000 tokens",
     creditCents: 5000,
-    priceId: env.paddleFiftyDollarTopUpPriceId,
+    providerPlanId: env.whopFiftyDollarTopUpPlanId,
     description: "For larger batches and production weeks.",
   },
   {
@@ -134,7 +129,7 @@ export const billingTopUps: BillingTopUp[] = [
     priceLabel: "$100",
     tokenLabel: "10,000 tokens",
     creditCents: 10000,
-    priceId: env.paddleHundredDollarTopUpPriceId,
+    providerPlanId: env.whopHundredDollarTopUpPlanId,
     description: "Best for sustained video and campaign output.",
   },
 ];
@@ -142,7 +137,7 @@ export const billingTopUps: BillingTopUp[] = [
 export function normalizeBillingPlanId(planId?: string | null): BillingPlanId | undefined {
   if (!planId) return undefined;
   if (planId === "solo" || planId === "creator" || planId === "agency") return planId;
-  return legacyPlanAliases[planId];
+  return undefined;
 }
 
 export function getPlanById(planId?: string | null) {
@@ -150,8 +145,8 @@ export function getPlanById(planId?: string | null) {
   return billingPlans.find((plan) => plan.id === normalizedPlanId);
 }
 
-export function getPlanByPriceId(priceId?: string | null) {
-  return billingPlans.find((plan) => plan.priceId && plan.priceId === priceId);
+export function getPlanByProviderPlanId(providerPlanId?: string | null) {
+  return billingPlans.find((plan) => plan.providerPlanId && plan.providerPlanId === providerPlanId);
 }
 
 export function getBillingOptionById(optionId?: string | null) {
@@ -160,19 +155,22 @@ export function getBillingOptionById(optionId?: string | null) {
   return [...billingPlans, ...billingTopUps].find((option) => option.id === optionId);
 }
 
-export function getBillingOptionByPriceId(priceId?: string | null) {
-  if (!priceId) return undefined;
-  const matches = [...billingPlans, ...billingTopUps].filter((option) => option.priceId === priceId);
-  if (matches.length > 1) throw new Error(`Paddle price ID ${priceId} is configured more than once.`);
+export function getBillingOptionByProviderPlanId(providerPlanId?: string | null) {
+  if (!providerPlanId) return undefined;
+  const matches = [...billingPlans, ...billingTopUps].filter((option) => option.providerPlanId === providerPlanId);
+  if (matches.length > 1) throw new Error(`Whop plan ID ${providerPlanId} is configured more than once.`);
   return matches[0];
 }
 
 export function assertValidBillingCatalog() {
-  const configured = [...billingPlans, ...billingTopUps].filter((option) => option.priceId);
-  const duplicate = configured.find((option, index) => configured.findIndex((candidate) => candidate.priceId === option.priceId) !== index);
-  if (duplicate) throw new Error(`Paddle price ID ${duplicate.priceId} must be unique.`);
-  if (env.paddleEnvironment === "production" && configured.length !== billingPlans.length + billingTopUps.length) {
-    throw new Error("Every Paddle subscription and top-up price ID is required in production.");
+  if (env.whopEnvironment !== "sandbox" && env.whopEnvironment !== "production") {
+    throw new Error("WHOP_ENVIRONMENT must be sandbox or production.");
+  }
+  const configured = [...billingPlans, ...billingTopUps].filter((option) => option.providerPlanId);
+  const duplicate = configured.find((option, index) => configured.findIndex((candidate) => candidate.providerPlanId === option.providerPlanId) !== index);
+  if (duplicate) throw new Error(`Whop plan ID ${duplicate.providerPlanId} must be unique.`);
+  if (env.whopEnvironment === "production" && configured.length !== billingPlans.length + billingTopUps.length) {
+    throw new Error("Every Whop subscription and top-up plan ID is required in production.");
   }
 }
 
@@ -185,38 +183,40 @@ export function formatPersonaLimit(limit: number | null) {
   return limit === null ? "Limitless personas" : `${limit} persona${limit === 1 ? "" : "s"}`;
 }
 
-export function hasPaddleCheckoutEnv() {
-  return Boolean(env.paddleClientToken && billingPlans.every((plan) => plan.priceId));
+const WHOP_MEMBERSHIP_STATUSES = new Set([
+  "trialing", "active", "past_due", "completed", "canceled", "expired", "unresolved", "drafted", "canceling",
+]);
+
+export function mapWhopMembershipStatus(status?: string | null, cancelAtPeriodEnd = false) {
+  const normalized = status?.toLowerCase();
+  if (cancelAtPeriodEnd && (normalized === "active" || normalized === "trialing")) return "canceling";
+  return normalized && WHOP_MEMBERSHIP_STATUSES.has(normalized) ? normalized : "drafted";
 }
 
-export function getPublicPaddleConfig() {
+export function hasWhopBillingEnv() {
+  return Boolean(
+    env.whopApiKey &&
+    env.whopWebhookSecret &&
+    env.whopCompanyId &&
+    [...billingPlans, ...billingTopUps].every((option) => option.providerPlanId),
+  );
+}
+
+export function getPublicBillingConfig(): PublicBillingConfig {
   assertValidBillingCatalog();
   const environment: "sandbox" | "production" =
-    env.paddleEnvironment === "production" ? "production" : "sandbox";
+    env.whopEnvironment === "production" ? "production" : "sandbox";
 
   return {
-    clientToken: env.paddleClientToken ?? "",
     environment,
-    plans: billingPlans.map((plan) => ({
-      id: plan.id,
-      kind: plan.kind,
-      name: plan.name,
-      priceLabel: plan.priceLabel,
-      tokenLabel: plan.tokenLabel,
-      creditCents: plan.creditCents,
-      personaLimit: plan.personaLimit,
-      priceId: plan.priceId ?? "",
-      description: plan.description,
-    })),
-    topUps: billingTopUps.map((topUp) => ({
-      id: topUp.id,
-      kind: topUp.kind,
-      name: topUp.name,
-      priceLabel: topUp.priceLabel,
-      tokenLabel: topUp.tokenLabel,
-      creditCents: topUp.creditCents,
-      priceId: topUp.priceId ?? "",
-      description: topUp.description,
-    })),
-  } satisfies PublicPaddleConfig;
+    configured: hasWhopBillingEnv(),
+    plans: billingPlans.map(toPublicOption),
+    topUps: billingTopUps.map(toPublicOption),
+  };
+}
+
+function toPublicOption<T extends { providerPlanId?: string }>(option: T): Omit<T, "providerPlanId"> {
+  const copy = { ...option };
+  delete copy.providerPlanId;
+  return copy;
 }

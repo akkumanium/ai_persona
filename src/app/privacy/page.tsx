@@ -4,11 +4,11 @@ export const metadata = { title: "Privacy | Idolborn", description: "How Idolbor
 
 export default function PrivacyPage() {
   return <LegalPage title="Privacy notice">
-    <p>Last updated: July 12, 2026.</p>
+    <p>Last updated: July 14, 2026.</p>
     <h2>Data we process</h2>
     <p>Idolborn stores your account identifier and email, persona details, prompts, uploaded reference media, generated assets, generation history, token ledger, referral records, and billing entitlement state. Authentication, database records, and private media storage are provided by Supabase.</p>
     <h2>Service providers</h2>
-    <p>Generation inputs are sent only to the provider selected for the requested operation, currently WaveSpeed and ElevenLabs. Paddle processes checkout, subscription, refund, and customer-portal activity; Idolborn does not receive full payment-card details. Vercel hosts the application.</p>
+    <p>Generation inputs are sent only to the provider selected for the requested operation, currently WaveSpeed and ElevenLabs. Whop processes checkout, payment, membership, refund, dispute, and billing-portal activity. Whop may create or use a billing identity for you; Idolborn receives provider identifiers, membership and payment status, amounts, plan IDs, and management links, but not full payment-card details. Vercel hosts the application.</p>
     <h2>Use, retention, and disclosure</h2>
     <p>We use data to authenticate you, provide generations, enforce plans and quotas, prevent abuse, reconcile payments, respond to support, and diagnose failures. Private media is disclosed to generation providers only as needed to perform your request. Records are retained while your account is active and as required for billing, fraud prevention, security, and legal obligations.</p>
     <h2>Your choices</h2>

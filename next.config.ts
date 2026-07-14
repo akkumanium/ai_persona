@@ -16,14 +16,14 @@ const nextConfig: NextConfig = {
       "base-uri 'self'",
       "object-src 'none'",
       "frame-ancestors 'none'",
-      "form-action 'self' https://*.paddle.com",
-      `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://cdn.paddle.com`,
+      "form-action 'self' https://whop.com https://*.whop.com",
+      `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""} https://js.whop.com https://cdn.plaid.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "media-src 'self' blob: https:",
       "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.paddle.com https://api.paddle.com https://sandbox-api.paddle.com https://api.wavespeed.ai https://api.elevenlabs.io",
-      "frame-src https://*.paddle.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://whop.com https://*.whop.com https://api.wavespeed.ai https://api.elevenlabs.io",
+      "frame-src https://whop.com https://*.whop.com",
       "upgrade-insecure-requests",
     ].join("; ");
     return [{

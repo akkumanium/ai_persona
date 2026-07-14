@@ -3,17 +3,17 @@ import { getPersonaLimitForPlan, getPlanById, type BillingPlanId } from "@/lib/b
 import { env } from "@/lib/env";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing", "canceling"]);
 
 type AccountProfileRow = {
   credit_balance_cents: number | null;
-  account_metadata?: Record<string, unknown> | null;
 };
 
 type BillingSubscriptionRow = {
   subscription_id: string | null;
   status: string | null;
   plan_id: string | null;
+  current_period_ends_at: string | null;
 };
 
 export type BillingAccess = {
@@ -29,13 +29,14 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
   const [profile, subscriptions] = await Promise.all([
     billingSupabase
       .from("account_profiles")
-      .select("credit_balance_cents, account_metadata")
+      .select("credit_balance_cents")
       .eq("user_id", userId)
       .maybeSingle<AccountProfileRow>(),
     billingSupabase
       .from("billing_subscriptions")
-      .select("subscription_id, status, plan_id")
+      .select("subscription_id, status, plan_id, current_period_ends_at")
       .eq("user_id", userId)
+      .eq("provider", "whop")
       .returns<BillingSubscriptionRow[]>(),
   ]);
 
@@ -43,23 +44,10 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
   if (subscriptions.error) throw new Error(`Could not load billing subscriptions: ${subscriptions.error.message}`);
 
   const balanceCents = Math.max(0, profile.data?.credit_balance_cents ?? 0);
-  const metadataSubscription = getMetadataSubscription(profile.data?.account_metadata);
   const subscriptionRows = subscriptions.data ?? [];
-  const activeSubscriptionRows = subscriptionRows.filter((row) =>
-    ACTIVE_SUBSCRIPTION_STATUSES.has(row.status ?? ""),
-  );
-  const metadataRow = metadataSubscription.subscriptionId
-    ? subscriptionRows.find((row) => row.subscription_id === metadataSubscription.subscriptionId)
-    : undefined;
-  const hasActiveMetadataSubscription =
-    ACTIVE_SUBSCRIPTION_STATUSES.has(metadataSubscription.status) &&
-    Boolean(metadataRow && ACTIVE_SUBSCRIPTION_STATUSES.has(metadataRow.status ?? ""));
-  const activePlanId = resolveActivePlanId(
-    activeSubscriptionRows,
-    hasActiveMetadataSubscription ? metadataSubscription.planId : undefined,
-  );
-  const hasActiveSubscription =
-    Boolean(activeSubscriptionRows.length) || hasActiveMetadataSubscription;
+  const activeSubscriptionRows = subscriptionRows.filter(isActiveSubscriptionRow);
+  const activePlanId = resolveActivePlanId(activeSubscriptionRows);
+  const hasActiveSubscription = Boolean(activeSubscriptionRows.length);
 
   return {
     balanceCents,
@@ -71,26 +59,15 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
   };
 }
 
-function getMetadataSubscription(metadata?: Record<string, unknown> | null) {
-  const paddle = metadata?.paddle;
-  if (!paddle || typeof paddle !== "object" || Array.isArray(paddle)) return { status: "", planId: undefined };
-  const status = (paddle as { subscriptionStatus?: unknown }).subscriptionStatus;
-  const planId = (paddle as { planId?: unknown }).planId;
-  const subscriptionId = (paddle as { subscriptionId?: unknown }).subscriptionId;
-  return {
-    status: typeof status === "string" ? status : "",
-    planId: typeof planId === "string" ? planId : undefined,
-    subscriptionId: typeof subscriptionId === "string" ? subscriptionId : undefined,
-  };
+function isActiveSubscriptionRow(row: BillingSubscriptionRow) {
+  if (!ACTIVE_SUBSCRIPTION_STATUSES.has(row.status ?? "")) return false;
+  return row.status !== "canceling" || Boolean(row.current_period_ends_at && Date.parse(row.current_period_ends_at) > Date.now());
 }
 
-function resolveActivePlanId(rows: BillingSubscriptionRow[], fallbackPlanId?: string) {
+function resolveActivePlanId(rows: BillingSubscriptionRow[]) {
   const candidates = rows
     .map((row) => getPlanById(row.plan_id))
     .filter((plan) => plan !== undefined);
-  const fallback = getPlanById(fallbackPlanId);
-  if (fallback) candidates.push(fallback);
-
   return candidates.sort((left, right) => scorePlan(right.id) - scorePlan(left.id))[0]?.id;
 }
 

@@ -12,6 +12,8 @@
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.110.2",
+    "@whop/checkout": "^0.3.0",
+    "@whop/sdk": "^0.0.40",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
     "music-metadata": "^11.13.0",
