@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { modelsForCapability } from "@/lib/model-registry";
 import { avatarMaximumDurationSeconds, estimateAvatarGenerationPricing, estimateImageGenerationPricing, estimateVideoGenerationPricing, usdToTokens } from "@/lib/pricing";
 import { mockImageGeneration, mockVideoGeneration } from "@/lib/providers/mock";
-import { wavespeedImageInput } from "@/lib/providers/wavespeed";
+import { wavespeedImageInput, wavespeedMotionInput } from "@/lib/providers/wavespeed";
 
 describe("model registry", () => {
   it("includes ChatGPT for image generation", () => {
@@ -276,6 +276,48 @@ describe("WaveSpeed image inputs", () => {
       prompt: "Change the shirt to red.",
       images: ["https://provider.example/source.png"],
       size: "768*1344",
+      seed: -1,
+    });
+  });
+});
+
+describe("WaveSpeed motion inputs", () => {
+  it("uses only the documented Kling Motion Control fields", () => {
+    expect(wavespeedMotionInput({
+      prompt: "Preserve the scene lighting.",
+      model: "kling-v3-0-motion-std",
+      mode: "motion",
+      durationSeconds: 8,
+      aspectRatio: "9:16",
+      resolution: "720p",
+      characterOrientation: "video",
+      negativePrompt: "distorted hands",
+      keepOriginalSound: true,
+    }, "https://provider.example/face.jpg", "https://provider.example/reel.mp4")).toEqual({
+      image: "https://provider.example/face.jpg",
+      video: "https://provider.example/reel.mp4",
+      character_orientation: "video",
+      prompt: "Preserve the scene lighting.",
+      negative_prompt: "distorted hands",
+      keep_original_sound: true,
+    });
+  });
+
+  it("uses only the documented Wan Animate fields", () => {
+    expect(wavespeedMotionInput({
+      prompt: "Preserve the outfit.",
+      model: "wan-animate",
+      mode: "motion",
+      durationSeconds: 8,
+      aspectRatio: "9:16",
+      resolution: "480p",
+      motionMode: "replace",
+    }, "https://provider.example/face.jpg", "https://provider.example/reel.mp4")).toEqual({
+      image: "https://provider.example/face.jpg",
+      video: "https://provider.example/reel.mp4",
+      prompt: "Preserve the outfit.",
+      mode: "replace",
+      resolution: "480p",
       seed: -1,
     });
   });

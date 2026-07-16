@@ -123,7 +123,6 @@ export function trendLibraryItemsFromAssets(assets: Asset[]): LibraryItem[] {
     };
   });
 }
-
 export function TrendVideoView({
   personas,
   assets,
@@ -502,7 +501,6 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     setError("");
     let balanceReconciled = false;
     try {
-      const candidateInput = await assetToProviderImageInput(selectedCandidate);
       const response = await fetch("/api/generate/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -525,7 +523,9 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           characterOrientation: motionControls.supportsCharacterOrientation ? motionCharacterOrientation : "video",
           keepOriginalSound: motionControls.supportsKeepOriginalSound ? keepOriginalSound : false,
           referenceAssetIds: [item.id, selectedCandidate.id],
-          startFrameImage: candidateInput,
+          // Let the server resolve private generated media. Fetching it in the
+          // browser can fail because storage URLs are protected or cross-origin.
+          startFrameImageUrl: selectedCandidate.url,
           motionReferenceVideoUrl: item.video.url,
           motionReferenceVideo: item.video.data
             ? { name: item.video.name, mimeType: item.video.mimeType, data: item.video.data }
@@ -1231,28 +1231,5 @@ async function captureFirstFrame(videoUrl: string, name: string) {
       cleanup();
       reject(new Error("Could not read the imported video."));
     }, { once: true });
-  });
-}
-
-async function assetToProviderImageInput(asset: Asset): Promise<SourceImageInput> {
-  const response = await fetch(asset.url);
-  if (!response.ok) {
-    throw new Error("Could not prepare the selected face frame.");
-  }
-  const blob = await response.blob();
-  const dataUrl = await blobToDataUrl(blob);
-  return {
-    name: asset.title,
-    mimeType: blob.type || asset.mimeType || "image/png",
-    data: dataUrl.split(",")[1] ?? "",
-  };
-}
-
-function blobToDataUrl(blob: Blob) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
   });
 }

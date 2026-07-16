@@ -129,9 +129,10 @@ export class WavespeedMediaProvider implements VideoProvider {
     const referenceAudio = request.referenceAudio
       ? await uploadProviderInput(client, request.referenceAudio, "audio", request.onProviderContact)
       : request.referenceAudioUrl;
-    const usesSeedanceMultimodalReferences = isSeedanceModel(request.model) && Boolean(referenceVideo || referenceAudio);
     const model = wavespeedVideoModel(request);
-    const input = usesSeedanceMultimodalReferences
+    const input = request.mode === "motion"
+      ? wavespeedMotionInput(request, startFrame, motionVideo)
+      : isSeedanceModel(request.model) && Boolean(referenceVideo || referenceAudio)
       ? {
           prompt: request.prompt,
           reference_images: [startFrame, endFrame].filter((url): url is string => Boolean(url)),
@@ -160,9 +161,6 @@ export class WavespeedMediaProvider implements VideoProvider {
           generate_audio: request.generateAudio,
           sound: request.generateAudio,
           return_last_frame: request.returnLastFrame,
-          mode: request.mode === "motion" ? request.motionMode ?? "animate" : undefined,
-          character_orientation: request.mode === "motion" ? request.characterOrientation ?? "video" : undefined,
-          keep_original_sound: request.mode === "motion" ? request.keepOriginalSound ?? true : undefined,
           shot_type: request.model.startsWith("kling-v3-0") ? "customize" : undefined,
           seed: -1,
         };
@@ -234,6 +232,34 @@ export class WavespeedAvatarProvider {
       raw: result,
     };
   }
+}
+
+export function wavespeedMotionInput(
+  request: VideoGenerationRequest,
+  imageUrl?: string,
+  videoUrl?: string,
+): Record<string, unknown> {
+  if (isKling30MotionModel(request.model)) {
+    return {
+      image: imageUrl,
+      video: videoUrl,
+      character_orientation: request.characterOrientation ?? "video",
+      prompt: request.prompt || undefined,
+      negative_prompt: request.negativePrompt || undefined,
+      keep_original_sound: request.keepOriginalSound ?? true,
+    };
+  }
+  if (request.model === "wan-animate") {
+    return {
+      image: imageUrl,
+      video: videoUrl,
+      prompt: request.prompt || undefined,
+      mode: request.motionMode ?? "animate",
+      resolution: request.resolution ?? "720p",
+      seed: -1,
+    };
+  }
+  throw new Error(`WaveSpeed motion model is not allowlisted: ${request.model}`);
 }
 
 function wavespeedClient() {
@@ -447,6 +473,10 @@ async function wavespeedApiRequest(url: string, init: RequestInit, onProviderCon
 
 function isSeedanceModel(model: string) {
   return model.includes("seedance");
+}
+
+function isKling30MotionModel(model: string) {
+  return model.startsWith("kling-v3-0-motion");
 }
 
 function seedream45Size(aspectRatio: string, imageSize: string) {
