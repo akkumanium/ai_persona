@@ -443,9 +443,10 @@ export function StudioWorkspace({
                 ...item,
                 candidates: [asset, ...item.candidates.filter((candidate) => candidate.id !== asset.id)],
                 selectedCandidateId: item.selectedCandidateId || asset.id,
+                isGeneratingFaces: false,
               };
             }
-            return asset.kind === "video" ? { ...item, finalVideo: asset } : item;
+            return asset.kind === "video" ? { ...item, finalVideo: asset, isGeneratingVideo: false } : item;
           }));
         } catch {
           // Polling failures are transient; keep the persisted job queued and retry on the next interval.
@@ -793,7 +794,7 @@ export function StudioWorkspace({
               onDeleteAsset={deleteAsset}
             />
           )}
-          {view === "trends" && (
+          <div hidden={view !== "trends"}>
             <TrendVideoView
               personas={personas}
               assets={assets}
@@ -820,7 +821,7 @@ export function StudioWorkspace({
               }}
               onSelectPersona={setSelectedPersonaId}
             />
-          )}
+          </div>
           {view === "speech" && (
             <SpeechView
               personas={personas}

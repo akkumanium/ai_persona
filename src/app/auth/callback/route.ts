@@ -6,6 +6,8 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
   const next = normalizeNextPath(requestUrl.searchParams.get("next"));
   const referralCode = normalizeReferralCode(requestUrl.searchParams.get("ref"));
+  const acknowledgedSignup = requestUrl.searchParams.get("signup_acknowledged") === "true";
+  const termsVersion = requestUrl.searchParams.get("terms_version") === "2026-07-16" ? "2026-07-16" : undefined;
 
   if (code) {
     const supabase = await createServerSupabaseClient();
@@ -26,6 +28,17 @@ export async function GET(request: Request) {
           p_referred_user_id: user.id,
         });
       }
+    }
+    if (acknowledgedSignup && termsVersion) {
+      await supabase.auth.updateUser({
+        data: {
+          terms_version: termsVersion,
+          terms_accepted_at: new Date().toISOString(),
+          privacy_policy_acknowledged_at: new Date().toISOString(),
+          ai_processing_acknowledged_at: new Date().toISOString(),
+          age_confirmed_at: new Date().toISOString(),
+        },
+      });
     }
   }
 

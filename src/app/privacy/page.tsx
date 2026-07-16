@@ -24,6 +24,9 @@ export default function PrivacyPage() {
         We collect data you provide or create through the Service: account information such as email address, account identifier, display name, profile image, and authentication information; persona names, descriptions, and style notes; prompts and generation settings; uploaded images, video, and audio; generated assets; and support communications you email to us.
       </p>
       <p>
+        If you choose to sign in with Google, Google provides account information that you make available through the Google sign-in flow, such as your email address, name, profile image, and Google account identifier. We receive and process that information through Supabase&apos;s authentication service to create and secure your Idolborn account.
+      </p>
+      <p>
         We also process Service and transaction information: generation-job and provider identifiers, status, model and settings, asset metadata, credit balances and ledger entries, referral information, subscription and membership status, checkout and payment identifiers, refund or dispute information, and limited billing-event records received from Whop. We do not receive or store full payment-card numbers.
       </p>
       <p>
@@ -43,7 +46,7 @@ export default function PrivacyPage() {
         When you request a generation, we send the relevant prompts, selected or uploaded images, audio, video, media URLs, and generation instructions to the provider needed to fulfill that request. WaveSpeedAI processes image, video, and avatar-generation requests. ElevenLabs processes text and voice settings for speech-generation requests. These providers may use subprocessors or underlying models. We do not use your prompts, uploads, generated media, or voices to train Idolborn's own AI models.
       </p>
       <p>
-        We use Supabase for authentication, database, session functionality, and private media storage. We use Whop for checkout, subscriptions, payment-related services, membership management, refunds, and billing webhooks. Whop may appear on your payment statement and processes payment data under its own policies. We disclose data to providers only as needed for the purposes described in this Policy, to comply with law, or to protect rights and safety.
+        We use Supabase for authentication, database, session functionality, and private media storage. If you choose Google sign-in, Google and Supabase process the sign-in request and related account information. We use Whop for checkout, subscriptions, payment-related services, membership management, refunds, and billing webhooks. Whop may appear on your payment statement and processes payment data under its own policies. We disclose data to providers only as needed for the purposes described in this Policy, to comply with law, or to protect rights and safety.
       </p>
 
       <h2>5. Sharing and international transfers</h2>

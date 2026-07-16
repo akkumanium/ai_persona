@@ -14,9 +14,11 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 type AuthMode = "signin" | "signup";
+const policyVersion = "2026-07-16";
 
 export function AuthButton({
   initialUserEmail,
@@ -42,6 +44,9 @@ export function AuthButton({
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAdult, setIsAdult] = useState(false);
+  const [acceptsTerms, setAcceptsTerms] = useState(false);
+  const [acknowledgesAiProcessing, setAcknowledgesAiProcessing] = useState(false);
 
   const supabase = useMemo(
     () => (supabaseReady ? createBrowserSupabaseClient() : null),
@@ -73,10 +78,13 @@ export function AuthButton({
 
     setError("");
     setStatus("");
+    if (!hasAcceptedSignupRequirements()) return;
     setIsSubmitting(true);
 
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     callbackUrl.searchParams.set("next", redirectPath);
+    callbackUrl.searchParams.set("terms_version", policyVersion);
+    callbackUrl.searchParams.set("signup_acknowledged", "true");
     if (referralCode) callbackUrl.searchParams.set("ref", referralCode);
 
     const { error: signInError } = await supabase.auth.signInWithOAuth({
@@ -101,6 +109,7 @@ export function AuthButton({
 
     setError("");
     setStatus("");
+    if (mode === "signup" && !hasAcceptedSignupRequirements()) return;
     setIsSubmitting(true);
 
     const credentials = {
@@ -115,7 +124,14 @@ export function AuthButton({
             ...credentials,
             options: {
               emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}${referralCode ? `&ref=${encodeURIComponent(referralCode)}` : ""}`,
-              data: referralCode ? { referral_code: referralCode } : undefined,
+              data: {
+                ...(referralCode ? { referral_code: referralCode } : {}),
+                terms_version: policyVersion,
+                terms_accepted_at: new Date().toISOString(),
+                privacy_policy_acknowledged_at: new Date().toISOString(),
+                ai_processing_acknowledged_at: new Date().toISOString(),
+                age_confirmed_at: new Date().toISOString(),
+              },
             },
           });
 
@@ -154,6 +170,12 @@ export function AuthButton({
     setIsSubmitting(false);
     setUserEmail("");
     router.refresh();
+  }
+
+  function hasAcceptedSignupRequirements() {
+    if (isAdult && acceptsTerms && acknowledgesAiProcessing) return true;
+    setError("Confirm your age, acceptance of the Terms and Privacy Policy, and AI processing before continuing.");
+    return false;
   }
 
   const accountClass =
@@ -254,6 +276,21 @@ export function AuthButton({
                       {isSubmitting ? <Loader2 size={17} className="animate-spin" /> : <BadgeCheck size={17} />}
                       Continue with Google
                     </button>
+
+                    <div className="mt-4 grid gap-3 rounded-md border border-[#ffffff1f] bg-[#ffffff08] p-3 text-left text-xs leading-5 text-[#d7dfeb]">
+                      <label className="flex cursor-pointer items-start gap-2">
+                        <input type="checkbox" checked={isAdult} onChange={(event) => setIsAdult(event.target.checked)} className="mt-1 size-3.5 accent-[#ff4fa3]" />
+                        <span>I confirm that I am at least 18 years old.</span>
+                      </label>
+                      <label className="flex cursor-pointer items-start gap-2">
+                        <input type="checkbox" checked={acceptsTerms} onChange={(event) => setAcceptsTerms(event.target.checked)} className="mt-1 size-3.5 accent-[#ff4fa3]" />
+                        <span>I agree to the <Link href="/terms" target="_blank" className="text-[#ffd0e7] underline">Terms of Service</Link> and acknowledge the <Link href="/privacy" target="_blank" className="text-[#ffd0e7] underline">Privacy Policy</Link>.</span>
+                      </label>
+                      <label className="flex cursor-pointer items-start gap-2">
+                        <input type="checkbox" checked={acknowledgesAiProcessing} onChange={(event) => setAcknowledgesAiProcessing(event.target.checked)} className="mt-1 size-3.5 accent-[#ff4fa3]" />
+                        <span>I understand that prompts, uploads, and generation instructions are sent to WaveSpeedAI or ElevenLabs to provide requested AI generations.</span>
+                      </label>
+                    </div>
 
                     <form onSubmit={handleEmailAuth} className="mt-4 grid gap-3">
                       <label className="grid gap-1.5 text-sm font-semibold text-[#dce8f7]">

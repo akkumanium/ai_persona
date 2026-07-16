@@ -13,7 +13,6 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 81. Verify whether cancelling and refunding work
 84. Put video to demo (or delete the demo)
 91. Emphasize targeting both OFM and UGC
-92. Generate terms and privacy
 120. Fix all the bugs after moving to Whop
 122. How are videos and first frame loaded
 123. Handle error in generation

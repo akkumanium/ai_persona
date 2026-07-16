@@ -17,7 +17,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { Dispatch, FormEvent, ReactNode, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { encodeFiles, sourceImageToDataUrl, uploadSourceImage } from "@/components/studio/media";
+import { encodeFiles, sourceImageToDataUrl } from "@/components/studio/media";
 import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import type { SourceImageInput, SourceVideoInput } from "@/components/studio/types";
@@ -393,7 +393,26 @@ Delete the tattoos. No text, no logos, no watermarks.`);
   async function generateFaceCandidates(event: FormEvent) {
     event.preventDefault();
     const item = editingItem;
-    if (!item || !item.firstFrame || !selectedPersona || !personaReferences.length || !supportsImageReferences(imageModel)) return;
+    if (!item) {
+      setError("Open a reel before generating faces.");
+      return;
+    }
+    if (!item.firstFrame?.data) {
+      setError("The reel's first frame is not ready yet. Wait for capture to finish and try again.");
+      return;
+    }
+    if (!selectedPersona) {
+      setError("Select a persona before generating faces.");
+      return;
+    }
+    if (!personaReferences.length) {
+      setError("Add at least one reference image to this persona before generating faces.");
+      return;
+    }
+    if (!supportsImageReferences(imageModel)) {
+      setError("The selected image model does not support reference images.");
+      return;
+    }
     if (!tryReserveTokens(faceCostTokens)) {
       setError(`Insufficient token balance. This generation costs ${faceCostTokens} tokens, but your balance is ${balanceTokens}.`);
       return;
@@ -402,11 +421,6 @@ Delete the tattoos. No text, no logos, no watermarks.`);
     setError("");
     let balanceReconciled = false;
     try {
-      const uploadedFrame = await uploadSourceImage(item.firstFrame, {
-        enabled: supabaseReady,
-        bucket: "uploads",
-        folder: `trend-frames/${selectedPersona.id}`,
-      });
       const response = await fetch("/api/generate/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -420,17 +434,18 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           imageSize: imageModelSupportsSize ? imageSize : "2K",
           imageQuality: imageModelSupportsQuality ? imageQuality : undefined,
           count: safeCandidateCount,
-          // WaveSpeed preserves the order of this array. The prompt treats the
-          // target frame as image 1 and persona references as images 2+, so keep
-          // the frame first when it was uploaded as a URL. A base64 fallback is
-          // sent through sourceImages below, which the API also places first.
-          referenceImageUrls: uploadedFrame.url
-            ? [uploadedFrame.url, ...personaReferences.map((asset) => asset.url)]
-            : personaReferences.map((asset) => asset.url),
+          referenceImageUrls: personaReferences.map((asset) => asset.url),
           sourceImageUrls: [],
-          sourceImages: uploadedFrame.data
-            ? [{ name: uploadedFrame.name, mimeType: uploadedFrame.mimeType, data: uploadedFrame.data }]
-            : [],
+          // The captured frame is already a small JPEG. Sending it inline
+          // avoids a separate browser-to-storage upload, which can fail due to
+          // storage CORS/network policy before generation is even requested.
+          // The API places sourceImages before URL references, preserving the
+          // prompt's frame-as-image-1 ordering.
+          sourceImages: [{
+            name: item.firstFrame.name,
+            mimeType: item.firstFrame.mimeType,
+            data: item.firstFrame.data,
+          }],
           referenceAssetIds: [item.id, ...personaReferences.map((asset) => asset.id)],
           titlePrefix: "Trend face",
         }),
@@ -459,7 +474,13 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           isGeneratingFaces: false,
         };
       }));
-      onAssetsCreated(nextAssets, payload.job);
+      // Image generation is normally accepted as a background job (202), so
+      // there may be no assets yet. Keep its source IDs on the client-side job
+      // so this reel can show the running state until polling returns a result.
+      onAssetsCreated(nextAssets, {
+        ...payload.job,
+        referenceAssetIds: [item.id, ...personaReferences.map((reference) => reference.id)],
+      });
     } catch (generationError) {
       updateLibraryItem(item.id, { isGeneratingFaces: false });
       setError(generationError instanceof Error ? generationError.message : "Face frame generation failed.");
@@ -691,6 +712,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
                     !supportsImageReferences(imageModel)
                   }
                 />
+                {error ? <p className="mt-2 rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p> : null}
               </form>
             </div>
 
@@ -894,7 +916,6 @@ Delete the tattoos. No text, no logos, no watermarks.`);
             </div>
           </StepSection>
 
-          {error ? <p className="rounded-md bg-red-50 p-2.5 text-xs text-red-700">{error}</p> : null}
         </div>
         </div>
       </>
