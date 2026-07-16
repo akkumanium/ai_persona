@@ -61,7 +61,7 @@ export class WavespeedMediaProvider implements VideoProvider {
       throw new Error("Wan 2.7 image edit requires at least one reference image.");
     }
     const referenceUrls = isSeedream45 ? uploadedReferenceUrls.slice(0, 10) : uploadedReferenceUrls;
-    const model = wavespeedImageModel(request.model, referenceUrls.length > 0);
+    const model = wavespeedImageModel(request.model, referenceUrls.length > 0, request.count);
     const result = await submitWavespeedPrediction(model, wavespeedImageInput({
       prompt: request.prompt,
       referenceUrls,
@@ -286,6 +286,25 @@ export function wavespeedImageInput(options: WavespeedImageInputOptions): Record
     };
   }
 
+  if (isSeedream45 && count > 1) {
+    return {
+      prompt: `Generate ${count} distinct edited candidates.\n${prompt}`,
+      images: referenceUrls,
+      size: seedream45Size(aspectRatio, imageSize),
+      max_images: count,
+    };
+  }
+
+  if (!isChatGptImage && !isSeedream45 && count > 1) {
+    return {
+      prompt,
+      images: referenceUrls.length ? referenceUrls : undefined,
+      aspect_ratio: aspectRatio,
+      num_images: count,
+      output_format: "png",
+    };
+  }
+
   return {
     prompt,
     image: isSeedream45 ? undefined : referenceUrls[0],
@@ -330,13 +349,17 @@ async function uploadProviderInput(client: Client, input: ProviderImageInput | P
   }
 }
 
-function wavespeedImageModel(model: string, hasReferences: boolean) {
+function wavespeedImageModel(model: string, hasReferences: boolean, count = 1) {
   if (model === WAN_2_7_IMAGE_MODEL_ID || model === WAN_2_7_IMAGE_EDIT_MODEL_ID) {
     return hasReferences ? "alibaba/wan-2.7/image-edit" : "alibaba/wan-2.7/text-to-image";
   }
   if (model === "gpt-image-2") return hasReferences ? "openai/gpt-image-2/edit" : "openai/gpt-image-2/text-to-image";
-  if (model === SEEDREAM_4_5_MODEL_ID) return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
+  if (model === SEEDREAM_4_5_MODEL_ID) {
+    if (count > 1) return hasReferences ? "bytedance/seedream-v4.5/edit-sequential" : "bytedance/seedream-v4.5/sequential";
+    return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
+  }
   if (model === "gemini-3-pro-image") {
+    if (count > 1) return hasReferences ? "google/nano-banana-pro/edit-multi" : "google/nano-banana-pro/text-to-image-multi";
     return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
   }
   throw new Error(`WaveSpeed image model is not allowlisted: ${model}`);

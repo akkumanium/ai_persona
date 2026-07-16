@@ -41,7 +41,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/studio/:path*",
-    "/pricing",
     "/auth/:path*",
     "/api/billing/:path*",
     "/api/generate/:path*",

@@ -474,13 +474,14 @@ Delete the tattoos. No text, no logos, no watermarks.`);
           isGeneratingFaces: false,
         };
       }));
-      // Image generation is normally accepted as a background job (202), so
-      // there may be no assets yet. Keep its source IDs on the client-side job
-      // so this reel can show the running state until polling returns a result.
-      onAssetsCreated(nextAssets, {
-        ...payload.job,
+      // Single-output models return one durable job per candidate; native
+      // multi-output models return one job for the entire candidate set.
+      const acceptedJobs = (Array.isArray(payload.jobs) ? payload.jobs : [payload.job]) as GenerationJob[];
+      acceptedJobs.filter(Boolean).forEach((job) => onAssetsCreated(nextAssets, {
+        ...job,
         referenceAssetIds: [item.id, ...personaReferences.map((reference) => reference.id)],
-      });
+      }));
+      if (typeof payload.warning === "string") setError(payload.warning);
     } catch (generationError) {
       updateLibraryItem(item.id, { isGeneratingFaces: false });
       setError(generationError instanceof Error ? generationError.message : "Face frame generation failed.");

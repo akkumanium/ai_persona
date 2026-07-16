@@ -56,6 +56,14 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
   if (request.model !== "gemini-3-pro-image") {
     throw new Error(`No authorized price is configured for image model ${request.model}.`);
   }
+  if (referenceCount > 0 && count > 1) {
+    const rawUsd = 0.07 * count;
+    return {
+      rawUsd,
+      tokens: usdToTokens(rawUsd),
+      notes: "Nano Banana Pro multi-output edit pricing.",
+    };
+  }
   const outputUsd = nanoBananaOutputUsd(request.imageSize);
   const inputUsd = referenceCount * 0.0011;
   const rawUsd = outputUsd * count + inputUsd;

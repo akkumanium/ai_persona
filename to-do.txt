@@ -1,5 +1,4 @@
 DO NOT TOUCH THIS, THIS IS MY WORKSPACE
-6. Come up with a name
 7. Google oauth settings fix 
 12. Email fix
 41. Add carousel
@@ -8,7 +7,6 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 51. Check options for every video and clearly differentiate them.
 58. Figure out Seedance prompting
 68. Optimize for phone users
-72. Change referral link
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
 84. Put video to demo (or delete the demo)

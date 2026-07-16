@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowLeft, ChevronDown } from "lucide-react";
 import { PublicHeader } from "@/components/public-header";
 import { hasSupabaseEnv } from "@/lib/env";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "FAQ | Idolborn", description: "Answers to common questions." };
 
@@ -13,21 +12,12 @@ const questions = [
   ["Can I cancel or request a refund?", "You can open your Whop billing portal from Studio settings or the pricing page. Your latest subscription payment is eligible for an automatic full refund only when none of its credits have been used."],
 ];
 
-export default async function FaqPage() {
+export default function FaqPage() {
   const supabaseReady = hasSupabaseEnv();
-  let initialUserEmail: string | undefined;
-
-  if (supabaseReady) {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    initialUserEmail = user?.email;
-  }
 
   return (
     <main className="public-page px-5 py-8 text-white sm:px-8 lg:py-12">
-      <PublicHeader initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} redirectPath="/faq" />
+      <PublicHeader supabaseReady={supabaseReady} redirectPath="/faq" />
       <div className="public-content mx-auto w-full max-w-4xl">
         <Link
           href="/"

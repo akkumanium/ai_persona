@@ -126,6 +126,20 @@ describe("token pricing", () => {
     ).toBe(3);
   });
 
+  it("uses Nano Banana Pro multi-output edit pricing", () => {
+    expect(
+      estimateImageGenerationPricing({
+        prompt: "Create two face-swap candidates.",
+        model: "gemini-3-pro-image",
+        aspectRatio: "9:16",
+        imageSize: "2K",
+        count: 2,
+        referenceImages: [{ name: "source", mimeType: "image/jpeg", data: "x" }],
+        generationType: "image_from_reference",
+      }),
+    ).toMatchObject({ rawUsd: 0.14, tokens: 14 });
+  });
+
   it("prices Wan 2.7 and Kling 3.0 per second without Fal pricing", () => {
     expect(
       estimateVideoGenerationPricing({
@@ -211,6 +225,43 @@ describe("provider fallbacks", () => {
 });
 
 describe("WaveSpeed image inputs", () => {
+  it("uses Nano Banana Pro Edit Multi for multiple candidates", () => {
+    expect(wavespeedImageInput({
+      prompt: "Create face-swap candidates.",
+      referenceUrls: ["https://provider.example/frame.jpg", "https://provider.example/face.jpg"],
+      aspectRatio: "9:16",
+      imageSize: "2K",
+      count: 2,
+      isChatGptImage: false,
+      isSeedream45: false,
+      isWan27Image: false,
+    })).toEqual({
+      prompt: "Create face-swap candidates.",
+      images: ["https://provider.example/frame.jpg", "https://provider.example/face.jpg"],
+      aspect_ratio: "9:16",
+      num_images: 2,
+      output_format: "png",
+    });
+  });
+
+  it("uses Seedream sequential output controls for multiple candidates", () => {
+    expect(wavespeedImageInput({
+      prompt: "Create face-swap candidates.",
+      referenceUrls: ["https://provider.example/frame.jpg", "https://provider.example/face.jpg"],
+      aspectRatio: "9:16",
+      imageSize: "2K",
+      count: 3,
+      isChatGptImage: false,
+      isSeedream45: true,
+      isWan27Image: false,
+    })).toEqual({
+      prompt: "Generate 3 distinct edited candidates.\nCreate face-swap candidates.",
+      images: ["https://provider.example/frame.jpg", "https://provider.example/face.jpg"],
+      size: "1440*2560",
+      max_images: 3,
+    });
+  });
+
   it("uses the Wan 2.7 edit schema without unsupported image aliases", () => {
     expect(wavespeedImageInput({
       prompt: "Change the shirt to red.",

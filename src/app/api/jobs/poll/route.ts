@@ -4,6 +4,7 @@ import { hasSupabaseEnv } from "@/lib/env";
 import { rateLimitRequest, readJsonRequest, requestBodyErrorResponse } from "@/lib/server/request-security";
 import { reconcileWavespeedJob } from "@/lib/server/wavespeed-job-completion";
 import { markPendingGenerationJobFailed } from "@/lib/server/studio-persistence";
+import { mapAsset, mapJob } from "@/lib/studio-records";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
       const supabase = await createServerSupabaseClient();
       const { data: job, error } = await supabase
         .from("generation_jobs")
-        .select("id, user_id, persona_id, status, provider, provider_job_id, model, generation_type, input_params, cost_estimate_cents, created_at")
+        .select("id, user_id, persona_id, status, provider, provider_job_id, model, generation_type, input_params, cost_estimate_cents, raw_provider_response, error_message, created_at, updated_at")
         .eq("user_id", auth.user.id)
         .eq("provider_job_id", String(providerJobId))
         .maybeSingle();
@@ -38,7 +39,12 @@ export async function POST(request: Request) {
       }
 
       if (job.status === "succeeded" || job.status === "failed") {
-        return NextResponse.json({ job });
+        const { data: assetRows } = await supabase
+          .from("assets")
+          .select("id,kind,public_url,storage_bucket,storage_path,title,prompt,persona_id,reference_asset_ids,reference_slot,is_default_reference,generation_type,provider,provider_job_id,provider_asset_id,model,mime_type,created_at,expires_at")
+          .eq("provider_job_id", String(providerJobId));
+        const assets = (assetRows ?? []).map(mapAsset);
+        return NextResponse.json({ job: mapJob(job), asset: assets[0], assets });
       }
 
       if (job.provider_job_id !== String(providerJobId) || job.provider !== "wavespeed") {
@@ -46,7 +52,7 @@ export async function POST(request: Request) {
       }
       try {
         const reconciled = await reconcileWavespeedJob(job);
-        return NextResponse.json({ job: reconciled?.job ?? job, asset: reconciled?.assets[0] });
+        return NextResponse.json({ job: reconciled?.job ?? mapJob(job), asset: reconciled?.assets[0], assets: reconciled?.assets ?? [] });
       } catch (error) {
         // Preserve retries for transient provider/storage errors, but do not let
         // a job whose provider task was accepted remain running indefinitely.

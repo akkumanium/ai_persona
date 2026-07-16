@@ -427,26 +427,37 @@ export function StudioWorkspace({
           const payload = await response.json();
           if (!response.ok || cancelled || !payload.job) return;
           const updatedJob = payload.job as GenerationJob;
-          const asset = payload.asset as Asset | undefined;
+          const completedAssets = (Array.isArray(payload.assets)
+            ? payload.assets
+            : payload.asset ? [payload.asset] : []) as Asset[];
           setJobs((current) => [updatedJob, ...current.filter((currentJob) => currentJob.id !== updatedJob.id)]);
-          if (!asset) return;
-          setAssets((current) => [asset, ...current.filter((currentAsset) => currentAsset.id !== asset.id)]);
-          if (asset.kind === "avatar" && asset.isDefaultReference && asset.personaId) {
-            setPersonas((current) => current.map((persona) => persona.id === asset.personaId && !persona.referenceAssetId
-              ? { ...persona, referenceAssetId: asset.id }
-              : persona));
-          }
-          setTrendLibrary((current) => current.map((item) => {
-            if (!asset.referenceAssetIds?.includes(item.id)) return item;
-            if (asset.kind === "image") {
-              return {
-                ...item,
-                candidates: [asset, ...item.candidates.filter((candidate) => candidate.id !== asset.id)],
-                selectedCandidateId: item.selectedCandidateId || asset.id,
-                isGeneratingFaces: false,
-              };
+          if (!completedAssets.length) return;
+          setAssets((current) => [
+            ...completedAssets,
+            ...current.filter((currentAsset) => !completedAssets.some((asset) => asset.id === currentAsset.id)),
+          ]);
+          completedAssets.forEach((asset) => {
+            if (asset.kind === "avatar" && asset.isDefaultReference && asset.personaId) {
+              setPersonas((current) => current.map((persona) => persona.id === asset.personaId && !persona.referenceAssetId
+                ? { ...persona, referenceAssetId: asset.id }
+                : persona));
             }
-            return asset.kind === "video" ? { ...item, finalVideo: asset, isGeneratingVideo: false } : item;
+          });
+          setTrendLibrary((current) => current.map((item) => {
+            const itemAssets = completedAssets.filter((asset) => asset.referenceAssetIds?.includes(item.id));
+            if (!itemAssets.length) return item;
+            const images = itemAssets.filter((asset) => asset.kind === "image");
+            const video = itemAssets.find((asset) => asset.kind === "video");
+            return {
+              ...item,
+              candidates: images.length
+                ? [...images, ...item.candidates.filter((candidate) => !images.some((asset) => asset.id === candidate.id))]
+                : item.candidates,
+              selectedCandidateId: item.selectedCandidateId || images[0]?.id || "",
+              finalVideo: video ?? item.finalVideo,
+              isGeneratingFaces: images.length ? false : item.isGeneratingFaces,
+              isGeneratingVideo: video ? false : item.isGeneratingVideo,
+            };
           }));
         } catch {
           // Polling failures are transient; keep the persisted job queued and retry on the next interval.

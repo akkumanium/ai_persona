@@ -87,9 +87,7 @@ export async function POST(request: Request) {
 
     const finalPrompt = [basePrompt, input.additionalPrompt.trim()].filter(Boolean).join("\n");
     const visiblePrompt = basePrompt;
-    let providerContactAttempted = false;
-
-    const providerRequest: ImageGenerationRequest = {
+    const baseProviderRequest: ImageGenerationRequest = {
       prompt: [
         finalPrompt,
         referenceImages.length ? `Keep facial identity consistent with reference persona ${input.personaName}.` : "",
@@ -104,87 +102,106 @@ export async function POST(request: Request) {
       count: input.count,
       referenceImages,
       generationType,
-      onProviderContact: () => { providerContactAttempted = true; },
     };
-    const estimatedPricing = estimateImageGenerationPricing(providerRequest);
-    const jobId = crypto.randomUUID();
-    const createdAt = nowIso();
-    const inputParams = {
-      prompt: visiblePrompt,
-      additionalPrompt: input.additionalPrompt.trim(),
-      model: input.model,
-      aspectRatio: input.aspectRatio,
-      imageSize: input.imageSize,
-      imageQuality: input.imageQuality,
-      count: input.count,
-      assetKind: input.assetKind,
-      referenceSlot: input.referenceSlot,
-      referenceAssetIds: input.referenceAssetIds,
-      isDefaultReference: input.isDefaultReference,
-      hiddenPromptUsed: false,
-    };
-    await persistPendingGenerationJob({
-      userId: auth.user?.id,
-      job: {
-        id: jobId,
-        status: "queued",
-        provider: imageProvider.name,
+    const supportsNativeMultiOutput = input.model === "gemini-3-pro-image" || input.model === "seedream-v4.5";
+    const providerRequests = supportsNativeMultiOutput || input.count === 1
+      ? [baseProviderRequest]
+      : Array.from({ length: input.count }, () => ({ ...baseProviderRequest, count: 1 }));
+    const jobs: GenerationJob[] = [];
+
+    for (const providerRequest of providerRequests) {
+      const estimatedPricing = estimateImageGenerationPricing(providerRequest);
+      const jobId = crypto.randomUUID();
+      const createdAt = nowIso();
+      const inputParams = {
+        prompt: visiblePrompt,
+        personaName: input.personaName,
+        additionalPrompt: input.additionalPrompt.trim(),
         model: input.model,
-        generationType,
-        prompt: visiblePrompt,
-        personaId: input.personaId,
-        costEstimateCents: estimatedPricing.tokens,
-        createdAt,
-        updatedAt: createdAt,
-      },
-      inputParams,
-    });
-    let tokensReserved = false;
-    try {
-      responseBalanceTokens = await reserveTokens(
-        auth.user?.id,
-        estimatedPricing.tokens,
-        jobId,
-        `${generationType.replaceAll("_", " ")} generation`,
-      );
-      tokensReserved = true;
-
-      const result = await imageProvider.submit(providerRequest);
-      await recordProviderAcceptance({ userId: auth.user?.id, jobId, providerJobId: result.providerJobId, raw: result.raw });
-      const updatedAt = nowIso();
-      const job: GenerationJob = {
-        id: jobId,
-        status: "running",
-        provider: result.provider,
-        providerJobId: result.providerJobId,
-        model: result.model,
-        generationType,
-        prompt: visiblePrompt,
-        personaId: input.personaId,
-        costEstimateCents: estimatedPricing.tokens,
-        rawProviderResponse: sanitizeProviderPayload(result.raw),
-        createdAt,
-        updatedAt,
+        aspectRatio: input.aspectRatio,
+        imageSize: input.imageSize,
+        imageQuality: input.imageQuality,
+        count: providerRequest.count,
+        requestedCount: input.count,
+        assetKind: input.assetKind,
+        referenceSlot: input.referenceSlot,
+        referenceAssetIds: input.referenceAssetIds,
+        isDefaultReference: input.isDefaultReference,
+        titlePrefix: input.titlePrefix,
+        hiddenPromptUsed: false,
       };
-
-      return NextResponse.json({
-        assets: [],
-        job,
-        providerJobId: result.providerJobId,
-        balanceTokens: responseBalanceTokens,
-      }, { status: 202 });
-    } catch (error) {
-      await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
-      if (shouldRefundUnsubmittedGeneration(tokensReserved, providerContactAttempted)) {
-        responseBalanceTokens = await refundTokens(
+      await persistPendingGenerationJob({
+        userId: auth.user?.id,
+        job: {
+          id: jobId,
+          status: "queued",
+          provider: imageProvider.name,
+          model: input.model,
+          generationType,
+          prompt: visiblePrompt,
+          personaId: input.personaId,
+          costEstimateCents: estimatedPricing.tokens,
+          createdAt,
+          updatedAt: createdAt,
+        },
+        inputParams,
+      });
+      let tokensReserved = false;
+      let providerContactAttempted = false;
+      try {
+        responseBalanceTokens = await reserveTokens(
           auth.user?.id,
           estimatedPricing.tokens,
           jobId,
-          `${generationType.replaceAll("_", " ")} refund: provider was not contacted`,
+          `${generationType.replaceAll("_", " ")} generation`,
         );
+        tokensReserved = true;
+        const result = await imageProvider.submit({
+          ...providerRequest,
+          onProviderContact: () => { providerContactAttempted = true; },
+        });
+        await recordProviderAcceptance({ userId: auth.user?.id, jobId, providerJobId: result.providerJobId, raw: result.raw });
+        const updatedAt = nowIso();
+        jobs.push({
+          id: jobId,
+          status: "running",
+          provider: result.provider,
+          providerJobId: result.providerJobId,
+          model: result.model,
+          generationType,
+          prompt: visiblePrompt,
+          personaId: input.personaId,
+          referenceAssetIds: input.referenceAssetIds,
+          costEstimateCents: estimatedPricing.tokens,
+          rawProviderResponse: sanitizeProviderPayload(result.raw),
+          createdAt,
+          updatedAt,
+        });
+      } catch (error) {
+        await markPendingGenerationJobFailed({ userId: auth.user?.id, jobId, error }).catch(() => undefined);
+        if (shouldRefundUnsubmittedGeneration(tokensReserved, providerContactAttempted)) {
+          responseBalanceTokens = await refundTokens(
+            auth.user?.id,
+            estimatedPricing.tokens,
+            jobId,
+            `${generationType.replaceAll("_", " ")} refund: provider was not contacted`,
+          );
+        }
+        if (!jobs.length) throw error;
+        break;
       }
-      throw error;
     }
+
+    return NextResponse.json({
+      assets: [],
+      job: jobs[0],
+      jobs,
+      providerJobId: jobs[0]?.providerJobId,
+      balanceTokens: responseBalanceTokens,
+      warning: jobs.length < providerRequests.length
+        ? `${jobs.length} of ${providerRequests.length} generation jobs were accepted. Try the remaining candidates again after the active jobs finish.`
+        : undefined,
+    }, { status: 202 });
   } catch (error) {
     const requestErrorResponse = requestBodyErrorResponse(error);
     if (requestErrorResponse) return requestErrorResponse;

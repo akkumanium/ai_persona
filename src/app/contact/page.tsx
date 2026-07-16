@@ -1,8 +1,8 @@
-import { ArrowLeft, Mail, Send } from "lucide-react";
-import Link from "next/link";
+import { Mail, Send } from "lucide-react";
+import { Suspense } from "react";
+import { ContactBackLink } from "@/components/contact-back-link";
 import { PublicHeader } from "@/components/public-header";
 import { env, hasSupabaseEnv } from "@/lib/env";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Contact | Idolborn",
@@ -14,31 +14,16 @@ const TELEGRAM_USER_URL = "https://t.me/idolborn_support";
 const TELEGRAM_GROUP = "@idolborn";
 const TELEGRAM_GROUP_URL = "https://t.me/idolborn";
 
-export default async function ContactPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
-  const { from } = await searchParams;
-  const returnToStudio = from === "studio";
+export default function ContactPage() {
   const supabaseReady = hasSupabaseEnv();
-  let initialUserEmail: string | undefined;
-
-  if (supabaseReady) {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    initialUserEmail = user?.email;
-  }
 
   return (
     <main className="public-page px-5 py-8 text-white sm:px-8">
-      <PublicHeader initialUserEmail={initialUserEmail} supabaseReady={supabaseReady} redirectPath="/contact" />
+      <PublicHeader supabaseReady={supabaseReady} redirectPath="/contact" />
       <div className="public-content mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl flex-col justify-center">
-        <Link
-          href={returnToStudio ? "/studio" : "/"}
-          className="mb-8 inline-flex w-fit items-center gap-2 rounded-md border border-white/[0.14] bg-white/[0.08] px-3 py-2 text-sm font-semibold text-white transition hover:border-[#ff4fa3]/70 hover:bg-white/[0.12]"
-        >
-          <ArrowLeft size={17} />
-          {returnToStudio ? "Back to Studio" : "Main page"}
-        </Link>
+        <Suspense fallback={<ContactBackLinkFallback />}>
+          <ContactBackLink />
+        </Suspense>
 
         <div className="grid gap-8 rounded-lg border border-white/10 bg-white/[0.055] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.28)] backdrop-blur sm:p-7">
           <div>
@@ -59,6 +44,12 @@ export default async function ContactPage({ searchParams }: { searchParams: Prom
         </div>
       </div>
     </main>
+  );
+}
+
+function ContactBackLinkFallback() {
+  return (
+    <div className="mb-8 inline-flex h-10 w-32 rounded-md border border-white/[0.14] bg-white/[0.08]" aria-hidden="true" />
   );
 }
 

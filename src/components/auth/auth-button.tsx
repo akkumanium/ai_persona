@@ -11,7 +11,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -47,6 +47,7 @@ export function AuthButton({
   const [isAdult, setIsAdult] = useState(false);
   const [acceptsTerms, setAcceptsTerms] = useState(false);
   const [acknowledgesAiProcessing, setAcknowledgesAiProcessing] = useState(false);
+  const userEmailRef = useRef(initialUserEmail ?? "");
 
   const supabase = useMemo(
     () => (supabaseReady ? createBrowserSupabaseClient() : null),
@@ -56,15 +57,20 @@ export function AuthButton({
   useEffect(() => {
     if (!supabase) return;
 
-    supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data.user?.email ?? initialUserEmail ?? "");
-    });
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user.email ?? "");
-      router.refresh();
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextEmail = session?.user.email ?? "";
+      const identityChanged = nextEmail !== userEmailRef.current;
+      userEmailRef.current = nextEmail;
+      setUserEmail(nextEmail);
+
+      // INITIAL_SESSION fires when the listener is registered, and SIGNED_IN
+      // may fire again when a tab regains focus. Neither should cause an extra
+      // RSC request unless the authenticated identity actually changed.
+      if (event !== "INITIAL_SESSION" && event !== "TOKEN_REFRESHED" && identityChanged) {
+        router.refresh();
+      }
     });
 
     return () => subscription.unsubscribe();
