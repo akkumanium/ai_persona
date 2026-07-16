@@ -37,7 +37,11 @@ describe("Whop billing catalog", () => {
 
   it("never exposes provider plan IDs in public page data", () => {
     const config = getPublicBillingConfig();
-    expect(config.plans).toHaveLength(3);
+    expect(config.plans).toHaveLength(2);
+    expect(config.plans).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "monthly", priceLabel: "$12", billingIntervalLabel: "monthly", personaLimit: null }),
+      expect.objectContaining({ id: "yearly", priceLabel: "$80", billingIntervalLabel: "yearly", personaLimit: null }),
+    ]));
     expect(config.topUps).toHaveLength(6);
     expect(config.plans.every((plan) => !("providerPlanId" in plan))).toBe(true);
     expect(config.topUps.every((topUp) => !("providerPlanId" in topUp))).toBe(true);

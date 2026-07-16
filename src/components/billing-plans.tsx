@@ -55,8 +55,8 @@ function CheckoutModal({
 }
 
 export function BillingPlans({
-  title = "Choose studio access",
-  copy = "Subscribe to unlock persona management and generation tools. Each plan includes a one-time $3 welcome credit grant.",
+  title = "Get studio access",
+  copy = "Choose monthly or yearly access to unlock limitless personas and generation tools, plus a one-time $3 welcome credit grant.",
   userId,
   userEmail,
   supabaseReady,
@@ -167,13 +167,13 @@ export function BillingPlans({
         <h2 className={`mt-3 text-3xl font-semibold tracking-normal sm:text-4xl ${styles.title}`}>{title}</h2>
         <p className={`mt-4 text-base leading-7 ${styles.copy}`}>{copy}</p>
       </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
+      <div className={cn("mt-8 grid gap-4", config.plans.length === 1 ? "mx-auto max-w-md grid-cols-1" : config.plans.length === 2 ? "mx-auto max-w-3xl md:grid-cols-2" : "md:grid-cols-3")}>
         {config.plans.map((plan) => {
           const isBusy = activePlanId === plan.id && checkoutState === "loading";
           return <article key={plan.id} className={styles.card}>
             <div className="flex items-start justify-between gap-4">
               <div><h3 className="text-xl font-semibold">{plan.name}</h3><p className={`mt-2 text-sm leading-6 ${styles.description}`}>{plan.description}</p></div>
-              <div className="text-right"><p className={`text-3xl font-semibold ${styles.price}`}>{plan.priceLabel}</p><p className={`text-xs font-medium ${styles.meta}`}>monthly</p></div>
+              <div className="text-right"><p className={`text-3xl font-semibold ${styles.price}`}>{plan.priceLabel}</p><p className={`text-xs font-medium ${styles.meta}`}>{plan.billingIntervalLabel}</p></div>
             </div>
             <div className={`mt-5 grid gap-2 text-sm ${styles.benefit}`}>
               <Benefit text={formatPersonaLimit(plan.personaLimit)} className={styles.check} />

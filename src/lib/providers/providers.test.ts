@@ -126,18 +126,22 @@ describe("token pricing", () => {
     ).toBe(3);
   });
 
-  it("uses Nano Banana Pro multi-output edit pricing", () => {
-    expect(
-      estimateImageGenerationPricing({
-        prompt: "Create two face-swap candidates.",
-        model: "gemini-3-pro-image",
-        aspectRatio: "9:16",
-        imageSize: "2K",
-        count: 2,
-        referenceImages: [{ name: "source", mimeType: "image/jpeg", data: "x" }],
-        generationType: "image_from_reference",
-      }),
-    ).toMatchObject({ rawUsd: 0.14, tokens: 14 });
+  it("prices multiple Nano Banana Pro standard edit jobs by resolution", () => {
+    const request = {
+      prompt: "Create face-swap candidates.",
+      model: "gemini-3-pro-image" as const,
+      aspectRatio: "9:16",
+      count: 3,
+      referenceImages: [{ name: "source", mimeType: "image/jpeg", data: "x" }],
+      generationType: "image_from_reference" as const,
+    };
+
+    const twoK = estimateImageGenerationPricing({ ...request, imageSize: "2K" });
+    const fourK = estimateImageGenerationPricing({ ...request, imageSize: "4K" });
+    expect(twoK.tokens).toBe(42);
+    expect(twoK.rawUsd).toBeCloseTo(0.4053);
+    expect(fourK.tokens).toBe(75);
+    expect(fourK.rawUsd).toBeCloseTo(0.7233);
   });
 
   it("prices Wan 2.7 and Kling 3.0 per second without Fal pricing", () => {
@@ -225,25 +229,6 @@ describe("provider fallbacks", () => {
 });
 
 describe("WaveSpeed image inputs", () => {
-  it("uses Nano Banana Pro Edit Multi for multiple candidates", () => {
-    expect(wavespeedImageInput({
-      prompt: "Create face-swap candidates.",
-      referenceUrls: ["https://provider.example/frame.jpg", "https://provider.example/face.jpg"],
-      aspectRatio: "9:16",
-      imageSize: "2K",
-      count: 2,
-      isChatGptImage: false,
-      isSeedream45: false,
-      isWan27Image: false,
-    })).toEqual({
-      prompt: "Create face-swap candidates.",
-      images: ["https://provider.example/frame.jpg", "https://provider.example/face.jpg"],
-      aspect_ratio: "9:16",
-      num_images: 2,
-      output_format: "png",
-    });
-  });
-
   it("uses Seedream sequential output controls for multiple candidates", () => {
     expect(wavespeedImageInput({
       prompt: "Create face-swap candidates.",

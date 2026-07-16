@@ -35,15 +35,15 @@ export function StudioPaywall({
           Studio access starts with an active plan.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#695c66]">
-          Choose a Whop subscription to unlock the workspace. Every plan includes one-time welcome credits and a persona management limit.
+          Choose a monthly or yearly Whop subscription to unlock the workspace, limitless personas, and one-time welcome credits.
         </p>
       </section>
 
       <BillingPlans
-        title={userId ? "Select your plan" : "Sign in, then select a plan"}
+        title={userId ? "Choose your subscription" : "Sign in, then subscribe"}
         copy={
           userId
-            ? "Pick the persona capacity that fits your production pace."
+            ? "Pay $12 monthly or save with the $80 yearly subscription. Both include limitless personas."
             : "Authentication connects the Whop payment to your saved workspace and welcome credits."
         }
         userId={userId}

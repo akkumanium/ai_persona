@@ -57,11 +57,14 @@ export function estimateImageGenerationPricing(request: ImageGenerationRequest):
     throw new Error(`No authorized price is configured for image model ${request.model}.`);
   }
   if (referenceCount > 0 && count > 1) {
-    const rawUsd = 0.07 * count;
+    // Nano candidates use independent standard edit jobs so every standard
+    // aspect ratio remains available. Each job incurs its own reference input
+    // and per-job cent rounding.
+    const singleJobUsd = nanoBananaOutputUsd(request.imageSize) + referenceCount * 0.0011;
     return {
-      rawUsd,
-      tokens: usdToTokens(rawUsd),
-      notes: "Nano Banana Pro multi-output edit pricing.",
+      rawUsd: singleJobUsd * count,
+      tokens: usdToTokens(singleJobUsd) * count,
+      notes: "Multiple Nano Banana Pro standard edit jobs.",
     };
   }
   const outputUsd = nanoBananaOutputUsd(request.imageSize);

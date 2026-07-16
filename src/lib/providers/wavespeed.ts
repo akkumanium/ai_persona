@@ -321,16 +321,6 @@ export function wavespeedImageInput(options: WavespeedImageInputOptions): Record
     };
   }
 
-  if (!isChatGptImage && !isSeedream45 && count > 1) {
-    return {
-      prompt,
-      images: referenceUrls.length ? referenceUrls : undefined,
-      aspect_ratio: aspectRatio,
-      num_images: count,
-      output_format: "png",
-    };
-  }
-
   return {
     prompt,
     image: isSeedream45 ? undefined : referenceUrls[0],
@@ -385,7 +375,6 @@ function wavespeedImageModel(model: string, hasReferences: boolean, count = 1) {
     return hasReferences ? "bytedance/seedream-v4.5/edit" : "bytedance/seedream-v4.5";
   }
   if (model === "gemini-3-pro-image") {
-    if (count > 1) return hasReferences ? "google/nano-banana-pro/edit-multi" : "google/nano-banana-pro/text-to-image-multi";
     return hasReferences ? "google/nano-banana-pro/edit" : "google/nano-banana-pro/text-to-image";
   }
   throw new Error(`WaveSpeed image model is not allowlisted: ${model}`);

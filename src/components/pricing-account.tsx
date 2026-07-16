@@ -42,10 +42,10 @@ export function PricingAccount({
   return (
     <div className="pb-20">
       <BillingPlans
-        title={user ? "Select your plan" : "Sign in, then select a plan"}
+        title={user ? "Choose your subscription" : "Sign in, then subscribe"}
         copy={
           user
-            ? "Your subscription connects to your saved workspace, persona capacity, and one-time welcome credits."
+            ? "Pay $12 monthly or save with the $80 yearly subscription. Both include limitless personas and one-time welcome credits."
             : "Authentication connects the Whop payment to your workspace before checkout."
         }
         userId={user?.id}

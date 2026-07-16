@@ -34,7 +34,9 @@ export async function validateWhopCatalogWithProvider() {
     if (plan.currency.toLowerCase() !== "usd") throw new Error(`Whop plan ${option.id} must use USD.`);
     const expectedType = option.kind === "subscription" ? "renewal" : "one_time";
     if (plan.plan_type !== expectedType) throw new Error(`Whop plan ${option.id} has the wrong billing type.`);
-    if (option.kind === "subscription" && plan.billing_period !== 30) throw new Error(`Whop plan ${option.id} must renew monthly.`);
+    if (option.kind === "subscription" && plan.billing_period !== option.billingPeriodDays) {
+      throw new Error(`Whop plan ${option.id} must renew every ${option.billingPeriodDays} days.`);
+    }
     if (plan.trial_period_days) throw new Error(`Whop plan ${option.id} must not have a trial.`);
     if (plan.adaptive_pricing_enabled) throw new Error(`Whop plan ${option.id} must disable adaptive pricing.`);
     const expectedPrice = Number(option.priceLabel.replace("$", ""));

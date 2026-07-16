@@ -21,7 +21,7 @@ const pageMono = JetBrains_Mono({
 
 export const metadata = {
   title: "Pricing | Idolborn",
-  description: "Choose an Idolborn plan for persona capacity, assets, and welcome credits.",
+  description: "Get Idolborn access with limitless personas for $12 monthly or $80 yearly.",
 };
 
 export default function PricingPage() {

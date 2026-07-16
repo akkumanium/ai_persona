@@ -10,7 +10,6 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
 84. Put video to demo (or delete the demo)
-91. Emphasize targeting both OFM and UGC
 120. Fix all the bugs after moving to Whop
 122. How are videos and first frame loaded
 123. Handle error in generation
@@ -24,7 +23,7 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 152. Rethink subscriptions
 156. Change public contact email. (and create it)
 170. Check if refund still works
-171. Fix Terms and Privacy design
+172. Kling doesn't use resolution
 
 Things to tell about in PDF:
 1. Check guides out

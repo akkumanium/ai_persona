@@ -4,9 +4,9 @@ Billing uses separate Whop sandbox and production data. Never reuse a key, compa
 
 ## Catalog
 
-Create a Studio product with three monthly recurring plans: Solo $10, Creator $50, and Agency $100. Create a Tokens product with six hidden one-time plans: $2, $5, $10, $20, $50, and $100. Use USD, unlimited stock, no trial, no promo codes, and no adaptive pricing.
+Create a Studio product with two recurring plans, both with limitless personas: Monthly at $12 every 30 days and Yearly at $80 every 365 days. Create a Tokens product with six hidden one-time plans: $2, $5, $10, $20, $50, and $100. Use USD, unlimited stock, no trial, no promo codes, and no adaptive pricing.
 
-Configure the matching `WHOP_*` values listed in `README.md`. All nine plan IDs must be unique and belong to the configured company and environment. The API key needs checkout-configuration creation, membership read/cancel, payment read/refund, and webhook verification access.
+Configure the matching `WHOP_*` values listed in `README.md`. All eight plan IDs must be unique and belong to the configured company and environment. The API key needs checkout-configuration creation, membership read/cancel, payment read/refund, and webhook verification access.
 
 ## Webhook
 
@@ -21,8 +21,8 @@ Set the endpoint secret as `WHOP_WEBHOOK_SECRET`. Billing reconciliation is not 
 
 ## Release order
 
-1. Apply every Supabase migration through `021_whop_billing.sql`.
-2. Deploy with sandbox values and verify success, decline, 3DS, all nine plans, portal access, cancellation, refund, duplicate delivery, and a manual reconciliation run after a deliberately missed webhook.
+1. Apply every Supabase migration through `023_subscription_plans.sql`.
+2. Deploy with sandbox values and verify success, decline, 3DS, all eight plans, portal access, cancellation, refund, duplicate delivery, and a manual reconciliation run after a deliberately missed webhook.
 3. Create the separate production catalog and webhook, then replace every Whop environment value together.
 4. Run `npm test`, `npm run lint`, and `npm run build`.
 5. In production, buy and refund one subscription and buy one top-up. Match each Whop resource to the Supabase payment, membership, credit-ledger, and portal records.

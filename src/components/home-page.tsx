@@ -360,7 +360,7 @@ export function HomePage({
                   <span className="check-mini" /> Top AI models
                 </span>
                 <span>
-                  <span className="check-mini" /> Cancel anytime
+                  <span className="check-mini" /> Best consistency
                 </span>
                 <span>
                   <span className="check-mini" /> No 6-hour tutorial required

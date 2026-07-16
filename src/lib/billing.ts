@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 
-export type BillingPlanId = "solo" | "creator" | "agency";
+export type BillingPlanId = "monthly" | "yearly";
 export type BillingTopUpId = "topup_2" | "topup_5" | "topup_10" | "topup_20" | "topup_50" | "topup_100";
 export const WELCOME_CREDIT_CENTS = 300;
 export const UNLIMITED_PERSONAS = null;
@@ -10,6 +10,8 @@ export type BillingPlan = {
   kind: "subscription";
   name: string;
   priceLabel: string;
+  billingIntervalLabel: string;
+  billingPeriodDays: number;
   tokenLabel: string;
   creditCents: number;
   personaLimit: number | null;
@@ -37,37 +39,30 @@ export type PublicBillingConfig = {
 
 export const billingPlans: BillingPlan[] = [
   {
-    id: "solo",
+    id: "monthly",
     kind: "subscription",
-    name: "Solo",
-    priceLabel: "$10",
-    tokenLabel: "300 welcome tokens",
-    creditCents: WELCOME_CREDIT_CENTS,
-    personaLimit: 1,
-    providerPlanId: env.whopSoloPlanId,
-    description: "For one creator persona with the full generation workspace.",
-  },
-  {
-    id: "creator",
-    kind: "subscription",
-    name: "Creator",
-    priceLabel: "$50",
-    tokenLabel: "300 welcome tokens",
-    creditCents: WELCOME_CREDIT_CENTS,
-    personaLimit: 5,
-    providerPlanId: env.whopCreatorPlanId,
-    description: "For managing a small portfolio of up to five personas.",
-  },
-  {
-    id: "agency",
-    kind: "subscription",
-    name: "Agency",
-    priceLabel: "$100",
+    name: "Monthly",
+    priceLabel: "$12",
+    billingIntervalLabel: "monthly",
+    billingPeriodDays: 30,
     tokenLabel: "300 welcome tokens",
     creditCents: WELCOME_CREDIT_CENTS,
     personaLimit: UNLIMITED_PERSONAS,
-    providerPlanId: env.whopAgencyPlanId,
-    description: "For teams and operators who need limitless personas.",
+    providerPlanId: env.whopMonthlyPlanId,
+    description: "Full Studio access with limitless personas, billed monthly.",
+  },
+  {
+    id: "yearly",
+    kind: "subscription",
+    name: "Yearly",
+    priceLabel: "$80",
+    billingIntervalLabel: "yearly",
+    billingPeriodDays: 365,
+    tokenLabel: "300 welcome tokens",
+    creditCents: WELCOME_CREDIT_CENTS,
+    personaLimit: UNLIMITED_PERSONAS,
+    providerPlanId: env.whopYearlyPlanId,
+    description: "Full Studio access with limitless personas, billed yearly.",
   },
 ];
 
@@ -136,7 +131,7 @@ export const billingTopUps: BillingTopUp[] = [
 
 export function normalizeBillingPlanId(planId?: string | null): BillingPlanId | undefined {
   if (!planId) return undefined;
-  if (planId === "solo" || planId === "creator" || planId === "agency") return planId;
+  if (planId === "monthly" || planId === "yearly") return planId;
   return undefined;
 }
 

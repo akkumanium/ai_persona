@@ -103,7 +103,9 @@ export async function POST(request: Request) {
       referenceImages,
       generationType,
     };
-    const supportsNativeMultiOutput = input.model === "gemini-3-pro-image" || input.model === "seedream-v4.5";
+    // Nano Banana's multi endpoint supports fewer aspect ratios than its
+    // standard endpoint, so Nano candidates use independent standard jobs.
+    const supportsNativeMultiOutput = input.model === "seedream-v4.5";
     const providerRequests = supportsNativeMultiOutput || input.count === 1
       ? [baseProviderRequest]
       : Array.from({ length: input.count }, () => ({ ...baseProviderRequest, count: 1 }));

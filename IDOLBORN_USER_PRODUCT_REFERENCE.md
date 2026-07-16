@@ -207,13 +207,12 @@ After signing in, users can browse the Studio in preview mode. An active subscri
 
 ### Subscription plans
 
-| Plan | Monthly price | Persona capacity | Welcome credit |
+| Plan | Price | Persona capacity | Welcome credit |
 | --- | ---: | --- | --- |
-| Solo | $10 | 1 persona | 300 tokens, once |
-| Creator | $50 | Up to 5 personas | 300 tokens, once |
-| Agency | $100 | Unlimited personas | 300 tokens, once |
+| Monthly | $12 monthly | Unlimited personas | 300 tokens, once |
+| Yearly | $80 yearly | Unlimited personas | 300 tokens, once |
 
-All plans can be cancelled at any time.
+Both plans can be cancelled at any time.
 
 ### Token balance and top-ups
 
@@ -285,5 +284,5 @@ Idolborn is not positioned as a general one-off image generator. Its distinguish
 - Users can start with their own material, generate a new identity, or blend several face images.
 - Reel Maker and Motion Control support content that follows a reference video’s movement.
 - The platform includes practical education alongside the production tools.
-- Plans scale from one persona to an unlimited portfolio, with token top-ups for continued generation.
+- Both subscriptions include an unlimited persona portfolio, with token top-ups for continued generation.
 
