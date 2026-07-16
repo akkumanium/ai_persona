@@ -68,7 +68,7 @@ export default function TermsPage() {
 
       <h2>9. Cancellation, refunds, and chargebacks</h2>
       <p>
-        You may cancel future renewal through the Whop billing-management link made available to you. Cancellation normally prevents a future renewal and does not automatically refund a completed charge. Refund eligibility, if any, is shown at checkout or in the Service and is subject to applicable law and Whop's processing requirements. Contact us at <a href="mailto:idolborn.support@gmail.com">idolborn.support@gmail.com</a> for Service-related refund questions. For an unrecognized charge or a payment-processing issue, contact Whop first. Do not initiate an unjustified chargeback; we may restrict the account while a dispute is reviewed.
+        You may cancel future renewal through the Whop billing-management link made available to you. Cancellation normally prevents a future renewal and does not automatically refund a completed charge. A refund for your latest subscription payment is available only if you have not spent any of the tokens granted since that subscription payment. Refund eligibility, if any, is shown at checkout or in the Service and is subject to applicable law and Whop's processing requirements. Contact us at <a href="mailto:idolborn.support@gmail.com">idolborn.support@gmail.com</a> for Service-related refund questions. For an unrecognized charge or a payment-processing issue, contact Whop first. Do not initiate an unjustified chargeback; we may restrict the account while a dispute is reviewed.
       </p>
 
       <h2>10. Availability and changes</h2>

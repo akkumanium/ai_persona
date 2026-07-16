@@ -15,7 +15,6 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 122. How are videos and first frame loaded
 123. Handle error in generation
 125. How does upgrading work
-130. We've generated a candidate and another one disappeared (to verify)
 136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
 141. Don't redirect to images when we're trying to edit a reference (to verify)
@@ -25,6 +24,7 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 152. Rethink subscriptions
 156. Change public contact email. (and create it)
 170. Check if refund still works
+171. Fix Terms and Privacy design
 
 Things to tell about in PDF:
 1. Check guides out

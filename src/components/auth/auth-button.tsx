@@ -46,7 +46,6 @@ export function AuthButton({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAdult, setIsAdult] = useState(false);
   const [acceptsTerms, setAcceptsTerms] = useState(false);
-  const [acknowledgesAiProcessing, setAcknowledgesAiProcessing] = useState(false);
   const userEmailRef = useRef(initialUserEmail ?? "");
 
   const supabase = useMemo(
@@ -179,8 +178,8 @@ export function AuthButton({
   }
 
   function hasAcceptedSignupRequirements() {
-    if (isAdult && acceptsTerms && acknowledgesAiProcessing) return true;
-    setError("Confirm your age, acceptance of the Terms and Privacy Policy, and AI processing before continuing.");
+    if (isAdult && acceptsTerms) return true;
+    setError("Confirm your age and acceptance of the Terms and Privacy Policy before continuing.");
     return false;
   }
 
@@ -291,10 +290,6 @@ export function AuthButton({
                       <label className="flex cursor-pointer items-start gap-2">
                         <input type="checkbox" checked={acceptsTerms} onChange={(event) => setAcceptsTerms(event.target.checked)} className="mt-1 size-3.5 accent-[#ff4fa3]" />
                         <span>I agree to the <Link href="/terms" target="_blank" className="text-[#ffd0e7] underline">Terms of Service</Link> and acknowledge the <Link href="/privacy" target="_blank" className="text-[#ffd0e7] underline">Privacy Policy</Link>.</span>
-                      </label>
-                      <label className="flex cursor-pointer items-start gap-2">
-                        <input type="checkbox" checked={acknowledgesAiProcessing} onChange={(event) => setAcknowledgesAiProcessing(event.target.checked)} className="mt-1 size-3.5 accent-[#ff4fa3]" />
-                        <span>I understand that prompts, uploads, and generation instructions are sent to WaveSpeedAI or ElevenLabs to provide requested AI generations.</span>
                       </label>
                     </div>
 
