@@ -578,9 +578,9 @@ Delete the tattoos. No text, no logos, no watermarks.`);
         <div className="space-y-3 p-4">
           <StepSection
             step={1}
-            title="Face Swap"
+            title="Recast"
             icon={Wand2}
-            hint="Swap the target frame's face with your persona, then pick the best result"
+            hint="Place your persona into the scene, then pick the best result"
           >
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_18rem]">
               {/* Sources */}
@@ -932,7 +932,7 @@ Delete the tattoos. No text, no logos, no watermarks.`);
               const hasCandidates = item.candidates.length > 0;
               const hasFinal = Boolean(item.finalVideo);
               const PrimaryIcon: LucideIcon = hasFinal ? Play : hasCandidates ? Film : Wand2;
-              const primaryLabel = hasFinal ? "Open" : hasCandidates ? "Continue" : "Face swap";
+              const primaryLabel = hasFinal ? "Open" : hasCandidates ? "Continue" : "Recast";
               const statusLabel = item.importState === "capturing"
                 ? "Preparing"
                 : hasFinal

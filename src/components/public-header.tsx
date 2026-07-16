@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthButton } from "@/components/auth/auth-button";
 
-const TELEGRAM_GROUP_URL = "https://t.me/personastudioai";
+const TELEGRAM_GROUP_URL = "https://t.me/idolborn";
 
 export function PublicHeader({
   initialUserEmail,

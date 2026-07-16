@@ -21,7 +21,7 @@ import { cn, formatTokens } from "@/lib/utils";
 
 type PromptSuggestion = { title: string; prompt: string };
 
-const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: boolean; badge?: string }> = [
+const allNavItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: boolean; badge?: string }> = [
   { id: "personas", label: "Personas", icon: UserRound },
   { id: "images", label: "Images", icon: ImageIcon },
   { id: "videos", label: "Videos", icon: Clapperboard },
@@ -33,6 +33,9 @@ const navItems: Array<{ id: View; label: string; icon: LucideIcon; disabled?: bo
   { id: "jobs", label: "Jobs", icon: Activity },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+
+// Speech is temporarily hidden from Studio while its implementation remains available.
+const navItems = allNavItems.filter((item) => item.id !== "speech");
 
 export function StudioWorkspace({
   initialData,
@@ -70,6 +73,7 @@ export function StudioWorkspace({
     initialData?.personas[0]?.id ?? demoPersonas[0]?.id ?? "",
   );
   const [generateInitialSlotId, setGenerateInitialSlotId] = useState<ReferenceSlotId | undefined>();
+  const [generateInitialReferenceAssetId, setGenerateInitialReferenceAssetId] = useState<string | undefined>();
   const launchNonce = useRef(0);
   const pollingJobIds = useRef(new Set<string>());
   const [initialVideoStartFrame, setInitialVideoStartFrame] = useState<{ id: string; nonce: number } | undefined>();
@@ -401,7 +405,10 @@ export function StudioWorkspace({
       (job) =>
         (job.status === "queued" || job.status === "running") &&
         Boolean(job.providerJobId) &&
-        (job.generationType === "video_normal" || job.generationType === "video_motion" || job.generationType === "video_prompt" || job.generationType === "image_from_prompt" || job.generationType === "image_from_reference" || job.generationType === "avatar_prompt" || job.generationType === "avatar_image_blend" || job.generationType === "avatar_normalization"),
+        // Every WaveSpeed generation uses the same durable result endpoint.
+        // Keeping this list in sync with generation types previously left talking
+        // avatar jobs running forever whenever their webhook was delayed or missed.
+        job.provider === "wavespeed",
     );
     if (!activeJobs.length) return;
 
@@ -734,14 +741,10 @@ export function StudioWorkspace({
               }}
               onToggleReferenceDefault={toggleReferenceDefault}
               onDeleteReference={deleteReferenceAsset}
-              onReferenceEdited={(nextAssets, job) => {
-                addGeneratedReferenceAssets(nextAssets, job);
-                addJob(job);
-                setNotice(`${nextAssets.length} edited reference${nextAssets.length === 1 ? "" : "s"} saved.`);
-              }}
-              onNavigateToGenerate={(slotId, personaId) => {
+              onNavigateToGenerate={(slotId, personaId, referenceAssetId) => {
                 if (personaId) setSelectedPersonaId(personaId);
                 setGenerateInitialSlotId(slotId);
+                setGenerateInitialReferenceAssetId(referenceAssetId);
                 setView("generate");
               }}
             />
@@ -753,6 +756,7 @@ export function StudioWorkspace({
               supabaseReady={supabaseReady}
               selectedPersona={selectedPersona}
               initialSlotId={generateInitialSlotId}
+              initialReferenceAssetId={generateInitialReferenceAssetId}
               onAssetsCreated={(nextAssets, job) => {
                 addGeneratedReferenceAssets(nextAssets, job);
                 addJob(job);
@@ -761,6 +765,7 @@ export function StudioWorkspace({
               onSelectPersona={setSelectedPersonaId}
               onBack={() => {
                 setGenerateInitialSlotId(undefined);
+                setGenerateInitialReferenceAssetId(undefined);
                 setView("personas");
               }}
             />

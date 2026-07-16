@@ -61,6 +61,28 @@ export default async function FaqPage() {
             </details>
           ))}
         </div>
+
+        <p className="mt-8 text-center text-[15px] leading-7 text-[#aeb4c6] sm:text-base">
+          Got any questions? Join our{" "}
+          <a
+            href="https://t.me/idolborn"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-[#ffd0e7] transition hover:text-white"
+          >
+            Telegram group
+          </a>{" "}
+          or contact the{" "}
+          <a
+            href="https://t.me/idolborn_support"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-[#ffd0e7] transition hover:text-white"
+          >
+            support directly
+          </a>
+          .
+        </p>
       </div>
     </main>
   );

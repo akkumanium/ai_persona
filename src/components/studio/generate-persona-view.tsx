@@ -4,7 +4,6 @@ import { DEFAULT_PROMPTS, referenceSlots } from "@/components/studio/constants";
 import { encodeFiles } from "@/components/studio/media";
 import { useStudioTokenBalance } from "@/components/studio/token-balance-context";
 import { AssetExpiryCaption } from "@/components/studio/asset-expiry-caption";
-import { ReferenceEditor } from "@/components/studio/personas-view";
 import type { FaceGenerationMode, ReferenceSlotId, SourceImageInput } from "@/components/studio/types";
 import {
   CheckboxField,
@@ -42,6 +41,7 @@ export function GeneratePersonaView({
   supabaseReady,
   selectedPersona,
   initialSlotId,
+  initialReferenceAssetId,
   onAssetsCreated,
   onSelectPersona,
   onBack,
@@ -51,18 +51,22 @@ export function GeneratePersonaView({
   supabaseReady?: boolean;
   selectedPersona?: Persona;
   initialSlotId?: ReferenceSlotId;
+  initialReferenceAssetId?: string;
   onAssetsCreated: (assets: Asset[], job: GenerationJob) => void;
   onSelectPersona: (id: string) => void;
   onBack: () => void;
 }) {
-  const initialSlot = referenceSlots.find((slot) => slot.id === (initialSlotId ?? "face")) ?? referenceSlots[0];
+  const initialReferenceAsset = assets.find((asset) => asset.id === initialReferenceAssetId);
+  const initialSlot = referenceSlots.find((slot) => slot.id === (initialSlotId ?? initialReferenceAsset?.referenceSlot ?? "face")) ?? referenceSlots[0];
   const [selectedSlotId, setSelectedSlotId] = useState<ReferenceSlotId>(initialSlot.id);
-  const [generationMode, setGenerationMode] = useState<FaceGenerationMode>("hybrid");
+  const [generationMode, setGenerationMode] = useState<FaceGenerationMode>(initialReferenceAsset ? "scratch" : "hybrid");
   const [scratchPrompt, setScratchPrompt] = useState("");
   const [referencePrompt, setReferencePrompt] = useState(
     initialSlot.id === "face" ? DEFAULT_PROMPTS.hybrid : initialSlot.prompt,
   );
-  const [scratchSources, setScratchSources] = useState<SourceImageInput[]>([]);
+  const [scratchSources, setScratchSources] = useState<SourceImageInput[]>(() =>
+    initialReferenceAsset && initialSlot.id === "face" ? [assetToSourceImage(initialReferenceAsset)] : [],
+  );
   const [hybridSources, setHybridSources] = useState<SourceImageInput[]>([]);
   const [selectedModel, setSelectedModel] = useState(NANO_BANANA_PRO_MODEL_ID);
   const [aspectRatio, setAspectRatio] = useState<string>(initialSlot.aspectRatio);
@@ -74,8 +78,11 @@ export function GeneratePersonaView({
   const [uploadingInputs, setUploadingInputs] = useState<Record<string, boolean>>({});
   const [generationError, setGenerationError] = useState("");
   const { balanceTokens, tryReserveTokens, reconcileTokenBalance } = useStudioTokenBalance();
-  const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>({});
-  const [editingReference, setEditingReference] = useState<Asset | undefined>();
+  const [referenceSelectionByPersona, setReferenceSelectionByPersona] = useState<Record<string, string[]>>(() =>
+    initialReferenceAsset?.personaId && initialSlot.id !== "face"
+      ? { [initialReferenceAsset.personaId]: [initialReferenceAsset.id] }
+      : {},
+  );
 
   const activeSlot = referenceSlots.find((slot) => slot.id === selectedSlotId) ?? referenceSlots[0];
   const allImageModelOptions = modelsForCapability("image-prompt");
@@ -174,6 +181,22 @@ export function GeneratePersonaView({
     setScratchPrompt("");
     setReferencePrompt(slotId === "face" ? DEFAULT_PROMPTS.hybrid : nextSlot.prompt);
     setGenerationError("");
+  }
+
+  function editReference(asset: Asset) {
+    const slotId: ReferenceSlotId =
+      asset.referenceSlot === "chest-up" || asset.referenceSlot === "body" || asset.referenceSlot === "face-grid"
+        ? asset.referenceSlot
+        : "face";
+    selectSlot(slotId);
+    if (slotId === "face") {
+      setGenerationMode("scratch");
+      setScratchSources([assetToSourceImage(asset)]);
+      return;
+    }
+    if (selectedPersona) {
+      setReferenceSelectionByPersona((current) => ({ ...current, [selectedPersona.id]: [asset.id] }));
+    }
   }
 
   function changeModel(modelId: string) {
@@ -384,7 +407,7 @@ export function GeneratePersonaView({
                     <CardImage src={asset.url} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => setEditingReference(asset)}
+                      onClick={() => editReference(asset)}
                       className="absolute left-2 top-2 flex h-8 items-center gap-1.5 rounded-md bg-black/55 px-2 text-xs font-semibold text-white opacity-0 transition hover:bg-emerald-800 group-hover:opacity-100"
                       aria-label="Edit this reference"
                     >
@@ -410,15 +433,6 @@ export function GeneratePersonaView({
           ) : null}
         </div>
       </section>
-
-      {editingReference && selectedPersona ? (
-        <ReferenceEditor
-          asset={editingReference}
-          persona={selectedPersona}
-          onAssetsCreated={onAssetsCreated}
-          onClose={() => setEditingReference(undefined)}
-        />
-      ) : null}
 
       <aside className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm xl:sticky xl:top-24 xl:max-h-[calc(100vh-9.5rem)] xl:self-start xl:overflow-y-auto">
         <form onSubmit={generateReference}>
@@ -566,4 +580,14 @@ export function GeneratePersonaView({
       </aside>
     </div>
   );
+}
+
+function assetToSourceImage(asset: Asset): SourceImageInput {
+  return {
+    name: asset.title || "Reference image",
+    mimeType: asset.mimeType || "image/png",
+    url: asset.url,
+    storageBucket: asset.storageBucket,
+    storagePath: asset.storagePath,
+  };
 }

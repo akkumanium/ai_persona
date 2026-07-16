@@ -17,11 +17,16 @@ export async function POST(request: Request) {
   if (Math.abs(Date.now() - Number(timestamp) * 1000) > 5 * 60 * 1000) {
     return NextResponse.json({ error: "Expired WaveSpeed webhook." }, { status: 401 });
   }
-  let payload: { id?: unknown; status?: unknown };
-  try { payload = JSON.parse(rawBody) as { id?: unknown; status?: unknown }; }
+  let payload: { id?: unknown; status?: unknown; data?: { id?: unknown; status?: unknown } };
+  try { payload = JSON.parse(rawBody) as { id?: unknown; status?: unknown; data?: { id?: unknown; status?: unknown } }; }
   catch { return NextResponse.json({ error: "Invalid JSON." }, { status: 400 }); }
-  const providerJobId = typeof payload.id === "string" ? payload.id : "";
-  if (!providerJobId || !["completed", "failed"].includes(String(payload.status))) {
+  // WaveSpeed callbacks are normally top-level, but some API responses wrap the
+  // prediction in `data`. Accept both shapes so a completed task is never dropped.
+  const providerJobId = typeof payload.id === "string"
+    ? payload.id
+    : typeof payload.data?.id === "string" ? payload.data.id : "";
+  const status = String(payload.status ?? payload.data?.status ?? "").toLowerCase();
+  if (!providerJobId || !["completed", "complete", "succeeded", "success", "failed", "error", "cancelled", "canceled", "expired"].includes(status)) {
     return NextResponse.json({ ok: true });
   }
   if (!env.supabaseServiceRoleKey) return NextResponse.json({ error: "Service database access is not configured." }, { status: 503 });

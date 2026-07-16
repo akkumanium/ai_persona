@@ -9,9 +9,9 @@ export const metadata = {
   description: "Contact Idolborn by email or Telegram.",
 };
 
-const TELEGRAM_USER = "Idolborn support";
+const TELEGRAM_USER = "@idolborn_support";
 const TELEGRAM_USER_URL = "https://t.me/idolborn_support";
-const TELEGRAM_GROUP = "Idolborn public telegram chat";
+const TELEGRAM_GROUP = "@idolborn";
 const TELEGRAM_GROUP_URL = "https://t.me/idolborn";
 
 export default async function ContactPage({ searchParams }: { searchParams: Promise<{ from?: string }> }) {
