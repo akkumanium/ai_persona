@@ -1078,7 +1078,7 @@ function isSeedanceVideoModel(modelId: string) {
 }
 
 function showsResolutionControl(modelId: string) {
-  return isSeedanceVideoModel(modelId) || modelId === "wan-2.7" || (isKling30VideoModel(modelId) && !modelId.includes("motion"));
+  return isSeedanceVideoModel(modelId) || modelId === "wan-2.7";
 }
 
 function resolutionsForVideoModel(modelId: string): Array<"480p" | "720p" | "1080p" | "4K"> {

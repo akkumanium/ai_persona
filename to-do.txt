@@ -16,14 +16,13 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 125. How does upgrading work
 136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
-141. Don't redirect to images when we're trying to edit a reference (to verify)
 144. Create a PDF to send to people
-145. When we delete a video, we shouldn't delete assets from them
 149. Check if Email asks for confirmation
-152. Rethink subscriptions
 156. Change public contact email. (and create it)
-170. Check if refund still works
 172. Kling doesn't use resolution
+173. Videos don't have previews
+174. I wonder if Seedance generation actually works correctly
+175.
 
 Things to tell about in PDF:
 1. Check guides out

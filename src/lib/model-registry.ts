@@ -8,7 +8,7 @@ export type ModelCapability =
 export type ModelRegistryEntry = {
   id: string;
   label: string;
-  provider: "nano-banana-pro" | "openai" | "wan" | "kling" | "seedance" | "wavespeed" | "elevenlabs";
+  provider: "wavespeed" | "elevenlabs";
   capabilities: ModelCapability[];
   enabled: boolean;
   notes: string;
@@ -36,7 +36,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: "wavespeed",
     capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
-    notes: "Google Gemini 3 Pro Image model with reference-image generation, aspect ratio, and 1K/2K/4K size controls.",
+    notes: "WaveSpeed-hosted Nano Banana Pro model with reference-image generation, aspect ratio, and 1K/2K/4K size controls.",
   },
   {
     id: CHATGPT_IMAGE_MODEL_ID,
@@ -44,7 +44,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: "wavespeed",
     capabilities: ["avatar", "image-prompt", "image-reference"],
     enabled: true,
-    notes: "OpenAI image model with generation, edit/reference inputs, quality, aspect ratio, and 1K/2K/4K resolution controls.",
+    notes: "WaveSpeed-hosted ChatGPT Image 2 model with generation, edit/reference inputs, quality, aspect ratio, and 1K/2K/4K resolution controls.",
   },
   {
     id: SEEDREAM_4_5_MODEL_ID,
@@ -68,7 +68,7 @@ export const MODEL_REGISTRY: ModelRegistryEntry[] = [
     provider: "wavespeed",
     capabilities: ["video-normal"],
     enabled: true,
-    notes: "PoYo Wan 2.7 text-to-video, image-to-video, and reference-to-video at 720p/1080p.",
+    notes: "WaveSpeed-hosted Wan 2.7 text-to-video, image-to-video, and reference-to-video at 720p/1080p.",
   },
   {
     id: "wan-animate",

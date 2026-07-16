@@ -4,16 +4,16 @@
 "purpose": "Website API model pricing ingestion",
 "important_notes": [
 "Prices are raw API or gateway costs and do not include your website markup, storage, CDN, failed generations, retries, payment fees, or support margin.",
-"Video model pricing is provider-specific. Do not mix credits or prices across PoYo, Fal, BytePlus, Kie, or other providers.",
+"All image and video model prices in this file are WaveSpeed gateway costs. Do not treat underlying model creators as direct providers.",
 "For frontend display, consider storing provider, model, workflow, resolution, duration, audio, billing_unit, raw_price_usd, and customer_price_usd separately.",
-"Only GPT Image 2 is included for OpenAI image pricing.",
+"ChatGPT Image 2 pricing is sourced from WaveSpeed; Idolborn does not use the OpenAI API directly.",
 "Wan 2.7 edit-video and the Wan 2.7 5-second example are intentionally excluded."
 ],
 "models": [
 {
 "model_key": "nano_banana_pro",
 "display_name": "Nano Banana Pro / Gemini 3 Pro Image",
-"provider": "Google Gemini API",
+"provider": "WaveSpeedAI",
 "category": "image",
 "pricing_type": "per_image_or_token_equivalent",
 "settings": [
@@ -85,7 +85,7 @@
 {
 "model_key": "gpt_image_2",
 "display_name": "GPT Image 2",
-"provider": "WaveSpeedAI / OpenAI",
+"provider": "WaveSpeedAI",
 "category": "image",
 "pricing_type": "per_run_by_workflow_quality_resolution",
 "settings": [
@@ -122,14 +122,14 @@
 "quality": "medium",
 "resolution": "2K",
 "unit": "image",
-"raw_price_usd": 0.07
+"raw_price_usd": 0.1
 },
 {
 "workflow": "text_to_image",
 "quality": "medium",
 "resolution": "4K",
 "unit": "image",
-"raw_price_usd": 0.11
+"raw_price_usd": 0.18
 },
 {
 "workflow": "text_to_image",
@@ -143,14 +143,14 @@
 "quality": "high",
 "resolution": "2K",
 "unit": "image",
-"raw_price_usd": 0.23
+"raw_price_usd": 0.4
 },
 {
 "workflow": "text_to_image",
 "quality": "high",
 "resolution": "4K",
 "unit": "image",
-"raw_price_usd": 0.41
+"raw_price_usd": 0.72
 },
 {
 "workflow": "edit",
@@ -190,7 +190,7 @@
 "resolution": "2K",
 "included_input_images": 1,
 "unit": "image",
-"raw_price_usd": 0.08
+"raw_price_usd": 0.11
 },
 {
 "workflow": "edit",
@@ -198,7 +198,7 @@
 "resolution": "4K",
 "included_input_images": 1,
 "unit": "image",
-"raw_price_usd": 0.12
+"raw_price_usd": 0.19
 },
 {
 "workflow": "edit",
@@ -206,7 +206,7 @@
 "resolution": "1K",
 "included_input_images": 1,
 "unit": "image",
-"raw_price_usd": 0.22
+"raw_price_usd": 0.23
 },
 {
 "workflow": "edit",
@@ -214,7 +214,7 @@
 "resolution": "2K",
 "included_input_images": 1,
 "unit": "image",
-"raw_price_usd": 0.24
+"raw_price_usd": 0.41
 },
 {
 "workflow": "edit",
@@ -222,7 +222,7 @@
 "resolution": "4K",
 "included_input_images": 1,
 "unit": "image",
-"raw_price_usd": 0.42
+"raw_price_usd": 0.73
 },
 {
 "workflow": "edit",
@@ -231,7 +231,7 @@
 }
 ],
 "notes": [
-"WaveSpeedAI model pages list aspect_ratio plus resolution values 1k, 2k, and 4k.",
+"WaveSpeedAI is the authoritative pricing source. Its model pages list aspect_ratio plus resolution values 1k, 2k, and 4k.",
 "Edit prices include one input image; each additional input image adds $0.012.",
 "Multiply raw_price_usd by number of requested output images/runs."
 ]
@@ -239,7 +239,7 @@
 {
 "model_key": "kling_2_6",
 "display_name": "Kling 2.6",
-"provider": "PoYo",
+"provider": "WaveSpeedAI",
 "category": "video",
 "pricing_type": "credits_or_estimated_usd",
 "credit_to_usd_estimate": 0.005,
@@ -299,7 +299,7 @@
 {
 "model_key": "kling_3_0",
 "display_name": "Kling 3.0",
-"provider": "PoYo",
+"provider": "WaveSpeedAI",
 "category": "video",
 "pricing_type": "per_second",
 "settings": [
@@ -344,7 +344,7 @@
 {
 "model_key": "wan_2_7",
 "display_name": "Wan 2.7",
-"provider": "PoYo",
+"provider": "WaveSpeedAI",
 "category": "video",
 "pricing_type": "per_second",
 "excluded_workflows": [
@@ -404,7 +404,7 @@
 {
 "model_key": "seedance_2_0",
 "display_name": "Seedance 2.0",
-"provider": "PoYo",
+"provider": "WaveSpeedAI",
 "category": "video",
 "pricing_type": "per_second",
 "settings": [
@@ -467,7 +467,7 @@
 {
 "model_key": "seedance_2_0_fast",
 "display_name": "Seedance 2.0 Fast",
-"provider": "PoYo",
+"provider": "WaveSpeedAI",
 "category": "video",
 "pricing_type": "per_second",
 "settings": [

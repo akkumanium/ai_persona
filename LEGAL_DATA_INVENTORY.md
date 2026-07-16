@@ -11,8 +11,8 @@ Scope reviewed:
 - The website uses Supabase for authentication, session cookies, Postgres data, and private Storage buckets.
 - The website uses Whop for checkout, billing webhooks, membership management links, and refund requests when configured.
 - Generation workflows may send prompts, uploaded images, uploaded audio, uploaded video, generated/selected media URLs, model settings, and job IDs to external AI/media providers.
-- The current default provider router sends image, video, and avatar generation through WaveSpeed unless legacy provider env flags are set. ElevenLabs is used for speech generation.
-- Legacy or optional adapters exist for OpenAI image generation, Google Gemini/Nano Banana, Wan, Kling, and Seedance/BytePlus.
+- WaveSpeed is the sole provider for image, video, and avatar generation. ElevenLabs is the sole provider for speech generation.
+- Models such as Nano Banana, ChatGPT Image, Wan, Kling, and Seedance are accessed through WaveSpeed; they are not direct integrations.
 - No analytics SDK, advertising pixel, behavioral tracker, or error-monitoring SDK was found in dependencies or source.
 - No custom `localStorage`, `sessionStorage`, or `document.cookie` use was found. Cookies are managed through Supabase SSR helpers.
 - A `ContactForm` component and `/api/contact` endpoint exist, but the current `/contact` page does not render that form; it links to email and Telegram instead.
@@ -20,7 +20,7 @@ Scope reviewed:
 
 ## Runtime Configuration Observed
 
-Code supports these env vars: Supabase, Whop, Gemini, OpenAI, Wan, Kling, Seedance/BytePlus, WaveSpeed, ElevenLabs, and contact email.
+Code supports these env vars: Supabase, Whop, WaveSpeed, ElevenLabs, and contact email.
 
 The local `.env.local` file contains only variable names for:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -276,7 +276,7 @@ Retention behavior visible in code:
 
 ### Image/reference generation
 
-Evidence: `src/components/studio/generate-persona-view.tsx`, `src/components/studio/generation-view.tsx`, `src/app/api/generate/image/route.ts`, `src/app/api/generate/avatar/route.ts`, `src/lib/providers/wavespeed.ts`, `src/lib/providers/openai-image.ts`, `src/lib/providers/nano-banana.ts`
+Evidence: `src/components/studio/generate-persona-view.tsx`, `src/components/studio/generation-view.tsx`, `src/app/api/generate/image/route.ts`, `src/app/api/generate/avatar/route.ts`, `src/lib/providers/wavespeed.ts`
 
 Collected:
 - Persona ID/name/description/style notes.
@@ -286,8 +286,7 @@ Collected:
 - Rights confirmation and adult-persona confirmation for avatar reference generation.
 
 Sent to:
-- Default current route: WaveSpeed client upload and `client.run`.
-- If legacy provider flags are set: OpenAI Images API or Google Gemini/Nano Banana API.
+- WaveSpeed client upload and `client.run`.
 - Supabase Storage and tables for generated media and job records.
 
 Purpose:
@@ -305,12 +304,12 @@ Retention behavior visible in code:
 - `sanitizeProviderPayload` omits long data URLs/base64-like payloads from raw provider response.
 
 Uncertainty:
-- Provider-side retention and training/reuse practices for WaveSpeed/OpenAI/Gemini are not specified in this repo.
+- Provider-side retention and training/reuse practices for WaveSpeed are not specified in this repo.
 - Whether rights/adult confirmations are persisted. The code requires them for the request but does not appear to store the boolean values.
 
 ### Video generation and motion-control generation
 
-Evidence: `src/components/studio/generation-view.tsx`, `src/components/studio/trend-video-view.tsx`, `src/app/api/generate/video/route.ts`, `src/lib/providers/wavespeed.ts`, `src/lib/providers/wan.ts`, `src/lib/providers/kling.ts`, `src/lib/providers/seedance.ts`
+Evidence: `src/components/studio/generation-view.tsx`, `src/components/studio/trend-video-view.tsx`, `src/app/api/generate/video/route.ts`, `src/lib/providers/wavespeed.ts`
 
 Collected:
 - Persona ID/name.
@@ -321,8 +320,7 @@ Collected:
 - Model, duration, aspect ratio, provider mode, CFG scale, generated audio flag, resolution, return-last-frame flag, motion mode, character orientation, keep-original-sound flag.
 
 Sent to:
-- Default current route: WaveSpeed.
-- If legacy provider flags are set: Wan API, Kling API, or Seedance/BytePlus API.
+- WaveSpeed.
 - Supabase Storage/tables for generated video and job records.
 
 Purpose:
@@ -341,7 +339,6 @@ Retention behavior visible in code:
 
 Uncertainty:
 - Provider-side retention/training/use of prompts and media.
-- Whether production uses default WaveSpeed routing or legacy direct provider routing.
 
 ### Speech generation
 
@@ -512,76 +509,6 @@ Purpose:
 Retention visible:
 - Provider retention not specified in repo.
 
-### OpenAI Images API
-
-Status:
-- Optional legacy image provider when `USE_LEGACY_IMAGE_PROVIDERS === "true"` and model starts with `gpt-`.
-
-Data involved:
-- Prompt, image references for edits, model/quality/size/count.
-
-Purpose:
-- Image generation/editing.
-
-Retention visible:
-- Provider retention/training not specified in repo.
-
-### Google Gemini / Nano Banana
-
-Status:
-- Optional legacy image provider when `USE_LEGACY_IMAGE_PROVIDERS === "true"` and non-OpenAI image model.
-
-Data involved:
-- Prompt and inline reference image data.
-
-Purpose:
-- Image generation.
-
-Retention visible:
-- Provider retention/training not specified in repo.
-
-### Wan API
-
-Status:
-- Optional legacy video provider via `WAN_API_BASE_URL` and `WAN_API_KEY`.
-
-Data involved:
-- Prompts, image URLs, motion reference text/video, video settings.
-
-Purpose:
-- Video generation.
-
-Retention visible:
-- Provider retention/training not specified in repo.
-
-### Kling API
-
-Status:
-- Optional legacy video provider for Kling models.
-
-Data involved:
-- Prompt, negative prompt, start/end image URL, duration, aspect ratio, mode, resolution, audio flag.
-
-Purpose:
-- Image-to-video generation and polling.
-
-Retention visible:
-- Provider retention/training not specified in repo.
-
-### Seedance / BytePlus API
-
-Status:
-- Optional legacy video provider for Seedance models.
-
-Data involved:
-- Prompt, start/end image URLs, duration, ratio, resolution, audio flag.
-
-Purpose:
-- Video generation and polling.
-
-Retention visible:
-- Provider retention/training not specified in repo.
-
 ### Remote video/image URLs
 
 Data involved:
@@ -723,7 +650,7 @@ Fields:
 2. Which jurisdictions are targeted or excluded?
 3. Are minors prohibited, and what minimum age applies?
 4. Is the product intended for adult-content creator workflows, and should generated personas/content be restricted to adults?
-5. Which third-party providers are enabled in production: Supabase, Whop, WaveSpeed, ElevenLabs, OpenAI, Google/Gemini, Wan, Kling, Seedance/BytePlus, Telegram?
+5. Which third-party providers are enabled in production: Supabase, Whop, WaveSpeed, ElevenLabs, and Telegram?
 6. Is Whop in sandbox or production for the live website?
 7. What are Supabase Auth session/cookie settings and enabled OAuth providers in production?
 8. Do you have hosting/CDN logs, server logs, WAF logs, or platform analytics outside this repo?

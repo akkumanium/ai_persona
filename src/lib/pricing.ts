@@ -181,13 +181,13 @@ function gptImage2OutputUsd(
   const effectiveSize = imageSize === "4K" ? "4K" : imageSize === "1K" ? "1K" : "2K";
   const textToImagePrices: Record<string, Record<string, number>> = {
     low: { "1K": 0.01, "2K": 0.02, "4K": 0.03 },
-    medium: { "1K": 0.06, "2K": 0.07, "4K": 0.11 },
-    high: { "1K": 0.22, "2K": 0.23, "4K": 0.41 },
+    medium: { "1K": 0.06, "2K": 0.1, "4K": 0.18 },
+    high: { "1K": 0.22, "2K": 0.4, "4K": 0.72 },
   };
   const editPrices: Record<string, Record<string, number>> = {
     low: { "1K": 0.02, "2K": 0.03, "4K": 0.04 },
-    medium: { "1K": 0.07, "2K": 0.08, "4K": 0.12 },
-    high: { "1K": 0.22, "2K": 0.24, "4K": 0.42 },
+    medium: { "1K": 0.07, "2K": 0.11, "4K": 0.19 },
+    high: { "1K": 0.23, "2K": 0.41, "4K": 0.73 },
   };
 
   if (referenceCount > 0) {

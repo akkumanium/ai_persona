@@ -12,7 +12,7 @@ export type GenerationType =
   | "video_motion"
   | "video_prompt";
 export type JobStatus = "queued" | "running" | "succeeded" | "failed";
-export type ProviderName = "nano-banana-pro" | "openai" | "wan" | "kling" | "seedance" | "wavespeed" | "elevenlabs";
+export type ProviderName = "wavespeed" | "elevenlabs";
 
 export type Persona = {
   id: string;

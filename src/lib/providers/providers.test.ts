@@ -57,7 +57,7 @@ describe("token pricing", () => {
         count: 2,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(46);
+    ).toBe(80);
 
     expect(
       estimateImageGenerationPricing({
@@ -69,7 +69,7 @@ describe("token pricing", () => {
         count: 1,
         generationType: "image_from_prompt",
       }).tokens,
-    ).toBe(11);
+    ).toBe(18);
 
     expect(
       estimateImageGenerationPricing({
@@ -85,7 +85,7 @@ describe("token pricing", () => {
         ],
         generationType: "image_from_reference",
       }).tokens,
-    ).toBe(10);
+    ).toBe(13);
   });
 
   it("prices Seedream 4.5 per generated image", () => {

@@ -30,16 +30,13 @@ The app currently has a polished home page at `/`, Supabase Auth entry points, a
 
 Image generation:
 
-- Nano Banana Pro / Gemini image generation, default model `gemini-3-pro-image-preview`
-- OpenAI image generation, default model `gpt-image-2`
+- WaveSpeed-hosted image models: Nano Banana Pro, ChatGPT Image 2, Seedream 4.5, and Wan 2.7 Image
 
 Video generation:
 
-- Wan adapter, including `wan-2.7` and `wan-animate`
-- Kling image-to-video, including `kling-v2-6` and `kling-v3-0`
-- Seedance 2.0, including standard and fast model options
+- WaveSpeed-hosted video models: Wan, Kling, and Seedance, including motion-control options where supported
 
-If the relevant provider key is missing, the adapter returns a clear API-not-configured error instead of a demo asset. The test suite still imports mock providers directly.
+ElevenLabs provides speech generation. WaveSpeed provides every image, video, and avatar model listed above; model names do not indicate separate direct integrations. If a required provider key is missing, the adapter returns a clear API-not-configured error instead of a demo asset. The test suite still imports mock providers directly.
 
 ## Project Structure
 
@@ -101,21 +98,6 @@ ELEVENLABS_API_KEY=
 CRON_SECRET=
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
-GEMINI_API_KEY=
-NANO_BANANA_MODEL=gemini-3-pro-image-preview
-
-OPENAI_API_KEY=
-
-WAN_API_BASE_URL=
-WAN_API_KEY=
-
-KLING_API_BASE_URL=https://api-singapore.klingai.com
-KLING_API_KEY=
-KLING_MODEL=kling-v2-6
-
-SEEDANCE_API_BASE_URL=https://ark.ap-southeast.bytepluses.com
-SEEDANCE_API_KEY=
-SEEDANCE_MODEL=dreamina-seedance-2-0-260128
 ```
 
 Every Whop plan ID must be nonempty and unique. Subscription plans and top-up plans must never share an ID. Sandbox and production require separate keys, company IDs, catalogs, plan IDs, and webhook endpoints. Production billing refuses ambiguous or incomplete catalogs. See `DEPLOYMENT.md` for catalog and rollout checks.

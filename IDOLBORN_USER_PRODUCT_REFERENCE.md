@@ -95,7 +95,7 @@ Users can choose:
 - A quality level for the image engine that offers it.
 - Saved persona references and additional uploaded references.
 
-The available image engines are Nano Banana Pro, ChatGPT Image 2, Seedream 4.5, and Wan 2.7 Image. They have different framing, size, and quality choices, so the interface only shows settings that are meaningful for the selected option.
+The available image models are Nano Banana Pro, ChatGPT Image 2, Seedream 4.5, and Wan 2.7 Image. All are provided through WaveSpeed and have different framing, size, and quality choices, so the interface only shows settings that are meaningful for the selected option.
 
 The product includes prompt suggestions for inspiration. Finished images are saved as persona assets. From an image result, a user can move directly into video, motion-control, or talking-avatar creation.
 
@@ -117,7 +117,7 @@ Depending on the chosen video option, a user can control:
 
 Some video choices also accept reference video and audio inputs. This provides extra creative guidance when the user wants the clip’s pacing, movement, or sound direction to follow existing material.
 
-The current video choices include Wan 2.7, several Kling 2.6 and Kling 3.0 options, and Seedance 2.0, including a faster Seedance version. The product presents these as creative choices with different controls, duration ranges, quality levels, and price points.
+The current video choices include WaveSpeed-hosted Wan 2.7, several Kling 2.6 and Kling 3.0 options, and Seedance 2.0, including a faster Seedance version. The product presents these as creative choices with different controls, duration ranges, quality levels, and price points.
 
 ## Motion Control
 
@@ -135,7 +135,7 @@ Available controls vary by the selected option, but can include:
 - A negative prompt to reduce unwanted visual issues.
 - 480p or 720p output, depending on the choice.
 
-The motion-control choices include Wan Animate and Kling 3.0 Motion. The selected option determines which of the above controls are available.
+The WaveSpeed-hosted motion-control choices include Wan Animate and Kling 3.0 Motion. The selected option determines which of the above controls are available.
 
 ## Reel Maker
 
