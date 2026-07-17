@@ -12,12 +12,10 @@ export function PersonasView({
   personas,
   assets,
   supabaseReady,
-  personaLimit = 0,
   selectedPersonaId,
   onSelect,
   onUpdatePersona,
   onCreatePersona,
-  onCreateLimitReached,
   onDeletePersona,
   onAddReferences,
   onToggleReferenceDefault,
@@ -27,12 +25,10 @@ export function PersonasView({
   personas: Persona[];
   assets: Asset[];
   supabaseReady?: boolean;
-  personaLimit?: number | null;
   selectedPersonaId?: string;
   onSelect: (id: string) => void;
   onUpdatePersona: (personaId: string, updates: Partial<Pick<Persona, "name" | "description" | "styleNotes">>) => void;
   onCreatePersona: (persona: Persona) => boolean | Promise<boolean>;
-  onCreateLimitReached?: () => boolean | Promise<boolean>;
   onDeletePersona: (personaId: string) => void;
   onAddReferences: (personaId: string, assets: Asset[]) => void;
   onToggleReferenceDefault: (assetId: string) => void;
@@ -44,7 +40,6 @@ export function PersonasView({
   const [newPersonaName, setNewPersonaName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const managedPersona = personas.find((persona) => persona.id === managedPersonaId);
-  const canCreatePersona = personaLimit === null || personas.length < personaLimit;
 
   function openPersona(personaId: string) {
     onSelect(personaId);
@@ -52,10 +47,6 @@ export function PersonasView({
   }
 
   async function beginCreatePersona() {
-    if (!canCreatePersona) {
-      const canCreateAfterRefresh = await onCreateLimitReached?.();
-      if (!canCreateAfterRefresh) return;
-    }
     setIsCreatingPersona(true);
   }
 
@@ -63,10 +54,6 @@ export function PersonasView({
     event.preventDefault();
     const name = newPersonaName.trim();
     const description = newDescription.trim();
-    if (!canCreatePersona) {
-      const canCreateAfterRefresh = await onCreateLimitReached?.();
-      if (!canCreateAfterRefresh) return;
-    }
     if (!name || !description) return;
 
     const personaId = crypto.randomUUID();

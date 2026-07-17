@@ -43,7 +43,6 @@ export function StudioWorkspace({
   initialUserId,
   initialUserEmail,
   billingConfig,
-  personaLimit = 0,
   imagePromptSuggestions = [],
   previewMode = false,
 }: {
@@ -52,7 +51,6 @@ export function StudioWorkspace({
   initialUserId?: string;
   initialUserEmail?: string;
   billingConfig: PublicBillingConfig;
-  personaLimit?: number | null;
   imagePromptSuggestions?: PromptSuggestion[];
   previewMode?: boolean;
 }) {
@@ -66,7 +64,6 @@ export function StudioWorkspace({
   const [balanceCents, setBalanceCents] = useState(initialData?.balanceCents ?? (supabaseReady ? 0 : 500));
   const balanceCentsRef = useRef(balanceCents);
   const pendingBalanceReservationsRef = useRef(0);
-  const [currentPersonaLimit, setCurrentPersonaLimit] = useState<number | null>(personaLimit);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(!previewMode);
   const [userId, setUserId] = useState<string | undefined>(initialUserId);
   const [selectedPersonaId, setSelectedPersonaId] = useState(
@@ -226,15 +223,6 @@ export function StudioWorkspace({
   }
 
   async function addPersona(persona: Persona) {
-    if (currentPersonaLimit !== null && personas.length >= currentPersonaLimit) {
-      const status = await refreshBillingStatus();
-      const refreshedLimit = status && "personaLimit" in status ? status.personaLimit ?? null : currentPersonaLimit;
-      if (refreshedLimit !== null && personas.length >= refreshedLimit) {
-        showPersonaLimitWarning();
-        return false;
-      }
-    }
-
     if (!supabaseReady) {
       setPersonas((current) => [persona, ...current]);
       setSelectedPersonaId(persona.id);
@@ -275,35 +263,16 @@ export function StudioWorkspace({
       const status = (await response.json()) as {
         error?: string;
         balanceCents?: number;
-        personaLimit?: number | null;
       };
       if (!response.ok) throw new Error(status.error ?? "Could not refresh billing status.");
       if (typeof status.balanceCents === "number") {
         if (pendingBalanceReservationsRef.current === 0) setAuthoritativeBalance(status.balanceCents);
-      }
-      if ("personaLimit" in status) {
-        setCurrentPersonaLimit(status.personaLimit ?? null);
       }
       return status;
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not refresh billing status.");
       return undefined;
     }
-  }
-
-  async function handlePersonaLimitReached() {
-    const status = await refreshBillingStatus();
-    const refreshedLimit = status && "personaLimit" in status ? status.personaLimit ?? null : currentPersonaLimit;
-    if (refreshedLimit === null || personas.length < refreshedLimit) {
-      setNotice("Your plan was refreshed. You can create another persona.");
-      return true;
-    }
-    showPersonaLimitWarning();
-    return false;
-  }
-
-  function showPersonaLimitWarning() {
-    setTransientAlert("Persona limit reached. Upgrade your plan or remove a persona to create a new one.");
   }
 
   function deletePersona(personaId: string) {
@@ -731,7 +700,6 @@ export function StudioWorkspace({
               personas={personas}
               assets={assets}
               supabaseReady={supabaseReady}
-              personaLimit={currentPersonaLimit}
               selectedPersonaId={selectedPersona?.id}
               onSelect={setSelectedPersonaId}
               onUpdatePersona={updatePersona}
@@ -741,7 +709,6 @@ export function StudioWorkspace({
                 setNotice(`${persona.name} is ready for references.`);
                 return true;
               }}
-              onCreateLimitReached={handlePersonaLimitReached}
               onDeletePersona={(personaId) => {
                 const personaName = personas.find((persona) => persona.id === personaId)?.name ?? "Persona";
                 deletePersona(personaId);
@@ -878,9 +845,6 @@ export function StudioWorkspace({
       onBillingStatusRefresh={(status) => {
         if ("hasActiveSubscription" in status) {
           setHasActiveSubscription(Boolean(status.hasActiveSubscription));
-        }
-        if ("personaLimit" in status) {
-          setCurrentPersonaLimit(status.personaLimit ?? null);
         }
       }}
       hasActiveSubscription={hasActiveSubscription}

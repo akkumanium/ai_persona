@@ -153,7 +153,7 @@ export function SettingsView({
   billingConfig: PublicBillingConfig;
   hasActiveSubscription: boolean;
   onBalanceRefresh?: (balanceCents: number) => void;
-  onBillingStatusRefresh?: (status: { balanceCents?: number; personaLimit?: number | null; hasActiveSubscription?: boolean }) => void;
+  onBillingStatusRefresh?: (status: { balanceCents?: number; hasActiveSubscription?: boolean }) => void;
 }) {
   const [referralCode, setReferralCode] = useState("");
   const [pendingReferrals, setPendingReferrals] = useState(0);

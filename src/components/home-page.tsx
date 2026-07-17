@@ -530,7 +530,7 @@ export function HomePage({
               </div>
               <div className="why-box">
                 <div className="why-box-num">02</div>
-                <h3>Community</h3>
+                <h3>Free community</h3>
                 <p>
                   Compare what&apos;s converting, what stopped working last week,
                   and which platform just changed its rules — with people actually doing this.
@@ -557,7 +557,7 @@ export function HomePage({
             <div className="section-head">
               <span className="eyebrow">04 / Guides</span>
               <h2>
-                Nobody tells you the part that <em>actually gets you banned</em>.
+                Nobody tells you the part that <em>actually makes you popular</em>.
               </h2>
             </div>
           </Reveal>
@@ -572,8 +572,8 @@ export function HomePage({
               }}
             >
               Learn how to set up accounts that survive, how
-              to warm up a new profile without tripping every spam filter, or how platforms actually detect AI content
-              creators. We provide written guides, updated as platforms change their rules.
+              to warm up a new profile without tripping every spam filter, or how make trendy videos. 
+              We provide written guides, updated as platforms change their rules.
             </p>
           </Reveal>
           <Reveal delay={240}>
@@ -588,7 +588,7 @@ export function HomePage({
               </div>
               <div className="guide-item">
                 <span className="guide-item-arrow">&rarr;</span>
-                Avoiding common shadowban triggers
+                Avoiding common mistakes
               </div>
               <div className="guide-item">
                 <span className="guide-item-arrow">&rarr;</span>

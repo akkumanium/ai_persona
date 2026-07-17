@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getPersonaLimitForPlan, getPlanById, type BillingPlanId } from "@/lib/billing";
+import { getPlanById, type BillingPlanId } from "@/lib/billing";
 import { env } from "@/lib/env";
 import { createServiceSupabaseClient } from "@/lib/supabase/server";
 
@@ -21,7 +21,6 @@ export type BillingAccess = {
   hasActiveSubscription: boolean;
   hasStudioAccess: boolean;
   activePlanId?: BillingPlanId;
-  personaLimit: number | null;
 };
 
 export async function getBillingAccess(supabase: SupabaseClient, userId: string): Promise<BillingAccess> {
@@ -50,7 +49,6 @@ export async function getBillingAccess(supabase: SupabaseClient, userId: string)
     // Authentication gates Studio. A subscription only controls generation credits.
     hasStudioAccess: true,
     activePlanId,
-    personaLimit: activePlanId ? getPersonaLimitForPlan(activePlanId) : 0,
   };
 }
 
@@ -91,6 +89,5 @@ function resolveActivePlanId(rows: BillingSubscriptionRow[]) {
 }
 
 function scorePlan(planId: BillingPlanId) {
-  const limit = getPersonaLimitForPlan(planId);
-  return limit === null ? Number.MAX_SAFE_INTEGER : limit;
+  return planId === "yearly" ? 2 : 1;
 }

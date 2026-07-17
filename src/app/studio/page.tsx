@@ -77,7 +77,6 @@ export default async function StudioPage() {
       initialUserId={user.id}
       initialUserEmail={user.email}
       billingConfig={billingConfig}
-      personaLimit={access.personaLimit}
       imagePromptSuggestions={imagePromptSuggestions}
       previewMode={!access.hasActiveSubscription}
     />

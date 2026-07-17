@@ -86,7 +86,7 @@ export function GenerationView({
   const [imagePrompt, setImagePrompt] = useState("");
   const [videoPrompt, setVideoPrompt] = useState("");
   const [imageModel, setImageModel] = useState(NANO_BANANA_PRO_MODEL_ID);
-  const [imageAspectRatio, setImageAspectRatio] = useState("4:5");
+  const [imageAspectRatio, setImageAspectRatio] = useState("9:16");
   const [imageSize, setImageSize] = useState("2K");
   const [imageQuality, setImageQuality] = useState("medium");
   const [uploadedImageReferences, setUploadedImageReferences] = useState<SourceImageInput[]>([]);
@@ -300,7 +300,7 @@ export function GenerationView({
     setGenerationError("");
     const nextAspectRatios = aspectRatiosForImageModel(modelId);
     if (!nextAspectRatios.includes(imageAspectRatio)) {
-      setImageAspectRatio(nextAspectRatios.includes("4:5") ? "4:5" : nextAspectRatios[0]);
+      setImageAspectRatio(nextAspectRatios.includes("9:16") ? "9:16" : nextAspectRatios[0]);
     }
     const nextImageSizes = imageSizesForModel(modelId);
     if (!nextImageSizes.includes(imageSize)) {

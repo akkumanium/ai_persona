@@ -9,11 +9,10 @@ DO NOT TOUCH THIS, THIS IS MY WORKSPACE
 68. Optimize for phone users
 80. Metadata cleaning
 81. Verify whether cancelling and refunding work
-84. Put video to demo (or delete the demo)
+84. Put video to demo (or delete the demo) (or replace it with the pdf guide)
 120. Fix all the bugs after moving to Whop
 122. How are videos and first frame loaded
 123. Handle error in generation
-125. How does upgrading work
 136. Build all the infrastructure needed for the articles and make them
 137. SEOmaxx through other ways
 144. Create a PDF to send to people

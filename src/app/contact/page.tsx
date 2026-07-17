@@ -38,7 +38,7 @@ export default function ContactPage() {
 
           <div className="grid gap-3">
             <ContactLink icon={Mail} label="Email" value={env.contactEmail} href={`mailto:${env.contactEmail}`} />
-            <ContactLink icon={Send} label="Telegram user" value={TELEGRAM_USER} href={TELEGRAM_USER_URL} />
+            <ContactLink icon={Send} label="Telegram support" value={TELEGRAM_USER} href={TELEGRAM_USER_URL} />
             <ContactLink icon={Send} label="Telegram group" value={TELEGRAM_GROUP} href={TELEGRAM_GROUP_URL} />
           </div>
         </div>

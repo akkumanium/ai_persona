@@ -13,11 +13,11 @@ export const DEFAULT_PROMPTS = {
     "Create a clean, photorealistic chest-up reference portrait of this persona with consistent facial identity, visible shoulders, natural posture, soft studio lighting, clean background, high-resolution, 4K.",
 } as const;
 
-export const referenceSlots: { id: ReferenceSlotId; label: string; prompt: string; aspectRatio: "1:1" | "4:5" }[] = [
-  { id: "face", label: "Face", prompt: DEFAULT_PROMPTS.face, aspectRatio: "4:5" },
-  { id: "chest-up", label: "Chest-up", prompt: DEFAULT_PROMPTS.chestUp, aspectRatio: "4:5" },
-  { id: "body", label: "Body", prompt: DEFAULT_PROMPTS.body, aspectRatio: "4:5" },
-  { id: "face-grid", label: "Face Grid", prompt: DEFAULT_PROMPTS.faceGrid, aspectRatio: "1:1" },
+export const referenceSlots: { id: ReferenceSlotId; label: string; prompt: string; aspectRatio: "9:16" }[] = [
+  { id: "face", label: "Face", prompt: DEFAULT_PROMPTS.face, aspectRatio: "9:16" },
+  { id: "chest-up", label: "Chest-up", prompt: DEFAULT_PROMPTS.chestUp, aspectRatio: "9:16" },
+  { id: "body", label: "Body", prompt: DEFAULT_PROMPTS.body, aspectRatio: "9:16" },
+  { id: "face-grid", label: "Face Grid", prompt: DEFAULT_PROMPTS.faceGrid, aspectRatio: "9:16" },
 ];
 
 export function promptForReferenceSlot(slotId: ReferenceSlotId) {

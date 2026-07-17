@@ -177,8 +177,7 @@ export function BillingPlans({
             </div>
             <div className={`mt-5 grid gap-2 text-sm ${styles.benefit}`}>
               <Benefit text={formatPersonaLimit(plan.personaLimit)} className={styles.check} />
-              <Benefit text={`Includes ${formatTokens(plan.creditCents)} in welcome credits once`} className={styles.check} />
-              <Benefit text="Cancel anytime" className={styles.check} />
+              <Benefit text={`${formatTokens(plan.creditCents)} welcome tokens`} className={styles.check} />
             </div>
             <button type="button" onClick={() => void openCheckout(plan)} disabled={isBusy || !checkoutReady} className={styles.button}>
               {isBusy ? <Loader2 size={17} className="animate-spin" /> : <CreditCard size={17} />}
